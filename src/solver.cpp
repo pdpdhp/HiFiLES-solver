@@ -60,8 +60,8 @@ void CalcResidual(struct solution* FlowSol) {
    LES model or explicit SVV filtering as a 'model'. */
   if(run_input.LES==1) {
     if(run_input.SGS_model==2 || run_input.SGS_model==3 || run_input.SGS_model==4) {
-		  for(i=0; i<FlowSol->n_ele_types; i++)
-			  FlowSol->mesh_eles(i)->calc_disuf_upts(in_disu_upts_from);
+        for(i=0; i<FlowSol->n_ele_types; i++)
+          FlowSol->mesh_eles(i)->calc_disuf_upts(in_disu_upts_from);
 		}
   }
   
@@ -83,22 +83,22 @@ void CalcResidual(struct solution* FlowSol) {
   }
   
   /*! Compute the inviscid flux at the solution points and store in total flux storage. */
-	for(i=0; i<FlowSol->n_ele_types; i++)
-		FlowSol->mesh_eles(i)->calc_tdisinvf_upts(in_disu_upts_from);
+  for(i=0; i<FlowSol->n_ele_types; i++)
+    FlowSol->mesh_eles(i)->calc_tdisinvf_upts(in_disu_upts_from);
   
   /*! Calculate body forcing, if switched on, and add to flux. */
-	if(run_input.equation==0 && run_input.run_type==0 && run_input.forcing==1) {
-		for(i=0; i<FlowSol->n_ele_types; i++)
-	    FlowSol->mesh_eles(i)->add_body_force_upts(FlowSol->body_force);
-	}
+  if(run_input.equation==0 && run_input.run_type==0 && run_input.forcing==1) {
+      for(i=0; i<FlowSol->n_ele_types; i++)
+        FlowSol->mesh_eles(i)->add_body_force_upts(FlowSol->body_force);
+  }
   
   /*! Compute the inviscid numerical fluxes.
    Compute the common solution and solution corrections (viscous only). */
-	for(i=0; i<FlowSol->n_int_inter_types; i++)
-		FlowSol->mesh_int_inters(i).calc_norm_tconinvf_fpts();
+  for(i=0; i<FlowSol->n_int_inter_types; i++)
+    FlowSol->mesh_int_inters(i).calc_norm_tconinvf_fpts();
   
-	for(i=0; i<FlowSol->n_bdy_inter_types; i++)
-		FlowSol->mesh_bdy_inters(i).calc_norm_tconinvf_fpts_boundary(FlowSol->time);
+  for(i=0; i<FlowSol->n_bdy_inter_types; i++)
+    FlowSol->mesh_bdy_inters(i).calc_norm_tconinvf_fpts_boundary(FlowSol->time);
   
 #ifdef _MPI
   /*! Send the previously computed values across the MPI interfaces. */
@@ -111,13 +111,13 @@ void CalcResidual(struct solution* FlowSol) {
   }
 #endif
   
-	if (FlowSol->viscous) {
+  if (FlowSol->viscous) {
     /*! Compute corrected gradient of the solution at the solution and flux points. */
-		for(i=0; i<FlowSol->n_ele_types; i++)
-			FlowSol->mesh_eles(i)->calc_cor_grad_disu_upts();
+      for(i=0; i<FlowSol->n_ele_types; i++)
+        FlowSol->mesh_eles(i)->calc_cor_grad_disu_upts();
 		
-		for(i=0; i<FlowSol->n_ele_types; i++)
-			FlowSol->mesh_eles(i)->calc_cor_grad_disu_fpts();
+      for(i=0; i<FlowSol->n_ele_types; i++)
+        FlowSol->mesh_eles(i)->calc_cor_grad_disu_fpts();
     
 #ifdef _MPI
     /*! Send the corrected value across the MPI interface. */
@@ -127,26 +127,26 @@ void CalcResidual(struct solution* FlowSol) {
     }
 #endif
     
-    /*! Compute discontinuous viscous flux at upts and add to inviscid flux at upts. */
-		for(i=0; i<FlowSol->n_ele_types; i++)
-			FlowSol->mesh_eles(i)->calc_tdisvisf_upts(in_disu_upts_from);
+    /*! Compute discontinuous viscous flux at solution points and add to inviscid flux at solution points. */
+      for(i=0; i<FlowSol->n_ele_types; i++)
+        FlowSol->mesh_eles(i)->calc_tdisvisf_upts(in_disu_upts_from);
   }
   
   /*! For viscous or inviscid, compute the divergence of flux at solution points. */
-	for(i=0; i<FlowSol->n_ele_types; i++)
-		FlowSol->mesh_eles(i)->calc_div_tdisf_upts(in_div_tconf_upts_to);
+  for(i=0; i<FlowSol->n_ele_types; i++)
+    FlowSol->mesh_eles(i)->calc_div_tdisf_upts(in_div_tconf_upts_to);
   
   /*! For viscous or inviscid, compute the normal discontinuous flux at flux points. */
   for(i=0; i<FlowSol->n_ele_types; i++)
-		FlowSol->mesh_eles(i)->calc_norm_tdisf_fpts();
+    FlowSol->mesh_eles(i)->calc_norm_tdisf_fpts();
   
   if (FlowSol->viscous) {
     /*! Compute normal interface viscous flux and add to normal inviscid flux. */
-		for(i=0; i<FlowSol->n_int_inter_types; i++)
-			FlowSol->mesh_int_inters(i).calc_norm_tconvisf_fpts();
+      for(i=0; i<FlowSol->n_int_inter_types; i++)
+        FlowSol->mesh_int_inters(i).calc_norm_tconvisf_fpts();
     
-	  for(i=0; i<FlowSol->n_bdy_inter_types; i++)
-      FlowSol->mesh_bdy_inters(i).calc_norm_tconvisf_fpts_boundary(FlowSol->time);
+      for(i=0; i<FlowSol->n_bdy_inter_types; i++)
+        FlowSol->mesh_bdy_inters(i).calc_norm_tconvisf_fpts_boundary(FlowSol->time);
     
 #if _MPI
     /*! Evaluate the MPI interfaces. */

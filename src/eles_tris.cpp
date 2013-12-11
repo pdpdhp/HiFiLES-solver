@@ -407,6 +407,7 @@ void eles_tris::set_tloc_fpts(void)
 
 }
 
+// set location and weights of volume cubature points in standard element
 
 void eles_tris::set_volume_cubpts(void)
 {

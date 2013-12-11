@@ -2563,6 +2563,7 @@ void eles::set_opp_p(void)
 
 // set opp_cub_f (solution at solution points to solution at plot points)
 
+// Solution at solution points to solution at interface cubature points
 void eles::set_opp_inters_cubpts(void)
 {
 
