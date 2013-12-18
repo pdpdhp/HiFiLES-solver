@@ -36,7 +36,7 @@ endif
 
 # Pre-processing macros
 
-OPTS    = -D_$(NODE)  -D_$(BLAS) 
+OPTS    = -D_$(NODE)  -D_$(BLAS)
 
 ifeq ($(PARALLEL),MPI)
 	OPTS    += -D_$(PARALLEL) 
@@ -79,7 +79,7 @@ endif
 
 ifeq ($(CODE),RELEASE)
 	ifeq ($(NODE),GPU)
-		OPTS += -w
+		OPTS	+= -w
 	endif
 endif
 
@@ -103,7 +103,6 @@ endif
 ifeq ($(NODE),GPU)
 	LIBS	+= -L $(CUDA_DIR)/lib64 -lcudart -lcublas -lcusparse -lm
 endif
-
 
 # Source
 
@@ -146,7 +145,7 @@ help:
 	@echo ' '
 
 HiFiLES: $(OBJS)
-	$(CC) $(OPTS) -o $(BIN)HiFiLES $(OBJS) $(LIBS) 
+	$(CC) $(OPTS) -o $(BIN)HiFiLES $(OBJS) ${LIBS}
 
 $(OBJ)HiFiLES.o: HiFiLES.cpp geometry.h input.h flux.h error.h
 	$(CC) $(OPTS)  -c -o $@ $<
@@ -157,10 +156,10 @@ $(OBJ)geometry.o: geometry.cpp geometry.h input.h  error.h
 $(OBJ)solver.o: solver.cpp solver.h input.h  error.h
 	$(CC) $(OPTS)  -c -o $@ $<
 
-$(OBJ)output.o: output.cpp output.h input.h  error.h
+$(OBJ)output.o: output.cpp output.h input.h error.h
 	$(CC) $(OPTS)  -c -o $@ $<
-	
-$(OBJ)eles.o: eles.cpp eles.h array.h error.h input.h array.h error.h
+
+$(OBJ)eles.o: eles.cpp eles.h array.h error.h input.h error.h
 	$(CC) $(OPTS)  -c -o $@ $<
 
 $(OBJ)eles_tris.o: eles_tris.cpp eles_tris.h eles.h funcs.h input.h array.h array.h cubature_1d.h error.h
