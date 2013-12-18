@@ -573,7 +573,7 @@ void input::setup(ifstream& in_run_input_file, int rank)
   else if (!mesh_file.compare(mesh_file.size()-3,3,"msh"))
     mesh_format=1;
   else
-    FatalError("Mesh format not recognized");
+    FatalError("Mesh format not recognized: must be '.neu' or '.msh'");
 
   if (equation==0)
   {
