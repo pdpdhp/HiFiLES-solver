@@ -59,7 +59,6 @@ HEADERS += \
     include/cubature_1d.h \
     include/bdy_inters.h \
     include/array.h \
-    defines.h
 
 OTHER_FILES += \
     data/loc_tri_inter_pts.dat \
