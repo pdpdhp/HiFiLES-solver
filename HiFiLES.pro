@@ -58,7 +58,8 @@ HEADERS += \
     include/cubature_hexa.h \
     include/cubature_1d.h \
     include/bdy_inters.h \
-    include/array.h
+    include/array.h \
+    defines.h
 
 OTHER_FILES += \
     data/loc_tri_inter_pts.dat \
@@ -74,4 +75,3 @@ OTHER_FILES += \
     data/cubature_hexa.dat \
     data/cubature_1d.dat \
     makefile.in
-
