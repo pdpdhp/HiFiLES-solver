@@ -54,11 +54,11 @@ void match_mpipnodes(array<int>& in_out_mpi_pnode2pnode, int& in_out_n_mpi_pnode
 
 /*!
  * \brief Method to read a mesh.
- * \param[in] in_file_name - _______________________.
- * \param[out] out_xv - _______________________.
- * \param[out] out_c2v - _______________________.
- * \param[out] out_c2n_v - _______________________.
- * \param[out] out_ctype - _______________________.
+ * \param[in] in_file_name - Name of mesh file to read.
+ * \param[out] out_xv - Array of physical vertex locations (x,y,z).
+ * \param[out] out_c2v - ID of vertices making up each cell.
+ * \param[out] out_c2n_v - Number of vertices in each cell.
+ * \param[out] out_ctype - Cell type.
  * \param[out] out_ic2icg - _______________________.
  * \param[out] out_iv2ivg - _______________________.
  * \param[out] out_n_cells - _______________________.

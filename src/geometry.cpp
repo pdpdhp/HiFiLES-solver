@@ -151,8 +151,8 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol) {
 	f2v.setup(max_inters,MAX_V_PER_F); // each edge/face cannot have more than 4 vertices
 	f2nv.setup(max_inters);
 	f2loc_f.setup(max_inters,2);
-	c2f.setup(FlowSol->num_eles,MAX_F_PER_C); // one cell cannot have more than 8 faces
-	c2e.setup(FlowSol->num_eles,MAX_E_PER_C); // one cell cannot have more than 8 faces
+    c2f.setup(FlowSol->num_eles,MAX_F_PER_C); // one cell cannot have more than 6 faces
+    c2e.setup(FlowSol->num_eles,MAX_E_PER_C); // one cell cannot have more than 12 edges
 	rot_tag.setup(max_inters);
 	unmatched_inters.setup(max_inters);
   
@@ -164,7 +164,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol) {
   
 	for (int i=0;i<FlowSol->num_eles;i++)
 		for(int k=0;k<MAX_F_PER_C;k++)
-      c2f(i,k)=-1;
+            c2f(i,k)=-1;
   
   array<int> icvsta, icvert;
   
@@ -1361,7 +1361,8 @@ void read_connectivity_gambit(string& in_file_name, int &out_n_cells, array<int>
 {
   
 	int n_verts_global,n_cells_global;
-	int dummy,dummy2;
+    int ctype;
+    int dummy,dummy2;
   
 	char buf[BUFSIZ]={""};
 	ifstream mesh_file;
@@ -1437,85 +1438,85 @@ void read_connectivity_gambit(string& in_file_name, int &out_n_cells, array<int>
 	// Start reading elements
 	for (int i=0;i<out_n_cells;i++)
 	{
-	  //  ctype is the element type:	1=edge, 2=quad, 3=tri, 4=brick, 5=wedge, 6=tet, 7=pyramid
-		mesh_file >> out_ic2icg(i) >> dummy >> out_c2n_v(i);
+        //  ctype is the element type:	1=edge, 2=quad, 3=tri, 4=brick, 5=wedge, 6=tet, 7=pyramid
+        mesh_file >> out_ic2icg(i) >> ctype >> out_c2n_v(i);
     
-    if (dummy==3) out_ctype(i)=0;
-    else if (dummy==2) out_ctype(i)=1;
-    else if (dummy==6) out_ctype(i)=2;
-    else if (dummy==5) out_ctype(i)=3;
-    else if (dummy==4) out_ctype(i)=4;
+        if (ctype==3) out_ctype(i)=0;
+        else if (ctype==2) out_ctype(i)=1;
+        else if (ctype==6) out_ctype(i)=2;
+        else if (ctype==5) out_ctype(i)=3;
+        else if (ctype==4) out_ctype(i)=4;
+
+        // triangle
+        if (out_ctype(i)==0)
+        {
+            if (out_c2n_v(i)==3) // linear triangle
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2);
+            else if (out_c2n_v(i)==6) // quadratic triangle
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,3) >>  out_c2v(i,1) >> out_c2v(i,4) >> out_c2v(i,2) >> out_c2v(i,5);
+            else
+                FatalError("triangle element type not implemented");
+        }
+        // quad
+        else if (out_ctype(i)==1)
+        {
+            if (out_c2n_v(i)==4) // linear quadrangle
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,3) >> out_c2v(i,2);
+            else if (out_c2n_v(i)==8)  // quadratic quad
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,4) >> out_c2v(i,1) >> out_c2v(i,5) >> out_c2v(i,2) >> out_c2v(i,6) >> out_c2v(i,3) >> out_c2v(i,7);
+            else
+                FatalError("quad element type not implemented");
+        }
+        // tet
+        else if (out_ctype(i)==2)
+        {
+            if (out_c2n_v(i)==4) // linear tets
+            {
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2) >> out_c2v(i,3);
+            }
+            else if (out_c2n_v(i)==10) // quadratic tet
+            {
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,4) >> out_c2v(i,1) >> out_c2v(i,5) >> out_c2v(i,7) >> out_c2v(i,2) >> out_c2v(i,6) >> out_c2v(i,9) >> out_c2v(i,8) >> out_c2v(i,3);
+            }
+            else
+                FatalError("tet element type not implemented");
+        }
+        // prisms
+        else if (out_ctype(i)==3)
+        {
+            if (out_c2n_v(i)==6) // linear prism
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2) >> out_c2v(i,3) >> out_c2v(i,4) >> out_c2v(i,5);
+            else if (out_c2n_v(i)==15) // quadratic prism
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,6) >> out_c2v(i,1) >> out_c2v(i,8) >> out_c2v(i,7) >> out_c2v(i,2) >> out_c2v(i,9) >> out_c2v(i,10) >> out_c2v(i,11) >> out_c2v(i,3) >> out_c2v(i,12) >> out_c2v(i,4) >> out_c2v(i,14) >> out_c2v(i,13) >> out_c2v(i,5) ;
+            else
+                FatalError("Prism element type not implemented");
+        }
+        // hexa
+        else if (out_ctype(i)==4)
+        {
+            if (out_c2n_v(i)==8) // linear hexas
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,2) >> out_c2v(i,4) >> out_c2v(i,6) >> out_c2v(i,1) >> out_c2v(i,3) >> out_c2v(i,5) >> out_c2v(i,7);
+            else if (out_c2n_v(i)==20) // quadratic hexas
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,11) >> out_c2v(i,3) >> out_c2v(i,12) >> out_c2v(i,15) >> out_c2v(i,4) >> out_c2v(i,19) >> out_c2v(i,7) >> out_c2v(i,8) >> out_c2v(i,10) >> out_c2v(i,16) >> out_c2v(i,18) >> out_c2v(i,1) >> out_c2v(i,9) >> out_c2v(i,2) >> out_c2v(i,13) >> out_c2v(i,14) >> out_c2v(i,5) >> out_c2v(i,17) >> out_c2v(i,6);
+            else
+                FatalError("Hexa element type not implemented");
+        }
+        else
+        {
+            cout << "Haven't implemented this element type in gambit_meshreader3, exiting " << endl;
+            exit(1);
+        }
+        mesh_file.getline(buf,BUFSIZ); // skip end of line
+
+        // Shift every values of c2v by -1
+        for(int k=0;k<out_c2n_v(i);k++)
+            if(out_c2v(i,k)!=0)
+                out_c2v(i,k)--;
+
+        // Also shift every value of ic2icg
+        out_ic2icg(i)--;
     
-    // triangle
-		if (out_ctype(i)==0)
-		{
-			if (out_c2n_v(i)==3) // linear triangle
-				mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2);
-			else if (out_c2n_v(i)==6) // quadratic triangle
-			  mesh_file >> out_c2v(i,0) >> out_c2v(i,3) >>  out_c2v(i,1) >> out_c2v(i,4) >> out_c2v(i,2) >> out_c2v(i,5);
-      else
-        FatalError("triangle element type not implemented");
-		}
-    // quad
-		else if (out_ctype(i)==1)
-		{
-			if (out_c2n_v(i)==4) // linear quadrangle
-				mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,3) >> out_c2v(i,2);
-			else if (out_c2n_v(i)==8)  // quadratic quad
-			  mesh_file >> out_c2v(i,0) >> out_c2v(i,4) >> out_c2v(i,1) >> out_c2v(i,5) >> out_c2v(i,2) >> out_c2v(i,6) >> out_c2v(i,3) >> out_c2v(i,7);
-      else
-        FatalError("quad element type not implemented");
-		}
-    // tet
-		else if (out_ctype(i)==2)
-		{
-			if (out_c2n_v(i)==4) // linear tets
-      {
-				mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2) >> out_c2v(i,3);
-      }
-      else if (out_c2n_v(i)==10) // quadratic tet
-      {
-				mesh_file >> out_c2v(i,0) >> out_c2v(i,4) >> out_c2v(i,1) >> out_c2v(i,5) >> out_c2v(i,7) >> out_c2v(i,2) >> out_c2v(i,6) >> out_c2v(i,9) >> out_c2v(i,8) >> out_c2v(i,3);
-      }
-      else
-        FatalError("tet element type not implemented");
-		}
-    // prisms
-		else if (out_ctype(i)==3)
-		{
-			if (out_c2n_v(i)==6) // linear prism
-				mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2) >> out_c2v(i,3) >> out_c2v(i,4) >> out_c2v(i,5);
-			else if (out_c2n_v(i)==15) // quadratic prism
-				mesh_file >> out_c2v(i,0) >> out_c2v(i,6) >> out_c2v(i,1) >> out_c2v(i,8) >> out_c2v(i,7) >> out_c2v(i,2) >> out_c2v(i,9) >> out_c2v(i,10) >> out_c2v(i,11) >> out_c2v(i,3) >> out_c2v(i,12) >> out_c2v(i,4) >> out_c2v(i,14) >> out_c2v(i,13) >> out_c2v(i,5) ;
-      else
-        FatalError("Prism element type not implemented");
-		}
-    // hexa
-    else if (out_ctype(i)==4)
-		{
-			if (out_c2n_v(i)==8) // linear hexas
-				mesh_file >> out_c2v(i,0) >> out_c2v(i,2) >> out_c2v(i,4) >> out_c2v(i,6) >> out_c2v(i,1) >> out_c2v(i,3) >> out_c2v(i,5) >> out_c2v(i,7);
-			else if (out_c2n_v(i)==20) // quadratic hexas
-				mesh_file >> out_c2v(i,0) >> out_c2v(i,11) >> out_c2v(i,3) >> out_c2v(i,12) >> out_c2v(i,15) >> out_c2v(i,4) >> out_c2v(i,19) >> out_c2v(i,7) >> out_c2v(i,8) >> out_c2v(i,10) >> out_c2v(i,16) >> out_c2v(i,18) >> out_c2v(i,1) >> out_c2v(i,9) >> out_c2v(i,2) >> out_c2v(i,13) >> out_c2v(i,14) >> out_c2v(i,5) >> out_c2v(i,17) >> out_c2v(i,6);
-      else
-        FatalError("Hexa element type not implemented");
-		}
-		else
-		{
-			cout << "Haven't implemented this element type in gambit_meshreader3, exiting " << endl;
-			exit(1);
-		}
-		mesh_file.getline(buf,BUFSIZ); // skip end of line
-    
-	  // Shift every values of c2v by -1
-	  for(int k=0;k<out_c2n_v(i);k++)
-		  if(out_c2v(i,k)!=0)
-        out_c2v(i,k)--;
-    
-    // Also shift every value of ic2icg
-    out_ic2icg(i)--;
-    
-	}
+    }
   
 #ifdef _MPI
   MPI_Barrier(MPI_COMM_WORLD);
@@ -1551,11 +1552,11 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
   
 	// Read number of boundaries and fields defined
 	mesh_file >> dummy;
-	cout << "dummy "<<dummy << endl;
+    cout << "Number of Physical Regions/Boundaries: "<< dummy << endl;
 	mesh_file.getline(buf,BUFSIZ);	// clear rest of line
 	for(int i=0;i<dummy;i++)
 	{
-		cout << "i "<<i << endl;
+        cout << "i "<< i << endl;
 		mesh_file.getline(buf,BUFSIZ);
 		sscanf(buf,"%d %d %s", &bcdim, &bcid, bc_txt_temp);
 		strcpy(bcTXT[bcid],bc_txt_temp);
@@ -1585,14 +1586,16 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
   for (int i=0;i<n_entities;i++)
   {
 		mesh_file >> id >> elmtype >> ntags;
-		if (ntags!=2)
-      FatalError("ntags != 2,exiting");
+        if (ntags!=2) {
+            cout << "GMSH: ntags=" << ntags << " at element #" << id << endl;
+            FatalError("ntags != 2,exiting");
+        }
     
 		mesh_file >> bcid >> dummy;
 		//cout << "bcid "<<bcid << endl;
 		//cout << "strstr(bcTXT[bcid] "<<strstr(bcTXT[bcid]) << endl;
 		if (strstr(bcTXT[bcid],"FLUID"))
-      icount++;
+            icount++;
     
 	  mesh_file.getline(buf,BUFSIZ);	// clear rest of line
     
@@ -1652,21 +1655,14 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
   
   for (int k=0;k<n_entities;k++)
   {
-		mesh_file >> id >> elmtype >> ntags;
+      mesh_file >> id >> elmtype >> ntags;
     
     //cout << "id=" <<  id << endl;
-    //cout << "k=" << k << endl;
-    
-		if (ntags!=2)
-    {
-      cout << "ntags=" << ntags << endl;
-      FatalError("ntags != 2,exiting");
-    }
-    
+    //cout << "k=" << k << endl;  
     //cout << "elmtype=" << elmtype << endl;
     
-		mesh_file >> bcid >> dummy;
-		if (strstr(bcTXT[bcid],"FLUID"))
+      mesh_file >> bcid >> dummy;
+      if (strstr(bcTXT[bcid],"FLUID"))
     {
       //cout << "icount=" << icount << endl;
       if (icount>=kstart && i< out_n_cells) // Read this cell
@@ -1676,56 +1672,59 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
         out_ic2icg(i) = icount;
         if (elmtype ==2 || elmtype==9 || elmtype==21) // Triangle
         {
-          out_ctype(i) = 0;
-          if (elmtype==2) // linear triangle
-          {
-            out_c2n_v(i) =3;
-					  mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2);
-          }
-          else if (elmtype==9) // quadratic triangle
-          {
-            out_c2n_v(i) =6;
-					  mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2) >> out_c2v(i,3) >> out_c2v(i,4) >> out_c2v(i,5) ;
-            //cout << "here" << endl;
-          }
-          else if (elmtype==21) // cubic triangle
-          {
-            FatalError("Cubic triangle not implemented");
-          }
+            out_ctype(i) = 0;
+            if (elmtype==2) // linear triangle
+            {
+                out_c2n_v(i) =3;
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2);
+            }
+            else if (elmtype==9) // quadratic triangle
+            {
+                out_c2n_v(i) =6;
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2) >> out_c2v(i,3) >> out_c2v(i,4) >> out_c2v(i,5) ;
+                //cout << "here" << endl;
+            }
+            else if (elmtype==21) // cubic triangle
+            {
+                FatalError("Cubic triangle not implemented");
+            }
         }
         else if (elmtype==3 || elmtype==16 || elmtype==10) // Quad
         {
-          out_ctype(i) = 1;
-          if (elmtype==3) // linear quadrangle
-          {
-            out_c2n_v(i) = 4;
-					  mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,3) >> out_c2v(i,2);
-          }
-          else if (elmtype==16) // quadratic quadrangle
-          {
-            out_c2n_v(i) = 8;
-				    mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2) >> out_c2v(i,3) >> out_c2v(i,4) >> out_c2v(i,5) >> out_c2v(i,6) >> out_c2v(i,7);
-          }
-          else if (elmtype==10) // quadratic quadrangle
-          {
-            out_c2n_v(i) = 9;
-				    mesh_file >> out_c2v(i,0) >> out_c2v(i,2) >> out_c2v(i,8) >> out_c2v(i,6) >> out_c2v(i,1) >> out_c2v(i,5) >> out_c2v(i,7) >> out_c2v(i,3) >> out_c2v(i,4);
-            //cout << "i=" << i << "id=" << id << endl;
-            //cout << "out_c2v(i,0)=" << out_c2v(i,0) << endl;
-            //cout << "out_c2v(i,1)=" << out_c2v(i,1) << endl;
-            //cout << "out_c2v(i,2)=" << out_c2v(i,2) << endl;
-            //cout << "out_c2v(i,3)=" << out_c2v(i,3) << endl;
-            //cout << "out_c2v(i,4)=" << out_c2v(i,4) << endl;
-          }
+            out_ctype(i) = 1;
+            if (elmtype==3) // linear quadrangle
+            {
+                out_c2n_v(i) = 4;
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,3) >> out_c2v(i,2);
+            }
+            else if (elmtype==16) // quadratic quadrangle
+            {
+                out_c2n_v(i) = 8;
+                /** Not consistent with Gambit quadratic-quadrangle redaer */
+                //mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2) >> out_c2v(i,3) >> out_c2v(i,4) >> out_c2v(i,5) >> out_c2v(i,6) >> out_c2v(i,7);
+                /** corrected to match Gambit reader */
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,4) >> out_c2v(i,1) >> out_c2v(i,5) >> out_c2v(i,2) >> out_c2v(i,6) >> out_c2v(i,3) >> out_c2v(i,7);
+            }
+            else if (elmtype==10) // quadratic quadrangle
+            {
+                out_c2n_v(i) = 9;
+                mesh_file >> out_c2v(i,0) >> out_c2v(i,2) >> out_c2v(i,8) >> out_c2v(i,6) >> out_c2v(i,1) >> out_c2v(i,5) >> out_c2v(i,7) >> out_c2v(i,3) >> out_c2v(i,4);
+                //cout << "i=" << i << "id=" << id << endl;
+                //cout << "out_c2v(i,0)=" << out_c2v(i,0) << endl;
+                //cout << "out_c2v(i,1)=" << out_c2v(i,1) << endl;
+                //cout << "out_c2v(i,2)=" << out_c2v(i,2) << endl;
+                //cout << "out_c2v(i,3)=" << out_c2v(i,3) << endl;
+                //cout << "out_c2v(i,4)=" << out_c2v(i,4) << endl;
+            }
         }
         else if (elmtype==5) // Hexahedral
         {
           out_ctype(i) = 4;
-          if (elmtype==5) // linear quadrangle
+          if (elmtype==5) // linear hexahedron
           {
             out_c2n_v(i) = 8;
-					  mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,3) >> out_c2v(i,2);
-					  mesh_file >> out_c2v(i,4) >> out_c2v(i,5) >> out_c2v(i,7) >> out_c2v(i,6);
+            mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,3) >> out_c2v(i,2);
+            mesh_file >> out_c2v(i,4) >> out_c2v(i,5) >> out_c2v(i,7) >> out_c2v(i,6);
           }
         }
         else
@@ -1736,27 +1735,27 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
         
 	      // Shift every values of c2v by -1
 	      for(int k=0;k<out_c2n_v(i);k++)
-        {
-		      if(out_c2v(i,k)!=0)
           {
-            out_c2v(i,k)--;
-            //cout << "elmtype=" << elmtype << endl;
-            //cout << "out_c2v=" << out_c2v(i,k) << endl;
+              if(out_c2v(i,k)!=0)
+              {
+                  out_c2v(i,k)--;
+                  //cout << "elmtype=" << elmtype << endl;
+                  //cout << "out_c2v=" << out_c2v(i,k) << endl;
+              }
           }
-        }
         
-        i++;
-		    mesh_file.getline(buf,BUFSIZ); // skip end of line
+          i++;
+          mesh_file.getline(buf,BUFSIZ); // skip end of line
       }
-      else //
+      else // Cell not on this processor; skip line
       {
-		    mesh_file.getline(buf,BUFSIZ); // skip line, cell doesn't belong to this processor
+          mesh_file.getline(buf,BUFSIZ);
       }
       icount++; // FLUID cell, increase icount
     }
-    else // Not FLUID cell, skip line
+    else // Not a FLUID cell, skip line
     {
-		  mesh_file.getline(buf,BUFSIZ); // skip line, cell doesn't belong to this processor
+          mesh_file.getline(buf,BUFSIZ);
     }
     
   } // End of loop over entities
@@ -2107,30 +2106,30 @@ void CompConectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_ct
 	int max = 0;
 	for(int iv=0;iv<n_verts;iv++)
 	{
-    if (ifill(iv)>max)
-      max = ifill(iv);
+      if (ifill(iv)>max)
+        max = ifill(iv);
 		
-    out_icvsta(iv) = k;
-    idummy(iv) = out_icvsta(iv);
-    k = k+ifill(iv);
+      out_icvsta(iv) = k;
+      idummy(iv) = out_icvsta(iv);
+      k = k+ifill(iv);
 	}
   
 	//cout << "Maximum number of cells who share same vertex = " << max << endl;
 	if (max>max_cells_per_vert)
 		FatalError("ERROR: some vertices are shared by more than max_cells_per_vert");
   
-	out_icvsta(n_verts) = out_icvsta(n_verts-1)+ifill(n_verts-1);
+    out_icvsta(n_verts) = out_icvsta(n_verts-1)+ifill(n_verts-1);
   
-  int iv,ic2,k2;
+    int iv,ic2,k2;
 	for(int ic=0;ic<n_cells;ic++)
 	{
-    //for(int k=0;k<num_v_per_c(in_ctype(ic));k++)
-    for(int k=0;k<in_c2n_v(ic);k++)
-    {
-      iv = in_c2v(ic,k);
-      out_icvert(idummy(iv)) = ic;
-      idummy(iv)++;
-    }
+      //for(int k=0;k<num_v_per_c(in_ctype(ic));k++)
+      for(int k=0;k<in_c2n_v(ic);k++)
+      {
+        iv = in_c2v(ic,k);
+        out_icvert(idummy(iv)) = ic;
+        idummy(iv)++;
+      }
 	}
   
   out_n_edges=-1;
@@ -2142,11 +2141,11 @@ void CompConectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_ct
       for (int j=0;j<MAX_E_PER_C;j++)
         out_c2e(i,j) = -1;
     
-	  num_e_per_c(0) = 3;
-	  num_e_per_c(1) = 4;
-	  num_e_per_c(2) = 6;
-	  num_e_per_c(3) = 9;
-	  num_e_per_c(4) = 12;
+      num_e_per_c(0) = 3;  // tri
+      num_e_per_c(1) = 4;  // quad
+      num_e_per_c(2) = 6;  // tet
+      num_e_per_c(3) = 9;  // wedge
+      num_e_per_c(4) = 12; // hex
     
     for (int ic=0;ic<n_cells;ic++)
     {
