@@ -1,0 +1,19 @@
+COMPLETED:
+--Added variable 'vel_spts' in eles
+--Added variable 'motion' in input
+--Added variable 'motion' in eles
+--Added method 'calc_alef_2D/3D' to flux.cpp
+
+TODO (Short Term):
+--Variable (array) to store velocity at flux points
+--Method to interpolate velocity at shape points to velocity at flux points
+
+TODO (Med Term):
+--Implement mesh deformation (linear elasticity) for just triangles
+--Create structure to call deformation script every xx iterations & update
+  mesh info - Jacobian, anything else?  'Opp_x' matrices?
+
+TODO (Long Term):
+--Implement mesh deformation for ALL 2D elements
+----Will it possibly involve converting quads to tris?
+--Implement mesh deformation for 3D

@@ -10,7 +10,10 @@
  * HiFiLES (High Fidelity Large Eddy Simulation).
  * Copyright (C) 2013 Aerospace Computing Laboratory.
  */
-
+// Just for the purpose of code highlighting
+#define _MPI
+#define _CPU
+// -----------------------------------------
 #include <iostream>
 #include <iomanip>
 #include <cmath>
@@ -76,12 +79,13 @@ void eles::setup(int in_n_eles, int in_max_n_spts_per_ele, int in_run_type)
   if (n_eles!=0)
   {
 
-	order=run_input.order;
-	p_res=run_input.p_res;
-	viscous =run_input.viscous;
-  inters_cub_order = run_input.inters_cub_order;
-  volume_cub_order = run_input.volume_cub_order;
-  n_bdy_eles=0;
+      order=run_input.order;
+      p_res=run_input.p_res;
+      viscous =run_input.viscous;
+      motion = run_input.motion;
+      inters_cub_order = run_input.inters_cub_order;
+      volume_cub_order = run_input.volume_cub_order;
+      n_bdy_eles=0;
 
   // Initialize the element specific static members
   (*this).setup_ele_type_specific(in_run_type);

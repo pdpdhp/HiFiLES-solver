@@ -46,7 +46,7 @@ class eles_pris: public eles
 	void set_loc_ppts(void);
 	
 	/*! set location of shape points */
-	void set_loc_spts(void);
+    //void set_loc_spts(void);
 	
 	/*! set transformed normals at flux points */
 	void set_tnorm_fpts(void);
