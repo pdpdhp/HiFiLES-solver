@@ -5,13 +5,17 @@ COMPLETED:
 --Added method 'calc_alef_2D/3D' to flux.cpp
 
 TODO (Short Term):
---Variable (array) to store velocity at flux points
+--Variable (array) to store velocity at flux points (in each eles child class)
 --Method to interpolate velocity at shape points to velocity at flux points
+----For 2nd-order and higher elements, need to re-implement the loc_spts
+    functions, since non-corner spts not neccessarily evenly spaced on faces
+    (in (r,s,t) coordinates
 
 TODO (Med Term):
 --Implement mesh deformation (linear elasticity) for just triangles
 --Create structure to call deformation script every xx iterations & update
   mesh info - Jacobian, anything else?  'Opp_x' matrices?
+--Modify boundary conditions
 
 TODO (Long Term):
 --Implement mesh deformation for ALL 2D elements
