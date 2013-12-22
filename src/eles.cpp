@@ -142,8 +142,8 @@ void eles::setup(int in_n_eles, int in_max_n_spts_per_ele, int in_run_type)
 			Hm.setup(n_upts_per_ele,n_dims);
 		}
 	}
-
-	set_shape(in_max_n_spts_per_ele);
+  
+  set_shape(in_max_n_spts_per_ele);
   ele2global_ele.setup(n_eles);
   bctype.setup(n_eles,n_inters_per_ele);
 
@@ -3207,6 +3207,27 @@ void eles::set_transforms(int in_run_type)
 
    if (rank==0) cout << endl;
   } // if n_eles!=0
+}
+
+void eles::set_mesh_motion(void)
+{
+	// Setup arrays
+	vel_fpts.setup(n_eles,n_fpts_per_ele,n_dims);
+	vel_spts.setup(n_eles);
+	for (int i=0;i<n_eles; i++) {
+		vel_spts(i).setup(n_spts_per_ele(i),n_dims);
+	}
+
+	// Initialize to zero
+	for (int i=0; i<n_eles; i++) {
+		for (int j=0; j<n_fpts_per_ele; j++)
+			for (int k=0; k<n_dims; k++)
+				vel_fpts(i,j,k) = 0;
+		
+		for (int j=0; j<n_spts_per_ele(i); j++)
+			for (int k=0; k<n_dims; k++)
+				vel_spts(i)(j,k) = 0;
+	}
 }
 
 void eles::add_contribution_to_pnodes(array<double> &plotq_pnodes)

@@ -3,13 +3,17 @@ COMPLETED:
 --Added variable 'motion' in input
 --Added variable 'motion' in eles
 --Added method 'calc_alef_2D/3D' to flux.cpp
-
+--Added 'vel_spts' and 'vel_fpts' to eles.h
+--Added setup & initialization to 0 for vel_spts & vel_fpts
+----eles::set_mesh_motion
+----called from geometry.cpp
+	  
 TODO (Short Term):
---Variable (array) to store velocity at flux points (in each eles child class)
 --Method to interpolate velocity at shape points to velocity at flux points
 ----For 2nd-order and higher elements, need to re-implement the loc_spts
     functions, since non-corner spts not neccessarily evenly spaced on faces
-    (in (r,s,t) coordinates
+    (in (r,s,t) coordinates)
+--Finish this todo list
 
 TODO (Med Term):
 --Implement mesh deformation (linear elasticity) for just triangles
@@ -21,3 +25,8 @@ TODO (Long Term):
 --Implement mesh deformation for ALL 2D elements
 ----Will it possibly involve converting quads to tris?
 --Implement mesh deformation for 3D
+
+SU2 Mesh Deformation Notes
+--trunk/common/src/grid_movement_structure.cpp
+----SetFEA_StiffMatrix2D   (Setup matrix for linear system)
+----SetVolume_Deformation  (Solve the linear system and update grid)

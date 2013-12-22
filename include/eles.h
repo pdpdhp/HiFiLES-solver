@@ -189,6 +189,9 @@ public:
     /*! set number of shape points */
     void set_n_spts(int in_ele, int in_n_spts);
 
+	/*! setup for mesh motion */
+	void set_mesh_motion(void);
+
     /*!  set global element number */
     void set_ele2global_ele(int in_ele, int in_global_ele);
 
@@ -492,9 +495,6 @@ protected:
     /*! location of shape points in standard element (simplex elements only)*/
     array<double> loc_spts;
 
-    /*! velocity of shape points in physical element (mesh motion) */
-    array<double> vel_spts;
-
     /*! number of interfaces per element */
     int n_inters_per_ele;
 
@@ -581,6 +581,18 @@ protected:
 
     /*! position at the plot points */
     array< array<double> > pos_ppts;
+
+	/*! 
+	Description: Mesh velocity at shape points \n
+	indexing: (in_ele)(in_spt, in_dim) \n
+	*/
+	array< array<double> > vel_spts;
+
+	/*! 
+	Description: Mesh velocity at flux points \n
+	indexing: (in_ele, in_fpt, in_dim) \n
+	*/
+	array<double> vel_fpts;
 
     /*!
     description: transformed discontinuous solution at the flux points \n
