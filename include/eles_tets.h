@@ -104,6 +104,9 @@ class eles_tets: public eles
 	/*! Calculate element volume */
 	double calc_ele_vol(double& detjac);
 
+	/*! Setup stiffness matrix for single element */
+	bool set_2D_StiffMat_ele(array<double> &stiffMat_ele, int ele_id);
+
 	protected:		
 
 	// methods

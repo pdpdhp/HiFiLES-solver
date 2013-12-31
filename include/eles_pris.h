@@ -53,18 +53,18 @@ class eles_pris: public eles
 
 	//#### helper methods ####
 
-  void setup_ele_type_specific(int in_run_type);
+    void setup_ele_type_specific(int in_run_type);
 
-  void create_map_ppt(void);
+    void create_map_ppt(void);
 
-  /*! read restart info */  
-  int read_restart_info(ifstream& restart_file);
+    /*! read restart info */  
+    int read_restart_info(ifstream& restart_file);
 
-  /*! write restart info */  
-  void write_restart_info(ofstream& restart_file);
+    /*! write restart info */  
+    void write_restart_info(ofstream& restart_file);
 
-  /*! Compute interface jacobian determinant on face */
-  double compute_inter_detjac_inters_cubpts(int in_inter, array<double> d_pos);
+    /*! Compute interface jacobian determinant on face */
+    double compute_inter_detjac_inters_cubpts(int in_inter, array<double> d_pos);
 
 	/*! evaluate nodal basis */
 	double eval_nodal_basis(int in_index, array<double> in_loc);
@@ -78,19 +78,22 @@ class eles_pris: public eles
 	/*! evaluate divergence of vcjh basis */
 	double eval_div_vcjh_basis(int in_index, array<double>& loc);
 
-  void fill_opp_3(array<double>& opp_3);
+    void fill_opp_3(array<double>& opp_3);
 	
 	/*! evaluate nodal shape basis */
 	double eval_nodal_s_basis(int in_index, array<double> in_loc, int in_n_spts);
 	
 	/*! evaluate derivative of nodal shape basis */
-  void eval_d_nodal_s_basis(array<double> &d_nodal_s_basis, array<double> in_loc, int in_n_spts);
+    void eval_d_nodal_s_basis(array<double> &d_nodal_s_basis, array<double> in_loc, int in_n_spts);
 	
 	/*! evaluate second derivative of nodal shape basis */
-  void eval_dd_nodal_s_basis(array<double> &dd_nodal_s_basis, array<double> in_loc, int in_n_spts);
+	void eval_dd_nodal_s_basis(array<double> &dd_nodal_s_basis, array<double> in_loc, int in_n_spts);
 
 	/*! Calculate element volume */
 	double calc_ele_vol(double& detjac);
+
+	/*! Setup stiffness matrix for single element */
+	bool set_2D_StiffMat_ele(array<double> &stiffMat_ele, int ele_id);
 
   int face0_map(int index);
 

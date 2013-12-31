@@ -1618,3 +1618,7 @@ double eles_pris::calc_ele_vol(double& detjac)
 	
 }
 
+bool eles_pris::set_2D_StiffMat_ele(array<double> &stiffMat_ele, int ele_id) {
+	cout << "Linear elasticity for prisms not yet implemented" << endl;
+	FatalError("Mesh Motion Failed");
+}

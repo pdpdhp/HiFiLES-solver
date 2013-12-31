@@ -7,7 +7,14 @@ COMPLETED:
 --Added setup & initialization to 0 for vel_spts & vel_fpts
 ----eles::set_mesh_motion
 ----called from geometry.cpp
-	  
+--Added function 'get_pos_spt' in eles.cpp
+--Added 'mesh_deform.cpp' - wrapper file for mesh deformation
+----Function deform_mesh: wrapper function
+----Function to build stiffness matrix for a single element
+----Function to build total stiffness matrix for single class of eles (tris, quads)
+------Loop over each element type & build matrix for those elements
+----Function to build global stiffness matrix for all elements of all types (all 2D or 3D)
+
 TODO (Short Term):
 --Method to interpolate velocity at shape points to velocity at flux points
 ----For 2nd-order and higher elements, need to re-implement the loc_spts

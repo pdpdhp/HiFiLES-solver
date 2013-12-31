@@ -3978,6 +3978,22 @@ void eles::calc_dd_pos(array<double> in_loc, int in_ele, array<double>& out_dd_p
 	}
 }
 
+/*! Get physical position (x,y,z) of shape points */
+double *eles::get_pos_spt(int in_ele, int in_spt) {
+	double *out_pos_spt;
+	out_pos_spt = new double[n_dims];
+
+	for (int i=0; i<n_dims; i++) {
+		out_pos_spt[i] = shape(i,in_spt,in_ele);
+	}
+
+	return out_pos_spt;
+}
+
+int eles::get_ele_global(int in_ele) {
+	return ele2global_ele(in_ele);
+}
+
 double eles::compute_res_upts(int in_norm_type, int in_field) {
 
   int i, j;

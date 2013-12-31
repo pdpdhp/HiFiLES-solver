@@ -1,6 +1,6 @@
 /*!
  * \file solution.h
- * \brief _____________________________
+ * \brief  - Structure to hold non-ele-specific solution information
  * \author - Original code: SD++ developed by Patrice Castonguay, Antony Jameson,
  *                          Peter Vincent, David Williams (alphabetical by surname).
  *         - Current development: Aerospace Computing Laboratory (ACL) directed

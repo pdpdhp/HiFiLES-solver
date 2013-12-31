@@ -310,6 +310,12 @@ public:
     /*! calculate second derivative of position */
     void calc_dd_pos(array<double> in_loc, int in_ele, array<double>& out_dd_pos);
 
+	/*! Get physical position (x,y,z) of shape points */
+	double *get_pos_spt(int in_ele, int in_spt);
+
+	/*! Get global element number*/
+	int get_ele_global(int in_ele);
+
     // #### virtual methods ####
 
     virtual void setup_ele_type_specific(int in_run_type)=0;
@@ -369,7 +375,8 @@ public:
     array<double> compute_error(int in_norm_type, double& time);
 
     array<double> get_pointwise_error(array<double>& sol, array<double>& grad_sol, array<double>& loc, double& time, int in_norm_type);
-
+    
+	virtual bool set_2D_StiffMat_ele(array<double> &stiffMat_ele, int ele_id) = 0;
 
 protected:
 
