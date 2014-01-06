@@ -22,7 +22,7 @@
 #endif
 
 class eles
-{	
+{
 public:
 
     // #### constructors ####
@@ -131,120 +131,15 @@ public:
 
     /*! calculate transformed discontinuous viscous flux at solution points */
     void calc_tdisvisf_upts(int in_disu_upts_from);
-    
+
     /*! calculate divergence of transformed discontinuous viscous flux at solution points */
     //void calc_div_tdisvisf_upts(int in_div_tconinvf_upts_to);
-    
+
     /*! calculate normal transformed discontinuous viscous flux at flux points */
     //void calc_norm_tdisvisf_fpts(void);
 
-  /*! calculate divergence of transformed continuous viscous flux at solution points */
-  //void calc_div_tconvisf_upts(int in_div_tconinvf_upts_to);
-  
-  /*! advance with rk11 (forwards euler) */
-  void advance_rk11(void);
-  
-  /*! advance with rk33 (three-stage third-order runge-kutta) */
-  void advance_rk33(int in_step);
-  
-  /*! advance with rk44 (four-stage forth-order runge-kutta) */
-  void advance_rk44(int in_step);
-  
-  /*! advance with rk45 (five-stage forth-order low-storage runge-kutta) */
-  void advance_rk45(int in_step);
-
-  /*! get number of elements */
-  int get_n_eles(void);
-       
-  // get number of ppts_per_ele
-  int get_n_ppts_per_ele(void);
-
-  // get number of peles_per_ele 
-  int get_n_peles_per_ele(void);
-
-  // get number of verts_per_ele 
-  int get_n_verts_per_ele(void);
-
-  /*! get number of solution points per element */
-  int get_n_upts_per_ele(void);
-  
-  /*! get element type */
-  int get_ele_type(void);
-      
-  /*! get number of dimensions */
-  int get_n_dims(void);
-
-  /*! get number of fields */
-  int get_n_fields(void);
-  
-  /*! set shape */
-  void set_shape(int in_max_n_spts_per_ele);
-
-  /*! set shape node */
-  void set_shape_node(int in_spt, int in_ele, array<double>& in_pos);
-
-  /*! set bc type */
-  void set_bctype(int in_ele, int in_inter, int in_bctype);
-
-  /*! set bc type */
-  void set_bdy_ele2ele(void);
-
-  /*! set number of shape points */
-  void set_n_spts(int in_ele, int in_n_spts);
-
-  /*!  set global element number */
-  void set_ele2global_ele(int in_ele, int in_global_ele);
-
-  /*! get a pointer to the transformed discontinuous solution at a flux point */
-	double* get_disu_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_field, int in_ele);
-  
-  /*! get a pointer to the normal transformed continuous flux at a flux point */
-  double* get_norm_tconf_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_field, int in_ele);
-       
-  /*! get a pointer to the determinant of the jacobian at a flux point */
-  double* get_detjac_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_ele);
-       
-  /*! get a pointer to the magntiude of normal dot inverse of (determinant of jacobian multiplied by jacobian) at flux points */
-	double* get_mag_tnorm_dot_inv_detjac_mul_jac_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_ele);
-        
-  /*! get a pointer to the normal at a flux point */
-  double* get_norm_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_dim, int in_ele);
-        
-  /*! get a pointer to the coordinates at a flux point */
-  double* get_loc_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_dim, int in_ele);
-        
-  /*! get a pointer to delta of the transformed discontinuous solution at a flux point */
-	double* get_delta_disu_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_field, int in_ele);
-
-	/*! get a pointer to gradient of discontinuous solution at a flux point */
-	double* get_grad_disu_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_dim, int in_field, int in_ele);
-
-	/*! get a pointer to the normal transformed continuous viscous flux at a flux point */
-	//double* get_norm_tconvisf_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_field, int in_ele);
-  
-  /*! set opp_0 */
-  void set_opp_0(int in_sparse);
-  
-  /*! set opp_1 */
-	void set_opp_1(int in_sparse);
-
-	/*! set opp_2 */	
-	void set_opp_2(int in_sparse);
-	
-	/*! set opp_3 */
-	void set_opp_3(int in_sparse);
-	
-	/*! set opp_4 */
-	void set_opp_4(int in_sparse);
-	
-	/*! set opp_5 */
-	void set_opp_5(int in_sparse);
-	
-	/*! set opp_6 */
-	void set_opp_6(int in_sparse);
-	
-	/*! set opp_p */
-	void set_opp_p(void);
+    /*! calculate divergence of transformed continuous viscous flux at solution points */
+    //void calc_div_tconvisf_upts(int in_div_tconinvf_upts_to);
 
     /*! advance with rk11 (forwards euler) */
     void advance_rk11(void);
@@ -267,16 +162,23 @@ public:
     // get number of peles_per_ele
     int get_n_peles_per_ele(void);
 
+    // get number of verts_per_ele
+    int get_n_verts_per_ele(void);
+
     /*! get number of solution points per element */
     int get_n_upts_per_ele(void);
 
     /*! get element type */
     int get_ele_type(void);
 
-  void get_plotq_ppts(int in_ele, array<double> &out_plotq_ppts, array<double>& plotq_pnodes);
+    /*! get number of dimensions */
+    int get_n_dims(void);
 
     /*! get number of fields */
     int get_n_fields(void);
+
+    /*! Get global element number*/
+    int get_ele_global(int in_ele);
 
     /*! set shape */
     void set_shape(int in_max_n_spts_per_ele);
@@ -292,9 +194,6 @@ public:
 
     /*! set number of shape points */
     void set_n_spts(int in_ele, int in_n_spts);
-
-	/*! setup for mesh motion */
-	void set_mesh_motion(void);
 
     /*!  set global element number */
     void set_ele2global_ele(int in_ele, int in_global_ele);
@@ -379,6 +278,8 @@ public:
 
     int* get_connectivity_plot_ptr();
 
+    array<int> get_connectivity_plot();
+
     void get_plotq_ppts(int in_ele, array<double> &out_plotq_ppts, array<double>& plotq_pnodes);
 
     /*! return the list of pnodes on face loc_f of cell ic_l */
@@ -413,12 +314,6 @@ public:
 
     /*! calculate second derivative of position */
     void calc_dd_pos(array<double> in_loc, int in_ele, array<double>& out_dd_pos);
-
-	/*! Get physical position (x,y,z) of shape points */
-	double *get_pos_spt(int in_ele, int in_spt);
-
-	/*! Get global element number*/
-	int get_ele_global(int in_ele);
 
     // #### virtual methods ####
 
@@ -463,6 +358,8 @@ public:
     /*! Calculate element volume */
     virtual double calc_ele_vol(double& detjac)=0;
 
+    virtual bool set_2D_StiffMat_ele(array<double> &stiffMat_ele, int ele_id) = 0;
+
     double compute_res_upts(int in_norm_type, int in_field);
 
     /*! calculate body forcing at solution points */
@@ -479,8 +376,7 @@ public:
     array<double> compute_error(int in_norm_type, double& time);
 
     array<double> get_pointwise_error(array<double>& sol, array<double>& grad_sol, array<double>& loc, double& time, int in_norm_type);
-    
-	virtual bool set_2D_StiffMat_ele(array<double> &stiffMat_ele, int ele_id) = 0;
+
 
 protected:
 
@@ -627,10 +523,22 @@ protected:
     /*! shape */
     array<double> shape;
 
+    /*!
+    Description: Mesh velocity at shape points \n
+    indexing: (in_ele)(in_spt, in_dim) \n
+    */
+    array< array<double> > vel_spts;
+
+    /*!
+    Description: Mesh velocity at flux points \n
+    indexing: (in_ele, in_fpt, in_dim) \n
+    */
+    array<double> vel_fpts;
+
     /*! temporary solution storage at a single solution point */
     array<double> temp_u;
 
-    /*! temporary solution gradient storage at a single solution point */
+    /*! temporary solution gradient storage */
     array<double> temp_grad_u;
 
     /*! Matrix of filter weights at solution points */
@@ -685,25 +593,11 @@ protected:
     */
     array< array<double> > disu_upts;
 
-    /*!
-    plot data at plot points
-    */
+    /*! plot data at plot points */
     array<int> ppt_to_pnode;
 
     /*! position at the plot points */
     array< array<double> > pos_ppts;
-
-	/*! 
-	Description: Mesh velocity at shape points \n
-	indexing: (in_ele)(in_spt, in_dim) \n
-	*/
-	array< array<double> > vel_spts;
-
-	/*! 
-	Description: Mesh velocity at flux points \n
-	indexing: (in_ele, in_fpt, in_dim) \n
-	*/
-	array<double> vel_fpts;
 
     /*!
     description: transformed discontinuous solution at the flux points \n
@@ -768,133 +662,133 @@ protected:
     array<double> dd_nodal_s_basis;
     // TODO: change naming (comments) to reflect reuse
 
-  #ifdef _GPU
-  cusparseHandle_t handle;
-  #endif 
+#ifdef _GPU
+    cusparseHandle_t handle;
+#endif
 
-	/*! operator to go from transformed discontinuous solution at the solution points to transformed discontinuous solution at the flux points */
-	array<double> opp_0;
-	array<double> opp_0_data;
-	array<int> opp_0_cols;
-	array<int> opp_0_b;
-	array<int> opp_0_e;
-	int opp_0_sparse;
+    /*! operator to go from transformed discontinuous solution at the solution points to transformed discontinuous solution at the flux points */
+    array<double> opp_0;
+    array<double> opp_0_data;
+    array<int> opp_0_cols;
+    array<int> opp_0_b;
+    array<int> opp_0_e;
+    int opp_0_sparse;
 
-  #ifdef _GPU
-  array<double> opp_0_ell_data;
-  array<int> opp_0_ell_indices;
-  int opp_0_nnz_per_row;
-  #endif
+#ifdef _GPU
+    array<double> opp_0_ell_data;
+    array<int> opp_0_ell_indices;
+    int opp_0_nnz_per_row;
+#endif
 
-	/*! operator to go from transformed discontinuous inviscid flux at the solution points to divergence of transformed discontinuous inviscid flux at the solution points */
-	array< array<double> > opp_1;
-	array< array<double> > opp_1_data;
-	array< array<int> > opp_1_cols;
-	array< array<int> > opp_1_b;
-	array< array<int> > opp_1_e;
-	int opp_1_sparse;
-  #ifdef _GPU
-  array< array<double> > opp_1_ell_data;
-  array< array<int> > opp_1_ell_indices;
-  array<int> opp_1_nnz_per_row;
-  #endif
-	
-	/*! operator to go from transformed discontinuous inviscid flux at the solution points to normal transformed discontinuous inviscid flux at the flux points */
-	array< array<double> > opp_2;
-	array< array<double> > opp_2_data;
-	array< array<int> > opp_2_cols;
-	array< array<int> > opp_2_b;
-	array< array<int> > opp_2_e;
-	int opp_2_sparse;
-  #ifdef _GPU
-  array< array<double> > opp_2_ell_data;
-  array< array<int> > opp_2_ell_indices;
-  array<int> opp_2_nnz_per_row;
-  #endif
-	
-	/*! operator to go from normal correction inviscid flux at the flux points to divergence of correction inviscid flux at the solution points*/
-	array<double> opp_3;
-	array<double> opp_3_data;
-	array<int> opp_3_cols;
-	array<int> opp_3_b;
-	array<int> opp_3_e;
-	int opp_3_sparse;
-  #ifdef _GPU
-  array<double> opp_3_ell_data;
-  array<int> opp_3_ell_indices;
-  int opp_3_nnz_per_row;
-  #endif
-	
-	/*! operator to go from transformed solution at solution points to transformed gradient of transformed solution at solution points */
-	array< array<double> >  opp_4;
-	array< array<double> >  opp_4_data;
-	array< array<int> > opp_4_cols;
-	array< array<int> > opp_4_b;
-	array< array<int> > opp_4_e;
-	int opp_4_sparse;
-  #ifdef _GPU
-  array< array<double> > opp_4_ell_data;
-  array< array<int> > opp_4_ell_indices;
-  array< int > opp_4_nnz_per_row;
-  #endif
-	
-	/*! operator to go from transformed solution at flux points to transformed gradient of transformed solution at solution points */
-	array< array<double> > opp_5;
-	array< array<double> > opp_5_data;
-	array< array<int> > opp_5_cols;
-	array< array<int> > opp_5_b;
-	array< array<int> > opp_5_e;
-	int opp_5_sparse;
-  #ifdef _GPU
-  array< array<double> > opp_5_ell_data;
-  array< array<int> > opp_5_ell_indices;
-  array<int> opp_5_nnz_per_row;
-  #endif
-	
-	/*! operator to go from transformed solution at solution points to transformed gradient of transformed solution at flux points */
-	array<double> opp_6;
-	array<double> opp_6_data;
-	array<int> opp_6_cols;
-	array<int> opp_6_b;
-	array<int> opp_6_e;
-	int opp_6_sparse;
-  #ifdef _GPU
-  array<double> opp_6_ell_data;
-  array<int> opp_6_ell_indices;
-  int opp_6_nnz_per_row;
-  #endif
-	
-	/*! operator to go from discontinuous solution at the solution points to discontinuous solution at the plot points */
-	array<double> opp_p;
+    /*! operator to go from transformed discontinuous inviscid flux at the solution points to divergence of transformed discontinuous inviscid flux at the solution points */
+    array< array<double> > opp_1;
+    array< array<double> > opp_1_data;
+    array< array<int> > opp_1_cols;
+    array< array<int> > opp_1_b;
+    array< array<int> > opp_1_e;
+    int opp_1_sparse;
+#ifdef _GPU
+    array< array<double> > opp_1_ell_data;
+    array< array<int> > opp_1_ell_indices;
+    array<int> opp_1_nnz_per_row;
+#endif
+
+    /*! operator to go from transformed discontinuous inviscid flux at the solution points to normal transformed discontinuous inviscid flux at the flux points */
+    array< array<double> > opp_2;
+    array< array<double> > opp_2_data;
+    array< array<int> > opp_2_cols;
+    array< array<int> > opp_2_b;
+    array< array<int> > opp_2_e;
+    int opp_2_sparse;
+#ifdef _GPU
+    array< array<double> > opp_2_ell_data;
+    array< array<int> > opp_2_ell_indices;
+    array<int> opp_2_nnz_per_row;
+#endif
+
+    /*! operator to go from normal correction inviscid flux at the flux points to divergence of correction inviscid flux at the solution points*/
+    array<double> opp_3;
+    array<double> opp_3_data;
+    array<int> opp_3_cols;
+    array<int> opp_3_b;
+    array<int> opp_3_e;
+    int opp_3_sparse;
+#ifdef _GPU
+    array<double> opp_3_ell_data;
+    array<int> opp_3_ell_indices;
+    int opp_3_nnz_per_row;
+#endif
+
+    /*! operator to go from transformed solution at solution points to transformed gradient of transformed solution at solution points */
+    array< array<double> >  opp_4;
+    array< array<double> >  opp_4_data;
+    array< array<int> > opp_4_cols;
+    array< array<int> > opp_4_b;
+    array< array<int> > opp_4_e;
+    int opp_4_sparse;
+#ifdef _GPU
+    array< array<double> > opp_4_ell_data;
+    array< array<int> > opp_4_ell_indices;
+    array< int > opp_4_nnz_per_row;
+#endif
+
+    /*! operator to go from transformed solution at flux points to transformed gradient of transformed solution at solution points */
+    array< array<double> > opp_5;
+    array< array<double> > opp_5_data;
+    array< array<int> > opp_5_cols;
+    array< array<int> > opp_5_b;
+    array< array<int> > opp_5_e;
+    int opp_5_sparse;
+#ifdef _GPU
+    array< array<double> > opp_5_ell_data;
+    array< array<int> > opp_5_ell_indices;
+    array<int> opp_5_nnz_per_row;
+#endif
+
+    /*! operator to go from transformed solution at solution points to transformed gradient of transformed solution at flux points */
+    array<double> opp_6;
+    array<double> opp_6_data;
+    array<int> opp_6_cols;
+    array<int> opp_6_b;
+    array<int> opp_6_e;
+    int opp_6_sparse;
+#ifdef _GPU
+    array<double> opp_6_ell_data;
+    array<int> opp_6_ell_indices;
+    int opp_6_nnz_per_row;
+#endif
+
+    /*! operator to go from discontinuous solution at the solution points to discontinuous solution at the plot points */
+    array<double> opp_p;
 
     array< array<double> > opp_inters_cubpts;
     array<double> opp_volume_cubpts;
 
-	/*! operator to go from discontinuous solution at the restart points to discontinuous solution at the solutoin points */
-	array<double> opp_r;
+    /*! operator to go from discontinuous solution at the restart points to discontinuous solution at the solutoin points */
+    array<double> opp_r;
 
-	/*! dimensions for blas calls */
-	int Arows, Acols;
-	int Brows, Bcols;
-	int Astride, Bstride, Cstride;
-	
-	/*! general settings for mkl sparse blas */
-	char matdescra[6];
-	
-	/*! transpose setting for mkl sparse blas */
-	char transa;
-	
-	/*! zero for mkl sparse blas */
-	double zero;
-	
-	/*! one for mkl sparse blas */
-	double one;
-	
-	/*! number of fields multiplied by number of elements */
-	int n_fields_mul_n_eles;
-	
-	/*! number of dimensions multiplied by number of solution points per element */
-	int n_dims_mul_n_upts_per_ele;
+    /*! dimensions for blas calls */
+    int Arows, Acols;
+    int Brows, Bcols;
+    int Astride, Bstride, Cstride;
+
+    /*! general settings for mkl sparse blas */
+    char matdescra[6];
+
+    /*! transpose setting for mkl sparse blas */
+    char transa;
+
+    /*! zero for mkl sparse blas */
+    double zero;
+
+    /*! one for mkl sparse blas */
+    double one;
+
+    /*! number of fields multiplied by number of elements */
+    int n_fields_mul_n_eles;
+
+    /*! number of dimensions multiplied by number of solution points per element */
+    int n_dims_mul_n_upts_per_ele;
 
     int rank;
 
