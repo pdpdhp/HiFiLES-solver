@@ -73,4 +73,6 @@ OTHER_FILES += \
     data/cubature_quad.dat \
     data/cubature_hexa.dat \
     data/cubature_1d.dat \
-    makefile.in
+    makefile.in \
+    GMSH_Element_Node_Ordering.txt \
+    TODO.txt

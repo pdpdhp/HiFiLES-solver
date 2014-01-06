@@ -1676,3 +1676,7 @@ double eles_tets::calc_ele_vol(double& detjac)
 	return vol;
 }
 
+bool eles_tets::set_2D_StiffMat_ele(array<double> &stiffMat_ele, int ele_id) {
+	cout << "Linear elasticity for tetrahedrons not yet implemented" << endl;
+	FatalError("Mesh Motion Failed");
+}

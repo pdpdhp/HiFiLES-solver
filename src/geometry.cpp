@@ -277,7 +277,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol) {
       local_c(i) = tris_count;
       FlowSol->mesh_eles_tris.set_n_spts(tris_count,c2n_v(i));
       FlowSol->mesh_eles_tris.set_ele2global_ele(tris_count,ic2icg(i));
-      
+
       for (int j=0;j<c2n_v(i);j++)
       {
         pos(0) = xv(c2v(i,j),0);
@@ -376,7 +376,17 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol) {
 		  FlowSol->mesh_eles(i)->set_transforms(in_run_type);
     }
   }
-  
+	
+	// ** Placeholder for misc mesh motion setup **
+	if (run_input.motion) {
+		if (FlowSol->rank==0) cout << "setting mesh motion parameters ... " << endl;
+		for(int i=0;i<FlowSol->n_ele_types;i++) {
+			if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
+				FlowSol->mesh_eles(i)->set_mesh_motion();
+			}
+		}
+	}
+
   // Set metrics at interface cubpts
 	if (FlowSol->rank==0) cout << "setting element transforms at interface cubpts ... " << endl;
 	for(int i=0;i<FlowSol->n_ele_types;i++) {

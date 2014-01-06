@@ -10,7 +10,10 @@
  * HiFiLES (High Fidelity Large Eddy Simulation).
  * Copyright (C) 2013 Aerospace Computing Laboratory.
  */
-
+// Just for the purpose of code highlighting
+#define _MPI
+#define _CPU
+// -----------------------------------------
 #include <iostream>
 #include <fstream>
 
@@ -163,7 +166,7 @@ int main(int argc, char *argv[]) {
     
     /*! Increase the iteration index. */
     i_steps++;
-    
+
     /////////////////////////////////////////////////
     /// Post-processing (visualization)
     /////////////////////////////////////////////////
@@ -214,6 +217,17 @@ int main(int argc, char *argv[]) {
     if(i_steps%FlowSol.restart_dump_freq==0) {
       write_restart(FlowSol.ini_iter+i_steps, &FlowSol);
     }
+
+	
+	/////////////////////////////////////////////////
+    /// Mesh Deformation
+    /////////////////////////////////////////////////
+    if (run_input.motion) {
+		/*! Steps:
+		1) 
+		*/
+		// mesh_deform(&FlowSol);
+	}
     
   }
   

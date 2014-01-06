@@ -10,7 +10,10 @@
  * HiFiLES (High Fidelity Large Eddy Simulation).
  * Copyright (C) 2013 Aerospace Computing Laboratory.
  */
-
+// Just for the purpose of code highlighting
+#define _MPI
+#define _CPU
+// -----------------------------------------
 #include <iostream>
 #include <iomanip>
 #include <cmath>
@@ -76,12 +79,13 @@ void eles::setup(int in_n_eles, int in_max_n_spts_per_ele, int in_run_type)
   if (n_eles!=0)
   {
 
-	order=run_input.order;
-	p_res=run_input.p_res;
-	viscous =run_input.viscous;
-  inters_cub_order = run_input.inters_cub_order;
-  volume_cub_order = run_input.volume_cub_order;
-  n_bdy_eles=0;
+      order=run_input.order;
+      p_res=run_input.p_res;
+      viscous =run_input.viscous;
+      motion = run_input.motion;
+      inters_cub_order = run_input.inters_cub_order;
+      volume_cub_order = run_input.volume_cub_order;
+      n_bdy_eles=0;
 
   // Initialize the element specific static members
   (*this).setup_ele_type_specific(in_run_type);
@@ -138,8 +142,8 @@ void eles::setup(int in_n_eles, int in_max_n_spts_per_ele, int in_run_type)
 			Hm.setup(n_upts_per_ele,n_dims);
 		}
 	}
-
-	set_shape(in_max_n_spts_per_ele);
+  
+  set_shape(in_max_n_spts_per_ele);
   ele2global_ele.setup(n_eles);
   bctype.setup(n_eles,n_inters_per_ele);
 
@@ -3222,6 +3226,27 @@ void eles::set_transforms(int in_run_type)
   } // if n_eles!=0
 }
 
+void eles::set_mesh_motion(void)
+{
+	// Setup arrays
+	vel_fpts.setup(n_eles,n_fpts_per_ele,n_dims);
+	vel_spts.setup(n_eles);
+	for (int i=0;i<n_eles; i++) {
+		vel_spts(i).setup(n_spts_per_ele(i),n_dims);
+	}
+
+	// Initialize to zero
+	for (int i=0; i<n_eles; i++) {
+		for (int j=0; j<n_fpts_per_ele; j++)
+			for (int k=0; k<n_dims; k++)
+				vel_fpts(i,j,k) = 0;
+		
+		for (int j=0; j<n_spts_per_ele(i); j++)
+			for (int k=0; k<n_dims; k++)
+				vel_spts(i)(j,k) = 0;
+	}
+}
+
 void eles::add_contribution_to_pnodes(array<double> &plotq_pnodes)
 {
 
@@ -3968,6 +3993,22 @@ void eles::calc_dd_pos(array<double> in_loc, int in_ele, array<double>& out_dd_p
 			}
 		}
 	}
+}
+
+/*! Get physical position (x,y,z) of shape points */
+double *eles::get_pos_spt(int in_ele, int in_spt) {
+	double *out_pos_spt;
+	out_pos_spt = new double[n_dims];
+
+	for (int i=0; i<n_dims; i++) {
+		out_pos_spt[i] = shape(i,in_spt,in_ele);
+	}
+
+	return out_pos_spt;
+}
+
+int eles::get_ele_global(int in_ele) {
+	return ele2global_ele(in_ele);
 }
 
 double eles::compute_res_upts(int in_norm_type, int in_field) {

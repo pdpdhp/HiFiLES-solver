@@ -10,7 +10,10 @@
  * HiFiLES (High Fidelity Large Eddy Simulation).
  * Copyright (C) 2013 Aerospace Computing Laboratory.
  */
-
+// Just for the purpose of code highlighting
+#define _MPI
+#define _CPU
+// -----------------------------------------
 #include <cmath>
 
 #include "../include/global.h"
@@ -326,6 +329,72 @@ void calc_visf_3d(array<double>& in_u, array<double>& in_grad_u, array<double>& 
     out_f(0,0) = -run_input.diff_coeff*in_grad_u(0,0);
     out_f(0,1) = -run_input.diff_coeff*in_grad_u(0,1);
     out_f(0,2) = -run_input.diff_coeff*in_grad_u(0,2);
+  }
+  else
+  {
+    FatalError("equation not recognized");
+  }
+}
+
+// Add additional ALE flux term due to mesh motion (2D)
+
+void calc_alef_2d(array<double>& in_u, array<double>& in_w, array<double>& out_f)
+{
+  if (run_input.equation==0) // Euler / N-S
+  {
+      double u_hat, v_hat;
+      u_hat = in_w(0);
+      v_hat = in_w(1);
+
+      out_f(1,0) -= in_u(1)*u_hat;
+      out_f(2,0) -= in_u(1)*v_hat;
+      out_f(3,0) -= in_u(3)*u_hat;
+
+      out_f(1,1) -= in_u(2)*u_hat;
+      out_f(2,1) -= in_u(2)*v_hat;
+      out_f(3,1) -= in_u(3)*v_hat;
+  }
+  else if (run_input.equation==1) // Advection-diffusion
+  {
+    out_f(0,0) -= in_w(0)*in_u(0);
+    out_f(0,1) -= in_w(1)*in_u(0);
+  }
+  else
+  {
+    FatalError("equation not recognized");
+  }
+}
+
+// Add additional ALE flux term due to mesh motion (3D)
+
+void calc_alef_3d(array<double>& in_u, array<double>& in_w, array<double>& out_f)
+{
+  if (run_input.equation==0) // Euler / N-S
+  {
+      double u_hat, v_hat, w_hat;
+      u_hat = in_w(0);
+      v_hat = in_w(1);
+      w_hat = in_w(2);
+
+      out_f(1,0) -= in_u(1)*u_hat;
+      out_f(2,0) -= in_u(1)*v_hat;
+      out_f(3,0) -= in_u(1)*w_hat;
+      out_f(4,0) -= in_u(4)*u_hat;
+
+      out_f(1,1) -= in_u(2)*u_hat;
+      out_f(2,1) -= in_u(2)*v_hat;
+      out_f(3,1) -= in_u(2)*w_hat;
+      out_f(4,1) -= in_u(4)*v_hat;
+
+      out_f(1,2) -= in_u(3)*u_hat;
+      out_f(2,2) -= in_u(3)*v_hat;
+      out_f(3,2) -= in_u(3)*w_hat;
+      out_f(4,2) -= in_u(4)*w_hat;
+  }
+  else if (run_input.equation==1) // Advection-diffusion
+  {
+    out_f(0,0) -= in_w(0)*in_u(0);
+    out_f(0,1) -= in_w(1)*in_u(0);
   }
   else
   {
