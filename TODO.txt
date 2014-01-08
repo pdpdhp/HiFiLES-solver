@@ -1,4 +1,5 @@
 COMPLETED:
+--Added ALE flux terms to flux.h
 --Added variable 'vel_spts' in eles
 --Added variable 'motion' in input
 --Added variable 'motion' in eles
@@ -15,12 +16,19 @@ COMPLETED:
 ------Loop over each element type & build matrix for those elements
 ----Function to build global stiffness matrix for all elements of all types (all 2D or 3D)
 
+--Created "mesh" class and relocated stiffness matrix routines to it
+--Added 'mesh Mesh' to HiFiLES.cpp; gets passed to GeoPreProcess
+
+
 TODO (Short Term):
+--Arrays & methods to get & store global spt index within each ele class
+----array<int> spt2global_spt, array<int> loc_spt2spt
 --Method to interpolate velocity at shape points to velocity at flux points
 ----For 2nd-order and higher elements, need to re-implement the loc_spts
     functions, since non-corner spts not neccessarily evenly spaced on faces
     (in (r,s,t) coordinates)
 --Finish this todo list
+--Organize the use of "Mesh" variable within GeoPreProcess (and eliminate redundant variables)
 
 TODO (Med Term):
 --Implement mesh deformation (linear elasticity) for just triangles

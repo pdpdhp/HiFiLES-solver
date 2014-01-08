@@ -132,6 +132,7 @@
     <ClInclude Include="..\include\linear_solvers_structure.hpp" />
     <ClInclude Include="..\include\macros.h" />
     <ClInclude Include="..\include\matrix_structure.hpp" />
+    <ClInclude Include="..\include\mesh.h" />
     <ClInclude Include="..\include\mpi_inters.h" />
     <ClInclude Include="..\include\output.h" />
     <ClInclude Include="..\include\parmetisbin.h" />

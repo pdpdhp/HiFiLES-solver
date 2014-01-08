@@ -174,6 +174,20 @@ void CSysMatrix::AddBlock(unsigned long block_i, unsigned long block_j, double *
 	}
 }
 
+void CSysMatrix::AddBlock(unsigned long block_i, unsigned long block_j, array<double> val_block) {
+	unsigned long iVar, jVar, index, step = 0;
+	
+	for (index = row_ptr[block_i]; index < row_ptr[block_i+1]; index++) {
+		step++;
+		if (col_ind[index] == block_j) {
+			for (iVar = 0; iVar < nVar; iVar++)
+				for (jVar = 0; jVar < nEqn; jVar++)
+					matrix[(row_ptr[block_i]+step-1)*nVar*nEqn+iVar*nEqn+jVar] += val_block(iVar,jVar);
+			break;
+		}
+	}
+}
+
 void CSysMatrix::SubtractBlock(unsigned long block_i, unsigned long block_j, double **val_block) {
 	unsigned long iVar, jVar, index, step = 0;
 	

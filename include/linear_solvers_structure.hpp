@@ -166,7 +166,7 @@ public:
    * \param[in] precond - object that defines preconditioner
    * \param[in] tol - tolerance with which to solve the system
    * \param[in] m - maximum size of the search subspace
-   * \param[in] monitoring - turn on priting residuals from solver to screen.
+   * \param[in] monitoring - turn on printing of residuals from solver to screen.
    */
   unsigned long FGMRES(const CSysVector & b, CSysVector & x, CMatrixVectorProduct & mat_vec,
                       CPreconditioner & precond, double tol,

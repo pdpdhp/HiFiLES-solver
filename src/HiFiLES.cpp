@@ -42,6 +42,7 @@ int main(int argc, char *argv[]) {
   clock_t init, final;                /*!< To control the time */
   struct solution FlowSol;            /*!< Main structure with the flow solution and geometry */
   ofstream write_force, write_stats;  /*!< Output files (forces and statistics) */
+  mesh Mesh;                          /*!< Store mesh details & perform mesh motion */
 
   /*! Check the command line input. */
   if (argc < 2) { cout << "ERROR: No input file specified ... " << endl; return(0); }
@@ -78,7 +79,7 @@ int main(int argc, char *argv[]) {
   SetInput(&FlowSol);
 
   /*! Read the mesh file from a file. */
-  GeoPreprocess(run_input.run_type, &FlowSol);
+  GeoPreprocess(run_input.run_type, &FlowSol, Mesh);
   
   InitSolution(&FlowSol);
   
@@ -226,7 +227,7 @@ int main(int argc, char *argv[]) {
 		/*! Steps:
 		1) 
 		*/
-		// mesh_deform(&FlowSol);
+		// Mesh.deform(&FlowSol);
 	}
     
   }

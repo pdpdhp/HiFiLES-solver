@@ -12,5 +12,11 @@
 # *.la
 # *.a
 
-# Other files
+# QT IDE files
 *.pro.user
+
+# MSVC IDE files
+*.sdf
+*.opensdf
+*.suo
+*.vcxproj.user

@@ -1053,6 +1053,11 @@ bool eles_tris::set_2D_StiffMat_ele(array<double> &stiffMat_ele, int ele_id) {
 					stiffMat_ele(iVar,jVar) += Area * Aux_Matrix[iVar][kVar]*B_Matrix[kVar][jVar];
 			}
 		}
+		
+        for (int i=0; i<n_spts; i++)
+            delete pos_spts[i];
+        delete [] pos_spts;
+
 		return true; 
 	}
 }

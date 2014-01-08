@@ -28,9 +28,11 @@
 #include <cmath>
 #include <cstdlib>
 
-#include "config_structure.hpp"
-#include "geometry_structure.hpp"
+//#include "config_structure.hpp"
+//#include "geometry_structure.hpp"
 #include "linear_solvers_structure.hpp"
+///////////////////////////
+#include "array.h"
 
 using namespace std;
 
@@ -137,6 +139,7 @@ public:
 	 * \param[in] **val_block - Block to add to A(i,j).
 	 */
 	void AddBlock(unsigned long block_i, unsigned long block_j, double **val_block);
+	void AddBlock(unsigned long block_i, unsigned long block_j, array<double> val_block);
   
 	/*!
 	 * \brief Subtracts the specified block to the sparse matrix.

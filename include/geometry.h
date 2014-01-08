@@ -25,6 +25,7 @@
 #include "int_inters.h"
 #include "bdy_inters.h"
 #include "solution.h"
+#include "mesh.h"
 
 #ifdef _MPI
 #include "mpi.h"
@@ -42,7 +43,7 @@ void SetInput(struct solution* FlowSol);
  * \param[in] in_run_type - Kind of run.
  * \param[in] FlowSol - Structure with the entire solution and mesh information.
  */
-void GeoPreprocess(int in_run_type, struct solution* FlowSol);
+void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh);
 
 void update_factor_pnodes(struct solution* FlowSol);
 

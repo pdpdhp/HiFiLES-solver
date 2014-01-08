@@ -85,6 +85,7 @@ public:
     /*! copy transformed discontinuous solution at solution points to gpu */
     void cp_disu_upts_cpu_gpu(void);
 
+	/*! copy transformed gradient of discontinuous solution at solution points from gpu to cpu */
     void cp_grad_disu_upts_gpu_cpu(void);
 
     /*! copy determinant of jacobian at solution points to cpu */
@@ -176,6 +177,9 @@ public:
 
     /*! get number of fields */
     int get_n_fields(void);
+
+	/*! get (x,y) position of shape point */
+	double *get_pos_spt(int in_ele, int in_spt) ;
 
     /*! Get global element number*/
     int get_ele_global(int in_ele);
@@ -499,7 +503,7 @@ protected:
     /*! location of plot points in standard element */
     array<double> loc_ppts;
 
-    /*! location of shape points in standard element (simplex elements only)*/
+    /*! location of shape points in standard element (r,s,t coords) (simplex elements only)*/
     array<double> loc_spts;
 
     /*! number of interfaces per element */
@@ -534,6 +538,12 @@ protected:
     indexing: (in_ele, in_fpt, in_dim) \n
     */
     array<double> vel_fpts;
+
+	/*! index of local (individual element) shape point to index of shape point within ele class (eles_tris, etc.) */
+	array<int> loc_spt2spt_ctype;
+
+	/*! index of shape point within ele class (eles_tris, etc.) to global index */
+	array<int> ctype_spt2global_spt;
 
     /*! temporary solution storage at a single solution point */
     array<double> temp_u;
