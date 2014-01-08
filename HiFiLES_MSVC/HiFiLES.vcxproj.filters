@@ -99,6 +99,12 @@
     <ClCompile Include="..\src\matrix_structure.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\mesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector_structure.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\src\cuda_kernels.cu">
@@ -139,6 +145,15 @@
     </None>
     <None Include="..\data\loc_tri_inter_pts.dat">
       <Filter>Data</Filter>
+    </None>
+    <None Include="..\include\linear_solvers_structure.inl">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="..\include\matrix_structure.inl">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="..\include\vector_structure.inl">
+      <Filter>Header Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -239,6 +254,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\vector_structure.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

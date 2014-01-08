@@ -86,10 +86,12 @@
     <ClCompile Include="..\src\int_inters.cpp" />
     <ClCompile Include="..\src\linear_solvers_structure.cpp" />
     <ClCompile Include="..\src\matrix_structure.cpp" />
+    <ClCompile Include="..\src\mesh.cpp" />
     <ClCompile Include="..\src\mesh_deform.cpp" />
     <ClCompile Include="..\src\mpi_inters.cpp" />
     <ClCompile Include="..\src\output.cpp" />
     <ClCompile Include="..\src\solver.cpp" />
+    <ClCompile Include="..\src\vector_structure.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\data\cubature_1d.dat" />
@@ -104,6 +106,9 @@
     <None Include="..\data\loc_tet_inter_pts_old.dat" />
     <None Include="..\data\loc_tri_alpha_pts.dat" />
     <None Include="..\data\loc_tri_inter_pts.dat" />
+    <None Include="..\include\linear_solvers_structure.inl" />
+    <None Include="..\include\matrix_structure.inl" />
+    <None Include="..\include\vector_structure.inl" />
     <None Include="..\src\cuda_kernels.cu" />
   </ItemGroup>
   <ItemGroup>
@@ -140,6 +145,7 @@
     <ClInclude Include="..\include\solution.h" />
     <ClInclude Include="..\include\solver.h" />
     <ClInclude Include="..\include\util.h" />
+    <ClInclude Include="..\include\vector_structure.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\TODO.txt" />
