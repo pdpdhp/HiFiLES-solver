@@ -48,6 +48,10 @@ Note that the email address should be the one associated with your GitHub accoun
 \begin{verbatim}
 git config --global credential.helper cache
 \end{verbatim}
+or
+\begin{verbatim}
+git config --global credential.helper "cache --timeout=3600"
+\end{verbatim}
 HiFiLES is currently under a private repository (this location will change if/when the code goes publicly open-source), and the main page for the project is located here: \url{https://github.com/fpalacios/HiFiLES}. The web interface is useful for viewing the recent commits to the code, changes to the code over time, or creating and viewing branches, for instance. To contribute to HiFiLES, an administrator for the project must add you as a member of the developer team with push and pull privileges (ask Francisco Palacios). 
 
 Most of the day-to-day development of the code will be done on your local machine at the command line using Git. After setting up Git and gaining access to the HiFiLES repository, create a local copy of the entire repository on your machine by cloning the version that is hosted on GitHub:
