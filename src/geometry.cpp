@@ -121,7 +121,7 @@ int get_bc_number(string& bcname) {
   return bcflag;
 }
 
-void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
+void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh* Mesh) {
   // ** TODO: clean up duplicate/redundant data here **
   array<double> xv;
   array<int> c2v,c2n_v,ctype,bctype_c,ic2icg,iv2ivg;
@@ -137,11 +137,13 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     FlowSol->ele_type = ctype;
   }
   // ** TODO: clean up duplicate/redundant data **
-  Mesh.c2v = c2v;
-  Mesh.c2n_v = c2n_v;
-  Mesh.xv = xv;
-  Mesh.iv2ivg = iv2ivg;
-  Mesh.ctype = ctype;
+  Mesh->c2v = c2v;
+  Mesh->c2n_v = c2n_v;
+  Mesh->xv = xv;
+  Mesh->iv2ivg = iv2ivg;
+  Mesh->ctype = ctype;
+  Mesh->n_eles = FlowSol->num_eles;
+  Mesh->n_verts = FlowSol->num_verts;
   
   /////////////////////////////////////////////////
   /// Set connectivity
@@ -190,9 +192,9 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     FlowSol->inter2ele = f2c;
   }
   // ** TODO: clean up duplicate/redundant data **
-  Mesh.c2f = c2f;
-  Mesh.c2e = c2e;
-  Mesh.f2c = f2c;
+  Mesh->c2f = c2f;
+  Mesh->c2e = c2e;
+  Mesh->f2c = f2c;
 
   /////////////////////////////////////////////////
   /// Initializing Elements

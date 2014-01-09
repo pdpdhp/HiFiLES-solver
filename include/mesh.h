@@ -58,17 +58,38 @@ public:
 	/** peform prescibed mesh motion using linear elasticity method*/
 	void deform(struct solution* FlowSol);
 
-	/** create individual-element stiffness matrix */
-	bool set_2D_StiffMat_ele(array<double> stiffMat_ele,int ele_id, solution *FlowSol);
+    /** create individual-element stiffness matrix - triangles */
+    // will I actually need the FlowSol variable for setting up the Stiffnexx Matrix?
+    bool set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
+
+    /** create individual-element stiffness matrix - triangles */
+    bool set_2D_StiffMat_ele_quad(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
+
+    /** create individual-element stiffness matrix - triangles */
+    bool set_2D_StiffMat_ele_tet(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
+
+    /** create individual-element stiffness matrix - triangles */
+    bool set_2D_StiffMat_ele_hex(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
 
 	// #### members ####
 	
+    int n_eles, v_verts;
+
 	/** arrays which define the basic mesh geometry */
 	array<double> xv;
 	array<int> c2v,c2n_v,ctype,bctype_c,ic2icg,iv2ivg;
 	array<int> f2c,f2loc_f,c2f,c2e,f2v,f2nv;
 	/** global stiffness matrix for linear-elasticity mesh motion */
-	array<double> StiffnessMatrix;
+    array<array<double> > stiff_mat;
+
+    /** enumeration for cell type */
+    enum CTYPE {
+        TRI = 0,
+        QUAD = 1,
+        TET = 2,
+        WEDGE = 3,
+        BRICK = 4
+    };
 
 	
 private:

@@ -14,6 +14,141 @@
 using namespace std;
 
 void mesh::deform(struct solution* FlowSol) {
+    array<double> stiff_mat_ele;
+
+    if (FlowSol->n_dims == 2) {
+        stiff_mat_ele.setup(6,6);
+    }else{
+        FatalError("3D Mesh motion not implemented yet!");
+    }
+
+    int block_i, block_j;
+    bool check;
+
+    stiff_mat.setup(n_eles);
+
+    for (int i=0; i<n_eles; i++) {
+        switch(ctype(i))
+        {
+        case TRI:
+            set_2D_StiffMat_ele_tri(stiff_mat(i),i,FlowSol);
+            break;
+        case QUAD:
+            set_2D_StiffMat_ele_quad(stiff_mat(i),i,FlowSol);
+            break;
+        default:
+            FatalError("Element type not yet supported for mesh motion - supported types are tris and quads");
+            break;
+        }
+    }
+
+    assemble_stiffness_matrix(); // will use stiff_mat to create StiffnessMatrix
+}
+
+bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id, solution *FlowSol) {
+    int index;
+
+    int n_spts = c2n_v(ele_id);
+
+    array<double> pos_spts;
+    pos_spts.setup(n_spts,n_dims);
+
+    for (int i=0; i<n_spts; i++) {
+        index = c2v(ele_id);
+        for (int j=0; j<n_dims; j++) {
+            pos_spts(i,j) = xv(index,j);
+        }
+    }
+
+    // ----------- Create single-element stiffness matrix ---------------
+    // Copied from SU2
+    unsigned short iDim, iVar, jVar, kVar;
+    double B_Matrix[6][12], BT_Matrix[12][6], D_Matrix[6][6], Aux_Matrix[12][6];
+    double a[3], b[3], c[3], Area, E, Mu, Lambda;
+
+    /*--- Initialize the element stuffness matrix to zero ---*/
+    for (iVar = 0; iVar < 6; iVar++)
+        for (jVar = 0; jVar < 6; jVar++)
+            stiffMat_ele(iVar,jVar) = 0.0;
+
+    for (iDim = 0; iDim < n_dims; iDim++) {
+        a[iDim] = pos_spts(0,iDim)-pos_spts(2,iDim);
+        b[iDim] = pos_spts(1,iDim)-pos_spts(2,iDim);
+    }
+
+    Area = 0.5*fabs(a[0]*b[1]-a[1]*b[0]);
+
+    if (Area < 0.0) {
+
+        /*--- The initial grid has degenerated elements ---*/
+        for (iVar = 0; iVar < 6; iVar++) {
+            for (jVar = 0; jVar < 6; jVar++) {
+                stiffMat_ele(iVar,jVar) = 0.0;
+            }
+        }
+        return false;
+    }else{
+
+        /*--- Each element uses their own stiffness which is inversely
+        proportional to the area/volume of the cell. Using Mu = E & Lambda = -E
+        is a modification to help allow rigid rotation of elements (see
+        "Robust Mesh Deformation using the Linear Elasticity Equations" by
+        R. P. Dwight. ---*/
+
+        E = 1.0 / Area * fabs(scale);
+        Mu = E;
+        Lambda = -E;
+
+        a[0] = 0.5 * (pos_spts(1,0)*pos_spts(2,1)-pos_spts(2,0)*pos_spts(1,1) / Area;
+        a[1] = 0.5 * (pos_spts(2,0)*pos_spts(0,1)-pos_spts(0,0)*pos_spts(2,1) / Area;
+        a[2] = 0.5 * (pos_spts(0,0)*pos_spts(1,1)-pos_spts(1,0)*pos_spts(0,1) / Area;
+
+         b[0] = 0.5 * (pos_spts(1,1)-pos_spts(2,1) / Area;
+        b[1] = 0.5 * (pos_spts(2,1)-pos_spts(0,1) / Area;
+        b[2] = 0.5 * (pos_spts(0,1)-pos_spts(1,1) / Area;
+
+        c[0] = 0.5 * (pos_spts(2,0)-pos_spts(1,0) / Area;
+        c[1] = 0.5 * (pos_spts(0,0)-pos_spts(2,0) / Area;
+        c[2] = 0.5 * (pos_spts(1,0)-pos_spts(0,0) / Area;
+
+        /*--- Compute the B Matrix ---*/
+        B_Matrix[0][0] = b[0];  B_Matrix[0][1] = 0.0;   B_Matrix[0][2] = b[1];  B_Matrix[0][3] = 0.0;   B_Matrix[0][4] = b[2];  B_Matrix[0][5] = 0.0;
+        B_Matrix[1][0] = 0.0;   B_Matrix[1][1] = c[0];  B_Matrix[1][2] = 0.0;   B_Matrix[1][3] = c[1];  B_Matrix[1][4] = 0.0;   B_Matrix[1][5] = c[2];
+        B_Matrix[2][0] = c[0];  B_Matrix[2][1] = b[0];  B_Matrix[2][2] = c[1];  B_Matrix[2][3] = b[1];  B_Matrix[2][4] = c[2];  B_Matrix[2][5] = b[2];
+
+        for (iVar = 0; iVar < 3; iVar++)
+            for (jVar = 0; jVar < 6; jVar++)
+                BT_Matrix[jVar][iVar] = B_Matrix[iVar][jVar];
+
+        /*--- Compute the D Matrix (for plane strain and 3-D)---*/
+        D_Matrix[0][0] = Lambda + 2.0*Mu;		D_Matrix[0][1] = Lambda;            D_Matrix[0][2] = 0.0;
+        D_Matrix[1][0] = Lambda;            D_Matrix[1][1] = Lambda + 2.0*Mu;   D_Matrix[1][2] = 0.0;
+        D_Matrix[2][0] = 0.0;               D_Matrix[2][1] = 0.0;               D_Matrix[2][2] = Mu;
+
+        /*--- Compute the BT.D Matrix ---*/
+        for (iVar = 0; iVar < 6; iVar++) {
+            for (jVar = 0; jVar < 3; jVar++) {
+                Aux_Matrix[iVar][jVar] = 0.0;
+                for (kVar = 0; kVar < 3; kVar++)
+                    Aux_Matrix[iVar][jVar] += BT_Matrix[iVar][kVar]*D_Matrix[kVar][jVar];
+            }
+        }
+
+        /*--- Compute the BT.D.B Matrix (stiffness matrix) ---*/
+        for (iVar = 0; iVar < 6; iVar++) {
+            for (jVar = 0; jVar < 6; jVar++) {
+                stiffMat_ele(iVar,jVar) = 0.0;
+                for (kVar = 0; kVar < 3; kVar++)
+                    stiffMat_ele(iVar,jVar) += Area * Aux_Matrix[iVar][kVar]*B_Matrix[kVar][jVar];
+            }
+        }
+
+        return true;
+    }
+}
+
+/// original try at the top-level structure, just hangin' around for reference
+void mesh_deform(struct solution* FlowSol) {
     //for(j=0; j<FlowSol.n_ele_types; j++) FlowSol.mesh_eles(j)->advance_rk11();
 
     // 1) Build Stiffness Matrix for each element

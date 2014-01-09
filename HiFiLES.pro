@@ -29,7 +29,12 @@ SOURCES += \
     src/bdy_inters.cpp \
     src/mesh_deform.cpp \
     src/matrix_structure.cpp \
-    src/linear_solvers_structure.cpp
+    src/linear_solvers_structure.cpp \
+    src/mesh.cpp \
+    src/vector_structure.cpp \
+    include/vector_structure.inl \
+    include/matrix_structure.inl \
+    include/linear_solvers_structure.inl
 
 HEADERS += \
     include/util.h \
@@ -63,7 +68,9 @@ HEADERS += \
     include/bdy_inters.h \
     include/array.h \
     include/matrix_structure.hpp \
-    include/linear_solvers_structure.hpp
+    include/linear_solvers_structure.hpp \
+    include/vector_structure.hpp \
+    include/mesh.h
 
 OTHER_FILES += \
     data/loc_tri_inter_pts.dat \
