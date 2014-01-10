@@ -566,3 +566,16 @@ void array<T>::initialize_to_zero()
         }
 
 }
+
+// Initialize values to <val>
+// NEW FUNCTION: used to initialize int, double and float types
+template <typename T>
+void array<T>::initialize_to_value(const T val)
+{
+
+        for(int i=0; i<dim_0*dim_1*dim_2*dim_3; i++)
+        {
+            cpu_data[i]=val;
+        }
+
+}

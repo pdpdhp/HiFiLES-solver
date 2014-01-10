@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
   SetInput(&FlowSol);
 
   /*! Read the mesh file from a file. */
-  GeoPreprocess(run_input.run_type, &FlowSol, Mesh);
+  GeoPreprocess(run_input.run_type, &FlowSol, &Mesh);
   
   InitSolution(&FlowSol);
   

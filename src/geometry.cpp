@@ -804,7 +804,7 @@ void ReadMesh(string& in_file_name, array<double>& out_xv, array<int>& out_c2v, 
   
   if (FlowSol->rank==0) cout << "reading vertices" << endl;
   
-  // Call method to create array iv2ivg and modify c2v using local vertex indices
+  // Call method to create array iv2ivg and modify c2v using local (to each processor) vertex indices
   array<int> iv2ivg;
   int n_verts;
   create_iv2ivg(iv2ivg,out_c2v,n_verts,out_n_cells);
@@ -1419,7 +1419,7 @@ void read_connectivity_gambit(string& in_file_name, int &out_n_cells, array<int>
   int kstart;
 #ifdef _MPI
 	// Assign a number of cells for each processor
-	out_n_cells = (int) ( (double)(n_cells_global)/(double)FlowSol->nproc);
+    out_n_cells = (int) ( (double)(n_cells_global)/(double)FlowSol->nproc );
   kstart = FlowSol->rank*out_n_cells;
   
   // Last processor has more cells
@@ -1433,12 +1433,17 @@ void read_connectivity_gambit(string& in_file_name, int &out_n_cells, array<int>
 #endif
   
 	//    c2n_v(i) is the number of nodes that define the element i
-	out_c2v.setup(out_n_cells,MAX_V_PER_C); // stores the vertices making that cell
-	out_c2n_v.setup(out_n_cells); // stores the number of nodes making that cell
-	out_ctype.setup(out_n_cells); // stores the type of cell
-  out_ic2icg.setup(out_n_cells);
+    out_c2v.setup(out_n_cells,MAX_V_PER_C);  // stores the global indices of the vertices making that cell
+    out_c2n_v.setup(out_n_cells);            // stores the number of nodes making that cell
+    out_ctype.setup(out_n_cells);            // stores the type of cell
+    out_ic2icg.setup(out_n_cells);           // stores the global index of the cell (id on processor -> id globally)
   
 	// Initialize arrays to -1
+    out_c2v.initialize_to_value(-1);
+    out_c2n_v.initialize_to_value(-1);
+    out_ctype.initialize_to_value(-1);
+    out_ic2icg.initialize_to_value(-1);
+    /*
 	for (int i=0;i<out_n_cells;i++) {
 		out_c2n_v(i)=-1;
     out_ctype(i) = -1;
@@ -1446,7 +1451,8 @@ void read_connectivity_gambit(string& in_file_name, int &out_n_cells, array<int>
 	  for (int k=0;k<MAX_V_PER_C;k++)
       out_c2v(i,k)=-1;
 	}
-  
+    */
+
   // Skip elements being read by other processors
   
   for (int i=0;i<kstart;i++) {
@@ -1457,7 +1463,7 @@ void read_connectivity_gambit(string& in_file_name, int &out_n_cells, array<int>
 		if (dummy2>21) mesh_file.getline(buf,BUFSIZ); // skip another line
 	}
   
-  // Each proc reads a block of elements
+  // Each processor reads a block of elements
   
 	// Start reading elements
 	for (int i=0;i<out_n_cells;i++)
@@ -2070,268 +2076,268 @@ void repartition_mesh(int &out_n_cells, array<int> &out_c2v, array<int> &out_c2n
 /*! method to create list of faces from the mesh */
 void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_ctype, array<int>& out_c2f, array<int>& out_c2e, array<int>& out_f2c, array<int>& out_f2loc_f, array<int>& out_f2v, array<int>& out_f2nv, array<int>& out_rot_tag, array<int>& out_unmatched_faces, int& out_n_unmatched_faces, array<int>& out_icvsta, array<int>& out_icvert, int& out_n_faces, int& out_n_edges, struct solution* FlowSol)
 {
-  
-	// inputs: 	in_c2v (clls to vertex) , in_ctype (type of cell)
-	// outputs:	f2c (face to cell), c2f (cell to face), f2loc_f (face to local face index of right and left cells), rot_tag,  n_faces (number of faces in the mesh)
-	// assumes that array f2c,f2f
-  
-	int sta_ind,end_ind;
-	int n_cells,n_verts;
-	int num_v_per_f,num_v_per_f2;
-	int iface, iface_old;
-	int found,rtag;
-	int pause;
-  
-	n_cells = in_c2v.get_dim(0);
-	n_verts = in_c2v.get_max()+1;
-  
-	//cout << "n_verts=" << n_verts << endl;
-	
-	//array<int> num_v_per_c(5); // for 5 element types
-	array<int> vlist_loc(MAX_V_PER_F),vlist_loc2(MAX_V_PER_F),vlist_glob(MAX_V_PER_F),vlist_glob2(MAX_V_PER_F); // faces cannot have more than 4 vertices
-  
-	array<int> ifill,idummy;
-  
-	// Number of vertices for different type of cells
-	//num_v_per_c(0) = 3; // tri
-	//num_v_per_c(1) = 4; // quads
-	//num_v_per_c(2) = 4; // tets
-	//num_v_per_c(3) = 6; // pris
-	//num_v_per_c(4) = 8; // hexas
-  
-	ifill.setup(n_verts);
-	idummy.setup(n_verts);
-	// Assumes there won't be more than X cells around 1 vertex
-	int max_cells_per_vert = 50;
-	out_icvert.setup(max_cells_per_vert*n_verts+1);
-	out_icvsta.setup(n_verts+1);
-  
-	// Initialize arrays to zero
-	for (int i=0;i<n_verts;i++) {
-		ifill(i) = 0;
-		idummy(i) = 0;
-		out_icvsta(i) = 0;
-	}
-  
-	out_icvsta(n_verts) = 0;
-	for (int i=0;i<max_cells_per_vert*n_verts+1;i++)
-		out_icvert(i) = 0;
-  
-	for(int i=0;i<MAX_V_PER_F;i++)
-		vlist_loc(i) = vlist_loc2(i) = vlist_glob(i) = vlist_glob2(i) = 0;
-  
-	// Compute how many cells share one node
-	for (int ic=0;ic<n_cells;ic++)
-	  //for(int k=0;k<num_v_per_c(in_ctype(ic));k++)
-	  for(int k=0;k<in_c2n_v(ic);k++)
- 	    ifill(in_c2v(ic,k))++;
-  
-	int k=0;
-	int max = 0;
-	for(int iv=0;iv<n_verts;iv++)
-	{
-      if (ifill(iv)>max)
-        max = ifill(iv);
-		
-      out_icvsta(iv) = k;
-      idummy(iv) = out_icvsta(iv);
-      k = k+ifill(iv);
-	}
-  
-	//cout << "Maximum number of cells who share same vertex = " << max << endl;
-	if (max>max_cells_per_vert)
-		FatalError("ERROR: some vertices are shared by more than max_cells_per_vert");
-  
-    out_icvsta(n_verts) = out_icvsta(n_verts-1)+ifill(n_verts-1);
-  
-    int iv,ic2,k2;
-	for(int ic=0;ic<n_cells;ic++)
-	{
-      //for(int k=0;k<num_v_per_c(in_ctype(ic));k++)
-      for(int k=0;k<in_c2n_v(ic);k++)
-      {
-        iv = in_c2v(ic,k);
-        out_icvert(idummy(iv)) = ic;
-        idummy(iv)++;
-      }
-	}
-  
-  out_n_edges=-1;
-  if (FlowSol->n_dims==3)
-  {
-    // Create array ic2e
-    array<int> num_e_per_c(5);
-    for (int i=0;i<n_cells;i++)
-      for (int j=0;j<MAX_E_PER_C;j++)
-        out_c2e(i,j) = -1;
-    
-      num_e_per_c(0) = 3;  // tri
-      num_e_per_c(1) = 4;  // quad
-      num_e_per_c(2) = 6;  // tet
-      num_e_per_c(3) = 9;  // wedge
-      num_e_per_c(4) = 12; // hex
-    
+
+    // inputs: 	in_c2v (clls to vertex) , in_ctype (type of cell)
+    // outputs:	f2c (face to cell), c2f (cell to face), f2loc_f (face to local face index of right and left cells), rot_tag,  n_faces (number of faces in the mesh)
+    // assumes that array f2c,f2f
+
+    int sta_ind,end_ind;
+    int n_cells,n_verts;
+    int num_v_per_f,num_v_per_f2;
+    int iface, iface_old;
+    int found,rtag;
+    int pause;
+
+    n_cells = in_c2v.get_dim(0);
+    n_verts = in_c2v.get_max()+1;
+
+    //cout << "n_verts=" << n_verts << endl;
+
+    //array<int> num_v_per_c(5); // for 5 element types
+    array<int> vlist_loc(MAX_V_PER_F),vlist_loc2(MAX_V_PER_F),vlist_glob(MAX_V_PER_F),vlist_glob2(MAX_V_PER_F); // faces cannot have more than 4 vertices
+
+    /*!
+     * vert2n_cells - vertex to # of cells touching that vertex;
+     * icvsta2 - copy of icvsta; icvsta(i) - first index in icvert corresponding to vertex i
+     * icvert - vertex to cells sharing vertex (1D array, though, hence icvsta & vert2n_cells)
+     */
+    array<int> vert2n_cells,icvsta2;
+
+    // Number of vertices for different type of cells
+    //num_v_per_c(0) = 3; // tri
+    //num_v_per_c(1) = 4; // quads
+    //num_v_per_c(2) = 4; // tets
+    //num_v_per_c(3) = 6; // pris
+    //num_v_per_c(4) = 8; // hexas
+
+    vert2n_cells.setup(n_verts);
+    icvsta2.setup(n_verts);
+    // Assumes there won't be more than X cells around 1 vertex
+    int max_cells_per_vert = 50;
+    out_icvert.setup(max_cells_per_vert*n_verts+1);
+    out_icvsta.setup(n_verts+1);
+
+    // Initialize arrays to zero
+    vert2n_cells.initialize_to_zero();
+    icvsta2.initialize_to_zero();
+    out_icvsta.initialize_to_zero();
+    out_icvert.initialize_to_zero();
+    vlist_loc.initialize_to_zero();
+    vlist_loc2.initialize_to_zero();
+    vlist_glob.initialize_to_zero();
+    vlist_glob2.initialize_to_zero();
+
+    // Compute how many cells share one node
     for (int ic=0;ic<n_cells;ic++)
+        for(int k=0;k<in_c2n_v(ic);k++)
+            vert2n_cells(in_c2v(ic,k))++;
+
+    int k=0;
+    int max = 0;
+    for(int iv=0;iv<n_verts;iv++)
     {
-      for(int k=0;k<num_e_per_c(in_ctype(ic));k++)
-      {
-        found = 0;
-	      if(out_c2e(ic,k) != -1) continue; // we have counted that face already
-        
-        out_n_edges++;
-        out_c2e(ic,k) = out_n_edges;
-        
-        get_vlist_loc_edge(in_ctype(ic),in_c2n_v(ic),k,vlist_loc);
-        for (int i=0;i<2;i++)
+        if (vert2n_cells(iv)>max)
+            max = vert2n_cells(iv);
+
+        out_icvsta(iv) = k;
+        icvsta2(iv) = k;
+        k += vert2n_cells(iv);
+    }
+
+    //cout << "Maximum number of cells who share same vertex = " << max << endl;
+    if (max>max_cells_per_vert)
+        FatalError("ERROR: some vertices are shared by more than max_cells_per_vert");
+
+    out_icvsta(n_verts) = out_icvsta(n_verts-1)+vert2n_cells(n_verts-1);
+
+    int iv,ic2,k2;
+    for(int ic=0;ic<n_cells;ic++)
+    {
+
+        for(int k=0;k<in_c2n_v(ic);k++)
         {
-          vlist_glob(i) = in_c2v(ic,vlist_loc(i));
+            iv = in_c2v(ic,k);
+            out_icvert(icvsta2(iv)) = ic;
+            icvsta2(iv)++;
         }
-        
-	      // loop over the cells touching vertex vlist_glob(0)
-	      sta_ind = out_icvsta(vlist_glob(0));
-	      end_ind = out_icvsta(vlist_glob(0)+1)-1;
-        
-	      for(int ind=sta_ind;ind<=end_ind;ind++)
-	      {
-		      int ic2 = out_icvert(ind);
-		      if(ic2==ic) continue; // ic2 is the same as ic1 so skip it
-          
-		      // Loop over edges of cell ic2 touching vertex vlist_glob(0)
-		      for(int k2=0;k2<num_e_per_c(in_ctype(ic2));k2++)
-		      {
-			      // Get local vertices of local face k2 of cell ic2
-			      get_vlist_loc_edge(in_ctype(ic2),in_c2n_v(ic),k2,vlist_loc2);
-            
-      		  // get global vertices corresponding to local vertices
-      		  for (int i2=0;i2<2;i2++)
-			    	  vlist_glob2(i2) = in_c2v(ic2,vlist_loc2(i2));
-            
-            if ( (vlist_glob(0)==vlist_glob2(0) && vlist_glob(1)==vlist_glob2(1)) ||
-                (vlist_glob(0)==vlist_glob2(1) && vlist_glob(1)==vlist_glob2(0)) )
+    }
+
+    out_n_edges=-1;
+    if (FlowSol->n_dims==3)
+    {
+        // Create array ic2e
+        array<int> num_e_per_c(5);
+        for (int i=0;i<n_cells;i++)
+            for (int j=0;j<MAX_E_PER_C;j++)
+                out_c2e(i,j) = -1;
+
+        num_e_per_c(0) = 3;  // tri
+        num_e_per_c(1) = 4;  // quad
+        num_e_per_c(2) = 6;  // tet
+        num_e_per_c(3) = 9;  // wedge
+        num_e_per_c(4) = 12; // hex
+
+        for (int ic=0;ic<n_cells;ic++)
+        {
+            for(int k=0;k<num_e_per_c(in_ctype(ic));k++)
             {
-              out_c2e(ic2,k2) = out_n_edges;
-            }
-		      }
-	      }
-      } // Loop over edges
-    } // Loop over cells
-    out_n_edges++;
-  } // if n_dims=3
-  
-	iface = 0;
-	out_n_unmatched_faces= 0;
-  
- 	// Loop over all the cells
-	for(int ic=0;ic<n_cells;ic++)
-	{
-    //Loop over all faces of that cell
-    for(int k=0;k< FlowSol->num_f_per_c(in_ctype(ic));k++)
+                found = 0;
+                if(out_c2e(ic,k) != -1) continue; // we have counted that face already
+
+                out_n_edges++;
+                out_c2e(ic,k) = out_n_edges;
+
+                get_vlist_loc_edge(in_ctype(ic),in_c2n_v(ic),k,vlist_loc);
+                for (int i=0;i<2;i++)
+                {
+                    vlist_glob(i) = in_c2v(ic,vlist_loc(i));
+                }
+
+                // loop over the cells touching vertex vlist_glob(0)
+                sta_ind = out_icvsta(vlist_glob(0));
+                end_ind = out_icvsta(vlist_glob(0)+1)-1;
+
+                for(int ind=sta_ind;ind<=end_ind;ind++)
+                {
+                    int ic2 = out_icvert(ind);
+                    if(ic2==ic) continue; // ic2 is the same as ic1 so skip it
+
+                    // Loop over edges of cell ic2 touching vertex vlist_glob(0)
+                    for(int k2=0;k2<num_e_per_c(in_ctype(ic2));k2++)
+                    {
+                        // Get local vertices of local face k2 of cell ic2
+                        get_vlist_loc_edge(in_ctype(ic2),in_c2n_v(ic),k2,vlist_loc2);
+
+                        // get global vertices corresponding to local vertices
+                        for (int i2=0;i2<2;i2++)
+                            vlist_glob2(i2) = in_c2v(ic2,vlist_loc2(i2));
+
+                        if ( (vlist_glob(0)==vlist_glob2(0) && vlist_glob(1)==vlist_glob2(1)) ||
+                             (vlist_glob(0)==vlist_glob2(1) && vlist_glob(1)==vlist_glob2(0)) )
+                        {
+                            out_c2e(ic2,k2) = out_n_edges;
+                        }
+                    }
+                }
+            } // Loop over edges
+        } // Loop over cells
+        out_n_edges++;
+    } // if n_dims=3
+
+    iface = 0;
+    out_n_unmatched_faces= 0;
+
+    // Loop over all the cells
+    for(int ic=0;ic<n_cells;ic++)
     {
-      found = 0;
-      iface_old = iface;
-      if(out_c2f(ic,k) != -1) continue; // we have counted that face already
-      
-      //cout << "ctype=" << in_ctype(ic) << "n_v=" << in_c2n_v(ic) << endl;
-      // Get local vertices of local face k of cell ic
-      //cout << "ic=" << ic << endl;
-      get_vlist_loc_face(in_ctype(ic),in_c2n_v(ic),k,vlist_loc,num_v_per_f);
-      
-      // get global vertices corresponding to local vertices
-      for(int i=0;i<num_v_per_f;i++)
-      {
-        vlist_glob(i) = in_c2v(ic,vlist_loc(i));
-      }
-      
-      // loop over the cells touching vertex vlist_glob(0)
-      sta_ind = out_icvsta(vlist_glob(0));
-      end_ind = out_icvsta(vlist_glob(0)+1)-1;
-      
-      for(int ind=sta_ind;ind<=end_ind;ind++)
-      {
-        ic2 = out_icvert(ind);
-        
-        if(ic2==ic) continue; // ic2 is the same as ic1 so skip it
-        
-        //cout << "ic2=" << ic2 << endl;
-        //cout << "ctype=" << in_ctype(ic2) << endl;
-        // Loop over faces of cell ic2 touching vertex vlist_glob(0)
-        for(k2=0;k2<FlowSol->num_f_per_c(in_ctype(ic2));k2++)
+        //Loop over all faces of that cell
+        for(int k=0;k< FlowSol->num_f_per_c(in_ctype(ic));k++)
         {
-          // Get local vertices of local face k2 of cell ic2
-          get_vlist_loc_face(in_ctype(ic2),in_c2n_v(ic2),k2,vlist_loc2,num_v_per_f2);
-          
-          if (num_v_per_f2==num_v_per_f)
-          {
+            found = 0;
+            iface_old = iface;
+            if(out_c2f(ic,k) != -1) continue; // we have counted that face already
+
+            //cout << "ctype=" << in_ctype(ic) << "n_v=" << in_c2n_v(ic) << endl;
+            // Get local vertices of local face k of cell ic
+            //cout << "ic=" << ic << endl;
+            get_vlist_loc_face(in_ctype(ic),in_c2n_v(ic),k,vlist_loc,num_v_per_f);
+
             // get global vertices corresponding to local vertices
-            for (int i2=0;i2<num_v_per_f2;i2++)
-              vlist_glob2(i2) = in_c2v(ic2,vlist_loc2(i2));
-            
-            // Compare the list of vertices
-            // If faces match returns 1
-            // For 3D SHOULD RETURN THE ORIENTATION OF FACE2 WRT FACE
-            compare_faces(vlist_glob,vlist_glob2,num_v_per_f,found,rtag);
-            
-            if (found==1) break;
-          }
-        }
-        
-        if (found==1) break;
-      }
-      
-      if(found==1)
-      {
-        out_c2f(ic2,k2) = iface;
-        
-        out_f2c(iface,0) = ic;
-        out_f2c(iface,1) = ic2;
-        
-        out_f2loc_f(iface,0) = k;
-        out_f2loc_f(iface,1) = k2;
-        
-        out_c2f(ic,k) = iface;
-        
-        for(int i=0;i<num_v_per_f;i++)
-          out_f2v(iface,i) = vlist_glob(i);
-        
-        out_f2nv(iface) = num_v_per_f;
-        out_rot_tag(iface) = rtag;
-        iface++;
-      }
-      else
-      {
-        // If loops over ic2 and k2 were unsuccesful, it means that face is not shared by two cells
-        // Then continue here and set f2c( ,1) = -1
-        if (out_f2c(iface_old+1,0)==-1)
-        {
-          out_f2c(iface,0) = ic;
-          out_f2c(iface,1) = -1;
-          
-          out_f2loc_f(iface,0) = k;
-          out_f2loc_f(iface,1) = -1;
-          
-          out_c2f(ic,k) = iface;
-          for(int i=0;i<num_v_per_f;i++)
-          {
-            out_f2v(iface,i) = vlist_glob(i);
-          }
-          
-          out_f2nv(iface) = num_v_per_f;
-          
-          
-          
-          
-          out_n_unmatched_faces++;
-          out_unmatched_faces(out_n_unmatched_faces-1) = iface;
-          
-          iface=iface_old+1;
-        }
-      }
-      
-    }	// end of loop over k
-  } // end of loop over ic
-  
-  out_n_faces = iface;
-  //cout << "n_faces = " << out_n_faces << endl;
+            for(int i=0;i<num_v_per_f;i++)
+            {
+                vlist_glob(i) = in_c2v(ic,vlist_loc(i));
+            }
+
+            // loop over the cells touching vertex vlist_glob(0)
+            sta_ind = out_icvsta(vlist_glob(0));
+            end_ind = out_icvsta(vlist_glob(0)+1)-1;
+
+            for(int ind=sta_ind;ind<=end_ind;ind++)
+            {
+                ic2 = out_icvert(ind);
+
+                if(ic2==ic) continue; // ic2 is the same as ic1 so skip it
+
+                //cout << "ic2=" << ic2 << endl;
+                //cout << "ctype=" << in_ctype(ic2) << endl;
+                // Loop over faces of cell ic2 touching vertex vlist_glob(0)
+                for(k2=0;k2<FlowSol->num_f_per_c(in_ctype(ic2));k2++)
+                {
+                    // Get local vertices of local face k2 of cell ic2
+                    get_vlist_loc_face(in_ctype(ic2),in_c2n_v(ic2),k2,vlist_loc2,num_v_per_f2);
+
+                    if (num_v_per_f2==num_v_per_f)
+                    {
+                        // get global vertices corresponding to local vertices
+                        for (int i2=0;i2<num_v_per_f2;i2++)
+                            vlist_glob2(i2) = in_c2v(ic2,vlist_loc2(i2));
+
+                        // Compare the list of vertices
+                        // If faces match returns 1
+                        // For 3D SHOULD RETURN THE ORIENTATION OF FACE2 WRT FACE
+                        compare_faces(vlist_glob,vlist_glob2,num_v_per_f,found,rtag);
+
+                        if (found==1) break;
+                    }
+                }
+
+                if (found==1) break;
+            }
+
+            if(found==1)
+            {
+                out_c2f(ic2,k2) = iface;
+
+                out_f2c(iface,0) = ic;
+                out_f2c(iface,1) = ic2;
+
+                out_f2loc_f(iface,0) = k;
+                out_f2loc_f(iface,1) = k2;
+
+                out_c2f(ic,k) = iface;
+
+                for(int i=0;i<num_v_per_f;i++)
+                    out_f2v(iface,i) = vlist_glob(i);
+
+                out_f2nv(iface) = num_v_per_f;
+                out_rot_tag(iface) = rtag;
+                iface++;
+            }
+            else
+            {
+                // If loops over ic2 and k2 were unsuccesful, it means that face is not shared by two cells
+                // Then continue here and set f2c( ,1) = -1
+                if (out_f2c(iface_old+1,0)==-1)
+                {
+                    out_f2c(iface,0) = ic;
+                    out_f2c(iface,1) = -1;
+
+                    out_f2loc_f(iface,0) = k;
+                    out_f2loc_f(iface,1) = -1;
+
+                    out_c2f(ic,k) = iface;
+                    for(int i=0;i<num_v_per_f;i++)
+                    {
+                        out_f2v(iface,i) = vlist_glob(i);
+                    }
+
+                    out_f2nv(iface) = num_v_per_f;
+
+
+
+
+                    out_n_unmatched_faces++;
+                    out_unmatched_faces(out_n_unmatched_faces-1) = iface;
+
+                    iface=iface_old+1;
+                }
+            }
+
+        }	// end of loop over k
+    } // end of loop over ic
+
+    out_n_faces = iface;
+    //cout << "n_faces = " << out_n_faces << endl;
 }
 
 
