@@ -33,6 +33,7 @@
 #include "linear_solvers_structure.hpp"
 ///////////////////////////
 #include "array.h"
+#include "mesh.h"
 
 using namespace std;
 

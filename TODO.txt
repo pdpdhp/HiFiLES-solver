@@ -19,6 +19,7 @@ COMPLETED:
 --Created "mesh" class and relocated stiffness matrix routines to it
 --Added 'mesh Mesh' to HiFiLES.cpp; gets passed to GeoPreProcess
 
+################################################################################################
 
 TODO (Short Term):
 --Arrays & methods to get & store global spt index within each ele class
@@ -41,9 +42,18 @@ TODO (Long Term):
 ----Will it possibly involve converting quads to tris?
 --Implement mesh deformation for 3D
 
-
+################################################################################################
 
 SU2 Mesh Deformation Notes
 --trunk/common/src/grid_movement_structure.cpp
 ----SetFEA_StiffMatrix2D   (Setup matrix for linear system)
 ----SetVolume_Deformation  (Solve the linear system and update grid)
+
+################################################################################################
+
+THOUGHTS
+--In CompConnectivity(...) and such, replace the gigantic list of things passed in & out with
+  just '&Mesh'?  For applicable variables (most of them).
+--How much more (than I currently expect) will need to be stored in 'Mesh' to update all the
+  metric information which is normally setup just once?  Might as well just store ALL mesh /
+  connectivity info in Mesh? (and remove applicable duplicates from geo.cpp?)

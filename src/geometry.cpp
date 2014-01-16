@@ -10,7 +10,9 @@
  * HiFiLES (High Fidelity Large Eddy Simulation).
  * Copyright (C) 2013 Aerospace Computing Laboratory.
  */
-
+// Just for the purpose of code highlighting
+#define _MPI
+#define _CPU
 #include <iostream>
 #include <sstream>
 #include <cmath>
@@ -126,7 +128,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh* Mesh) {
   array<double> xv;
   array<int> c2v,c2n_v,ctype,bctype_c,ic2icg,iv2ivg;
   
-  /*! Reading vertices and cells. */
+  /*! Reading vertices and cells, and partition mesh across processors. */
   ReadMesh(run_input.mesh_file, xv, c2v, c2n_v, ctype, ic2icg, iv2ivg, FlowSol->num_eles, FlowSol->num_verts, FlowSol);
   
   if (in_run_type==1) // Plotting mode
@@ -150,7 +152,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh* Mesh) {
   /////////////////////////////////////////////////
 	
 	// ** TODO: clean up duplicate/redundant data **
-	array<int> f2c,f2loc_f,c2f,c2e,f2v,f2nv;
+    array<int> f2c,f2loc_f,c2f,c2e,f2v,f2nv;
 	array<int> rot_tag,unmatched_inters;
 	int n_unmatched_inters;
   
@@ -165,7 +167,9 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh* Mesh) {
     c2e.setup(FlowSol->num_eles,MAX_E_PER_C); // one cell cannot have more than 12 edges
 	rot_tag.setup(max_inters);
 	unmatched_inters.setup(max_inters);
-  
+
+    Mesh->v2n_e.setup(Mesh->n_verts);
+
 	// Initialize arrays to -1
 	for (int i=0;i<max_inters;i++) {
 		f2c(i,0) = f2c(i,1) = -1;
@@ -179,7 +183,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh* Mesh) {
   array<int> icvsta, icvert;
   
   // Compute connectivity
-	CompConnectivity(c2v, c2n_v, ctype, c2f, c2e, f2c, f2loc_f, f2v, f2nv, rot_tag, unmatched_inters, n_unmatched_inters, icvsta, icvert, FlowSol->num_inters, FlowSol->num_edges, FlowSol);
+    CompConnectivity(c2v, c2n_v, ctype, c2f, c2e, f2c, f2loc_f, f2v, f2nv, Mesh->e2v, Mesh->v2n_e, Mesh->v2e, rot_tag, unmatched_inters, n_unmatched_inters, icvsta, icvert, FlowSol->num_inters, FlowSol->num_edges, FlowSol);
   
   // Reading boundaries
   ReadBound(run_input.mesh_file,c2v,c2n_v,ctype,bctype_c,ic2icg,icvsta,icvert,iv2ivg,FlowSol->num_eles,FlowSol->num_verts, FlowSol);
@@ -195,6 +199,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh* Mesh) {
   Mesh->c2f = c2f;
   Mesh->c2e = c2e;
   Mesh->f2c = f2c;
+  Mesh->f2n_v = f2nv;
 
   /////////////////////////////////////////////////
   /// Initializing Elements
@@ -2073,10 +2078,15 @@ void repartition_mesh(int &out_n_cells, array<int> &out_c2v, array<int> &out_c2n
 
 #endif
 
-/*! method to create list of faces from the mesh */
-void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_ctype, array<int>& out_c2f, array<int>& out_c2e, array<int>& out_f2c, array<int>& out_f2loc_f, array<int>& out_f2v, array<int>& out_f2nv, array<int>& out_rot_tag, array<int>& out_unmatched_faces, int& out_n_unmatched_faces, array<int>& out_icvsta, array<int>& out_icvert, int& out_n_faces, int& out_n_edges, struct solution* FlowSol)
+/*! method to create list of faces & edges from the mesh */
+void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_ctype, array<int>& out_c2f, array<int>& out_c2e,
+                      array<int>& out_f2c, array<int>& out_f2loc_f, array<int>& out_f2v, array<int>& out_f2nv,
+                      vector<int>& e2v, array<int>& out_v2n_e, vector<vector<int> >& v2e,
+                      array<int>& out_rot_tag, array<int>& out_unmatched_faces, int& out_n_unmatched_faces,
+                      array<int>& out_icvsta, array<int>& out_icvert, int& out_n_faces, int& out_n_edges,
+                      struct solution* FlowSol)
 {
-
+/*array<int>& out_e2v, array<int>& out_v2n_e, array<int>& out_v2e,*/
     // inputs: 	in_c2v (clls to vertex) , in_ctype (type of cell)
     // outputs:	f2c (face to cell), c2f (cell to face), f2loc_f (face to local face index of right and left cells), rot_tag,  n_faces (number of faces in the mesh)
     // assumes that array f2c,f2f
@@ -2166,11 +2176,11 @@ void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c
     if (FlowSol->n_dims==3)
     {
         // Create array ic2e
+        out_c2e.initialize_to_value(-1);
+        //vector<int> e2v;
+        //vector<vector<int> > v2e;
+        v2e.reserve(n_verts);
         array<int> num_e_per_c(5);
-        for (int i=0;i<n_cells;i++)
-            for (int j=0;j<MAX_E_PER_C;j++)
-                out_c2e(i,j) = -1;
-
         num_e_per_c(0) = 3;  // tri
         num_e_per_c(1) = 4;  // quad
         num_e_per_c(2) = 6;  // tet
@@ -2182,15 +2192,24 @@ void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c
             for(int k=0;k<num_e_per_c(in_ctype(ic));k++)
             {
                 found = 0;
-                if(out_c2e(ic,k) != -1) continue; // we have counted that face already
+                if(out_c2e(ic,k) != -1) continue; // we have counted that edge already
 
                 out_n_edges++;
                 out_c2e(ic,k) = out_n_edges;
 
+                // Get global indices of points on this edge
                 get_vlist_loc_edge(in_ctype(ic),in_c2n_v(ic),k,vlist_loc);
                 for (int i=0;i<2;i++)
                 {
                     vlist_glob(i) = in_c2v(ic,vlist_loc(i));
+
+                    // ** NEW ** edge_2_vertices, vertex_2_edges
+                    int iv = vlist_glob(i);
+                    e2v.push_back(iv);
+                    v2e[iv].push_back(out_n_edges);
+                    //out_e2v(out_n_edges,i) = iv;
+                    //out_v2e(iv,out_v2n_e(iv)) = out_n_edges;
+                    out_v2n_e(iv)++;
                 }
 
                 // loop over the cells touching vertex vlist_glob(0)
@@ -2205,7 +2224,7 @@ void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c
                     // Loop over edges of cell ic2 touching vertex vlist_glob(0)
                     for(int k2=0;k2<num_e_per_c(in_ctype(ic2));k2++)
                     {
-                        // Get local vertices of local face k2 of cell ic2
+                        // Get local vertices of local edge k2 of cell ic2
                         get_vlist_loc_edge(in_ctype(ic2),in_c2n_v(ic),k2,vlist_loc2);
 
                         // get global vertices corresponding to local vertices
@@ -2222,6 +2241,14 @@ void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c
             } // Loop over edges
         } // Loop over cells
         out_n_edges++;
+
+        // consider reversing for better CPU cache performance
+        /*out_e2v.setup(out_n_edges,2);
+        for (int ie=0; ie<out_n_edges; ie++) {
+            out_e2v(ie,0) = e2v[2*ie];
+            out_e2v(ie,1) = e2v[2*ie+1];
+        }*/
+
     } // if n_dims=3
 
     iface = 0;

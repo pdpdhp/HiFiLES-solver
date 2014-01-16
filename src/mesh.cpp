@@ -45,6 +45,7 @@ void mesh::deform(struct solution* FlowSol) {
     assemble_stiffness_matrix(); // will use stiff_mat to create StiffnessMatrix
 }
 
+/*! set individual-element stiffness matrix for a triangle */
 bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id, solution *FlowSol) {
     int index;
 
@@ -103,7 +104,7 @@ bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id, solut
         a[1] = 0.5 * (pos_spts(2,0)*pos_spts(0,1)-pos_spts(0,0)*pos_spts(2,1) / Area;
         a[2] = 0.5 * (pos_spts(0,0)*pos_spts(1,1)-pos_spts(1,0)*pos_spts(0,1) / Area;
 
-         b[0] = 0.5 * (pos_spts(1,1)-pos_spts(2,1) / Area;
+        b[0] = 0.5 * (pos_spts(1,1)-pos_spts(2,1) / Area;
         b[1] = 0.5 * (pos_spts(2,1)-pos_spts(0,1) / Area;
         b[2] = 0.5 * (pos_spts(0,1)-pos_spts(1,1) / Area;
 
@@ -147,64 +148,65 @@ bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id, solut
     }
 }
 
-void CVolumetricMovement::AddFEA_StiffMatrix2D(CGeometry *geometry, array<double> StiffMatrix_Elem, unsigned long val_Point_0,
-                                               unsigned long val_Point_1, unsigned long val_Point_2) {
-    unsigned short iVar, jVar;
-    unsigned short nVar = geometry->GetnDim();
+/*! set individual-element stiffness matrix for a quadrilateral */
+bool mesh::set_2D_StiffMat_ele_quad(array<double> &stiffMat_ele,int ele_id, solution *FlowSol) {
+    FatalError("ERROR: Sorry, mesh motion on quads not yet implemented.  :( ");
+}
+
+/*!
+ * Transform element-defined stiffness matrix into node-base stiffness matrix for inclusion
+ * into global stiffness matrix 'StiffMatrix'
+ */
+void mesh::Add_EleTri_StiffMat(array<double> StiffMatrix_Elem, int id_pt_0,
+                                               int id_pt_1, int id_pt_2) {
+    unsigned short nVar = n_dims;
+
+    // Transform local -> global node ID
+    id_pt_0 = iv2ivg(id_pt_0);
+    id_pt_1 = iv2ivg(id_pt_1);
+    id_pt_2 = iv2ivg(id_pt_1);
 
     array<double> StiffMatrix_Node;
     StiffMatrix_Node.setup(nVar,nVar);
     StiffMatrix_Node.initialize_to_zero();
 
-    for (iVar = 0; iVar < nVar; iVar++)
-        for (jVar = 0; jVar < nVar; jVar++)
-            StiffMatrix_Node[iVar][jVar] = 0.0;
-
-
     /*--- Transform the stiffness matrix for the triangular element into the
    contributions for the individual nodes relative to each other. ---*/
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(0,0);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(0,1);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(1,0);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(1,1);
-    StiffMatrix.AddBlock(val_Point_0, val_Point_0, StiffMatrix_Node);
+    StiffMatrix.AddBlock(id_pt_0, id_pt_0, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(0,2);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(0,3);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(1,2);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(1,3);
-    StiffMatrix.AddBlock(val_Point_0, val_Point_1, StiffMatrix_Node);
+    StiffMatrix.AddBlock(id_pt_0, id_pt_1, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(0,4);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(0,5);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(1,4);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(1,5);
-    StiffMatrix.AddBlock(val_Point_0, val_Point_2, StiffMatrix_Node);
+    StiffMatrix.AddBlock(id_pt_0, id_pt_2, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(2,0);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(2,1);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(3,0);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(3,1);
-    StiffMatrix.AddBlock(val_Point_1, val_Point_0, StiffMatrix_Node);
+    StiffMatrix.AddBlock(id_pt_1, id_pt_0, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(2,2);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(2,3);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(3,2);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(3,3);
-    StiffMatrix.AddBlock(val_Point_1, val_Point_1, StiffMatrix_Node);
+    StiffMatrix.AddBlock(id_pt_1, id_pt_1, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(2,4);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(2,5);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(3,4);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(3,5);
-    StiffMatrix.AddBlock(val_Point_1, val_Point_2, StiffMatrix_Node);
+    StiffMatrix.AddBlock(id_pt_1, id_pt_2, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(4,0);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(4,1);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(5,0);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(5,1);
-    StiffMatrix.AddBlock(val_Point_2, val_Point_0, StiffMatrix_Node);
+    StiffMatrix.AddBlock(id_pt_2, id_pt_0, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(4,2);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(4,3);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(5,2);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(5,3);
-    StiffMatrix.AddBlock(val_Point_2, val_Point_1, StiffMatrix_Node);
+    StiffMatrix.AddBlock(id_pt_2, id_pt_1, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(4,4);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(4,5);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(5,4);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(5,5);
-    StiffMatrix.AddBlock(val_Point_2, val_Point_2, StiffMatrix_Node);
-
-
-    /*--- Deallocate memory and exit ---*/
-    for (iVar = 0; iVar < nVar; iVar++)
-        delete StiffMatrix_Node[iVar];
-    delete [] StiffMatrix_Node;
-
+    StiffnessMatrix.AddBlock(id_pt_2, id_pt_2, StiffMatrix_Node);
 }
 
 /// original try at the top-level structure, just hangin' around for reference

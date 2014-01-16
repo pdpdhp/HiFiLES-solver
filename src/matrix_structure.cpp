@@ -31,53 +31,63 @@ CSysMatrix::CSysMatrix(void) {
 	col_ind           = NULL;
 	block             = NULL;
 	prod_block_vector = NULL;
-	prod_row_vector   = NULL;
-	aux_vector        = NULL;
-  invM              = NULL;
-  LineletBool       = NULL;
-  LineletPoint      = NULL;
+    prod_row_vector   = NULL;
+    aux_vector        = NULL;
+    invM              = NULL;
+    LineletBool       = NULL;
+    LineletPoint      = NULL;
   
 }
 
 CSysMatrix::~CSysMatrix(void) {
-  
-	if (matrix != NULL)             delete [] matrix;
-	if (row_ptr != NULL)            delete [] row_ptr;
-	if (col_ind != NULL)            delete [] col_ind;
-	if (block != NULL)              delete [] block;
-	if (prod_block_vector != NULL)  delete [] prod_block_vector;
-	if (prod_row_vector != NULL)    delete [] prod_row_vector;
-	if (aux_vector != NULL)         delete [] aux_vector;
-  if (invM != NULL)               delete [] invM;
-  if (LineletBool != NULL)        delete [] LineletBool;
-  if (LineletPoint != NULL)       delete [] LineletPoint;
+
+    if (matrix != NULL)             delete [] matrix;
+    if (row_ptr != NULL)            delete [] row_ptr;
+    if (col_ind != NULL)            delete [] col_ind;
+    if (block != NULL)              delete [] block;
+    if (prod_block_vector != NULL)  delete [] prod_block_vector;
+    if (prod_row_vector != NULL)    delete [] prod_row_vector;
+    if (aux_vector != NULL)         delete [] aux_vector;
+    if (invM != NULL)               delete [] invM;
+    if (LineletBool != NULL)        delete [] LineletBool;
+    if (LineletPoint != NULL)       delete [] LineletPoint;
   
 }
 
-void CSysMatrix::Initialize(unsigned long nPoint, unsigned long nPointDomain, unsigned short nVar, unsigned short nEqn, CGeometry *geometry) {
+void CSysMatrix::Initialize(mesh &Mesh) {
 	unsigned long iPoint, *row_ptr, *col_ind, *vneighs, index, nnz;
-	unsigned short iNeigh, nNeigh, Max_nNeigh;
-  
+    unsigned short iNeigh, nNeigh, Max_nNeigh, iEdge;
+
+    nPoint = Mesh->n_verts;
+    nVar = Mesh->n_dims;
+    nEqn = Mesh->n_dims;
+
 	/*--- Don't delete *row_ptr, *col_ind because they are asigned to the Jacobian structure. ---*/
 	row_ptr = new unsigned long [nPoint+1];
 	row_ptr[0] = 0;
 	for (iPoint = 0; iPoint < nPoint; iPoint++)
-		row_ptr[iPoint+1] = row_ptr[iPoint]+(geometry->node[iPoint]->GetnPoint()+1); // +1 -> to include diagonal element
+        row_ptr[iPoint+1] = row_ptr[iPoint]+(Mesh->v2n_e(iPoint)+1); // +1 -> to include diagonal element
 	nnz = row_ptr[nPoint];
   
 	col_ind = new unsigned long [nnz];
   
-  Max_nNeigh = 0;
-  for (iPoint = 0; iPoint < nPoint; iPoint++) {
-		nNeigh = geometry->node[iPoint]->GetnPoint();
-    if (nNeigh > Max_nNeigh) Max_nNeigh = nNeigh;
-  }
+    Max_nNeigh = 0;
+    for (iPoint = 0; iPoint < nPoint; iPoint++) {
+        nNeigh = Mesh->v2n_e(iPoint);
+        if (nNeigh > Max_nNeigh) Max_nNeigh = nNeigh;
+    }
 	vneighs = new unsigned long [Max_nNeigh+1]; // +1 -> to include diagonal
   
 	for (iPoint = 0; iPoint < nPoint; iPoint++) {
-		nNeigh = geometry->node[iPoint]->GetnPoint();
-		for (iNeigh = 0; iNeigh < nNeigh; iNeigh++)
-			vneighs[iNeigh] = geometry->node[iPoint]->GetPoint(iNeigh);
+        nNeigh = Mesh->v2n_e(iPoint);
+        for (iNeigh = 0; iNeigh < nNeigh; iNeigh++) {
+            iEdge = Mesh->v2e(iPoint,iNeigh);
+            if (Mesh->e2v(iEdge,0) == iPoint) {
+                vneighs[iNeigh] = Mesh->e2v(iEdge,1);
+            }else{
+                vneighs[iNeigh] = Mesh->e2v(iEdge,0);
+            }
+        }
 		vneighs[nNeigh] = iPoint;
 		sort(vneighs,vneighs+nNeigh+1);
 		index = row_ptr[iPoint];
@@ -87,32 +97,40 @@ void CSysMatrix::Initialize(unsigned long nPoint, unsigned long nPointDomain, un
 		}
 	}
   
-  /*--- Set the indices in the in the sparce matrix structure ---*/
-	SetIndexes(nPoint, nPointDomain, nVar, nEqn, row_ptr, col_ind, nnz);
+    /*--- Set the indices in the in the sparce matrix structure ---*/
+    SetIndexes(row_ptr, col_ind, nnz, Mesh);
   
-  /*--- Initialization to zero ---*/
-  SetValZero();
+    /*--- Initialization to zero ---*/
+    SetValZero();
   
 	delete[] vneighs;
 }
 
-void CSysMatrix::SetIndexes(unsigned long val_nPoint, unsigned long val_nPointDomain, unsigned short val_nVar, unsigned short val_nEq, unsigned long* val_row_ptr, unsigned long* val_col_ind, unsigned long val_nnz) {
+void CSysMatrix::SetIndexes(unsigned long* val_row_ptr, unsigned long* val_col_ind, unsigned long val_nnz, mesh &Mesh) {
   
-	nPoint = val_nPoint;              // Assign number of points in the mesh
-	nPointDomain = val_nPointDomain;  // Assign number of points in the mesh
-	nVar = val_nVar;                  // Assign number of vars in each block system
-	nEqn = val_nEq;                   // Assign number of eqns in each block system
+    nPoint = Mesh->n_verts;              // Assign number of points in the mesh
+    nPointDomain = Mesh->n_verts_global;  // Assign number of points in the mesh
+    nVar = Mesh->n_dims;                  // Assign number of vars in each block system
+    nEqn = Mesh->n_dims;                   // Assign number of eqns in each block system
 	nnz = val_nnz;                    // Assign number of possible non zero blocks
 	row_ptr = val_row_ptr;
 	col_ind = val_col_ind;
 	
-	matrix = new double [nnz*nVar*nEqn];	// Reserve memory for the values of the matrix
-	block = new double [nVar*nEqn];
-	prod_block_vector = new double [nEqn];
-	prod_row_vector = new double [nVar];
-	aux_vector = new double [nVar];
-	
-  invM = new double [nPoint*nVar*nEqn];	// Reserve memory for the values of the inverse of the preconditioner
+    matrix            = new double [nnz*nVar*nEqn];	// Reserve memory for the values of the matrix
+    block             = new double [nVar*nEqn];
+    prod_block_vector = new double [nEqn];
+    prod_row_vector   = new double [nVar];
+    aux_vector        = new double [nVar];
+    invM              = new double [nPoint*nVar*nEqn];	// Reserve memory for the values of the inverse of the preconditioner
+
+    /*--- Memory initialization ---*/
+    unsigned long iVar;
+    for (iVar = 0; iVar < nnz*nVar*nEqn; iVar++)    matrix[iVar] = 0.0;
+    for (iVar = 0; iVar < nVar*nEqn; iVar++)        block[iVar] = 0.0;
+    for (iVar = 0; iVar < nEqn; iVar++)             prod_block_vector[iVar] = 0.0;
+    for (iVar = 0; iVar < nVar; iVar++)             prod_row_vector[iVar] = 0.0;
+    for (iVar = 0; iVar < nVar; iVar++)             aux_vector[iVar] = 0.0;
+    for (iVar = 0; iVar < nPoint*nVar*nEqn; iVar++) invM[iVar] = 0.0;
   
 }
 

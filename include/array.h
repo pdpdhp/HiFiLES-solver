@@ -128,6 +128,8 @@ public:
 
     void initialize_to_zero();
 
+    void initialize_to_value(const T val);
+
 protected:
 
     int dim_0;
