@@ -3964,4 +3964,3 @@ void compare_mpi_faces(array<double> &xvert1, array<double> &xvert2, int& num_v_
 }
 
 #endif
-

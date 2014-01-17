@@ -154,7 +154,7 @@ public:
     /*! advance with rk45 (five-stage forth-order low-storage runge-kutta) */
     void advance_rk45(int in_step);
 
-    /*! get number of elements */
+    /*! get number of elements (local to processor & element type) */
     int get_n_eles(void);
 
     // get number of ppts_per_ele
@@ -313,7 +313,7 @@ public:
     /*! set transforms at the volume cubature points*/
     void set_transforms_vol_cubpts(void);
 
-    /*! calculate position */
+    /*! calculate position of a point within an element (r,s,t -> x,y,z) */
     void calc_pos(array<double> in_loc, int in_ele, array<double>& out_pos);
 
     /*! calculate derivative of position */
@@ -562,6 +562,9 @@ protected:
 
     /*! temporary solution gradient storage */
     array<double> temp_grad_u;
+
+    /*! temporary grid velocity storage at a single solution point */
+    array<double> temp_w;
 
     /*! Matrix of filter weights at solution points */
     array<double> filter_upts;

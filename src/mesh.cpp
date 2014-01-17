@@ -143,7 +143,7 @@ void mesh::set_grid_velocity(solution* FlowSol, double dt)
         }
     }
 
-    // Apply to the eles classes
+    // Apply to the eles classes at the shape points
     int local_ic;
     array<double> vel(n_dims);
 
@@ -155,6 +155,11 @@ void mesh::set_grid_velocity(solution* FlowSol, double dt)
             local_ic = ic2loc_c(ic);
             FlowSol->mesh_eles(ctype(ic))->set_grid_vel_spt(local_ic,j,vel);
         }
+    }
+
+    // Interpolate grid vel @ spts to fpts
+    for (int i=0; i<FlowSol->n_ele_types; i++) {
+        FlowSol->mesh_eles(i)->set_grid_vel_fpts();
     }
 }
 
@@ -321,6 +326,52 @@ void mesh::Add_EleTri_StiffMat(array<double> StiffMatrix_Elem, int id_pt_0,
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(4,4);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(4,5);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(5,4);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(5,5);
     StiffnessMatrix.AddBlock(id_pt_2, id_pt_2, StiffMatrix_Node);
+}
+
+void mesh::update(solution* FlowSol)
+{
+    // Update element shape points
+    if (FlowSol->rank==0) cout << "Deform: updating element shape points" << endl;
+
+    int ele_type, local_id;
+    array<double> pos(FlowSol->n_dims);
+
+    for (int ic=0; ic<FlowSol->num_eles; ic++) {
+        ele_type = FlowSol->c2ctype_c(ic);
+        local_id = ic2loc_c(ic);
+        for (int iv=0; iv<c2n_v(ic); iv++) {
+            for (int k=0; k<FlowSol->n_dims; k++) {
+                pos(k) = xv_new(c2v(ic,iv),k);
+            }
+            FlowSol->mesh_eles(ele_type)->set_shape_node(iv,local_id,pos);
+        }
+    }
+
+    if (FlowSol->rank==0) cout << "Deform: done updating elements' shape" << endl;
+
+    // Update element transforms
+    if (FlowSol->rank==0) cout << "Deform: updating element transforms ... " << endl;
+    for(int i=0;i<FlowSol->n_ele_types;i++) {
+        if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
+            FlowSol->mesh_eles(i)->set_transforms(in_run_type);
+        }
+    }
+
+    // Set metrics at interface cubpts
+    if (FlowSol->rank==0) cout << "Deform: setting element transforms at interface cubature points ... " << endl;
+    for(int i=0;i<FlowSol->n_ele_types;i++) {
+        if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
+            FlowSol->mesh_eles(i)->set_transforms_inters_cubpts();
+        }
+    }
+
+    // Set metrics at volume cubpts
+    if (FlowSol->rank==0) cout << "Deform: setting element transforms at volume cubature points ... " << endl;
+    for(int i=0;i<FlowSol->n_ele_types;i++) {
+        if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
+            FlowSol->mesh_eles(i)->set_transforms_vol_cubpts();
+        }
+    }
 }
 
 /// original try at the top-level structure, just hangin' around for reference

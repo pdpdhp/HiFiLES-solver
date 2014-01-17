@@ -57,10 +57,13 @@ public:
 	// #### methods ####
 
 	/** peform prescibed mesh motion using linear elasticity method*/
-	void deform(struct solution* FlowSol);
+    void deform(solution* FlowSol);
 
     /** update grid velocity & apply to eles */
     void set_grid_velocity(solution *FlowSol, double dt);
+
+    /** update the mesh: re-set spts, transforms, etc. */
+    void update(solution *FlowSol);
 
 	// #### members ####
 	

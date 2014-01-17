@@ -87,7 +87,7 @@ void CalcResidual(struct solution* FlowSol) {
 
     /*! Compute the inviscid flux at the solution points and store in total flux storage. */
     for(i=0; i<FlowSol->n_ele_types; i++)
-        FlowSol->mesh_eles(i)->calc_tdisinvf_upts(in_disu_upts_from);
+        FlowSol->mesh_eles(i)->calc_tdisinvf_upts(in_disu_upts_from,run_input.motion);
 
     /*! Calculate body forcing, if switched on, and add to flux. */
     if(run_input.equation==0 && run_input.run_type==0 && run_input.forcing==1) {

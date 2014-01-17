@@ -1,5 +1,6 @@
 COMPLETED:
 --Added ALE flux terms to flux.h
+------added call to ALE flux from 'calc_tdisinvf_upts' in eles.cpp
 --Added variable 'vel_spts' in eles
 --Added variable 'motion' in input
 --Added variable 'motion' in eles
@@ -14,17 +15,20 @@ COMPLETED:
 ----Function to build stiffness matrix for a single class of eles (tris, quads)
 ------Loop over each element type & build matrix for those elements
 ----Working on assembling global stiffness matrix from individual elements
-
+--Method to interpolate velocity at shape points to velocity at flux points
+----set_opp_vf currently - need a 1D interp function for do spt -> gauss (flux) pts
+----eval_nodal_s_basis - evaluates the basis function defined on the shape points
 --Created "mesh" class and relocated stiffness matrix routines to it
 --Added 'mesh Mesh' to HiFiLES.cpp; gets passed to GeoPreProcess
 
 ################################################################################################
 
 TODO (Short Term):
---Method to interpolate velocity at shape points to velocity at flux points
-----set_opp_vf currently - need a 1D interp function for do spt -> gauss (flux) pts
-----**eval_nodal_s_basis???**
-----** SEE set_tloc_fpts **
+**Finish flux implementation:
+----Setup opp for grid vel @ spts -> grid vel @ upts (only have fpts currently)
+----Setup temp_w for use in calc_tdisinvf_upts
+----Setup temp_w_l, temp_w_r for left/right grid velocity at flux points
+
 ----For 2nd-order and higher elements, need to re-implement the loc_spts
     functions, since non-corner spts not neccessarily evenly spaced on faces
     (in (r,s,t) coordinates)

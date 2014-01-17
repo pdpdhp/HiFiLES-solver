@@ -10,7 +10,10 @@
  * HiFiLES (High Fidelity Large Eddy Simulation).
  * Copyright (C) 2013 Aerospace Computing Laboratory.
  */
-
+// Just for the purpose of code highlighting
+#define _MPI
+#define _CPU
+// -----------------------------------------
 #include <iostream>
 #include <cmath>
 
@@ -192,10 +195,18 @@ void int_inters::calc_norm_tconinvf_fpts(void)
 			  if(n_dims==2) {
 			  	calc_invf_2d(temp_u_l,temp_f_l);
 			  	calc_invf_2d(temp_u_r,temp_f_r);
+                if (run_input.motion) {
+                    calc_alef_2d(temp_u_l,temp_w_l,temp_f_l);
+                    calc_alef_2d(temp_u_r,temp_w_r,temp_f_r);
+                }
 			  }
 			  else if(n_dims==3) {
 			  	calc_invf_3d(temp_u_l,temp_f_l);
 			  	calc_invf_3d(temp_u_r,temp_f_r);
+                if (run_input.motion) {
+                    calc_alef_3d(temp_u_l,temp_w_l,temp_f_l);
+                    calc_alef_3d(temp_u_r,temp_w_r,temp_f_r);
+                }
 			  }
 			  else
   		  	FatalError("ERROR: Invalid number of dimensions ... ");

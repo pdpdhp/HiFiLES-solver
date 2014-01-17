@@ -916,14 +916,22 @@ void eles::calc_tdisinvf_upts(int in_disu_upts_from)
 			{
 				temp_u(k)=disu_upts(in_disu_upts_from)(j,i,k);
 			}
+
+            if (run_input.motion) {
+                for (k=0; k<n_dims; k++) {
+                    temp_w(k) = vel_upts(i,j,k); // FIX: CREATE VEL_UPTS()
+                }
+            }
 			
 			if(n_dims==2)
 			{
 				calc_invf_2d(temp_u,temp_f);
+                if (run_input.motion) calc_alef_2d(temp_u, temp_w, temp_f);
 			}
 			else if(n_dims==3)
 			{
 				calc_invf_3d(temp_u,temp_f);
+                if (run_input.motion) calc_alef_3d(temp_u, temp_w, temp_f);
 			}
 			else
 			{
@@ -3258,7 +3266,7 @@ void eles::initialize_grid_vel(void)
 	// Setup arrays
     // n_fpts_per_ele = constant (w/o multigrid, at least)
     // n_spts_per_ele = variable
-	vel_fpts.setup(n_eles,n_fpts_per_ele,n_dims);
+    vel_fpts.setup(n_dims,n_fpts_per_ele,n_eles);
     vel_fpts.initialize_to_zero();
 
 	vel_spts.setup(n_eles);
@@ -3948,7 +3956,7 @@ double* eles::get_norm_tconvisf_fpts_ptr(int in_inter_local_fpt, int in_ele_loca
 
 //#### helper methods ####
 
-// calculate position
+// calculate position of a point within an element (r,s,t -> x,y,z)
 
 void eles::calc_pos(array<double> in_loc, int in_ele, array<double>& out_pos)
 {
@@ -4757,13 +4765,28 @@ void eles::compute_wall_forces( array<double>& inv_force, array<double>& vis_for
   }
 }
 
+/*! Set the grid velocity at one shape point */
 void eles::set_grid_vel_spt(int in_ele, int in_spt, array<double> in_vel)
 {
     for (int i=0; i<n_dims; i++)
         vel_spts(in_ele)(in_spt,i) = in_vel[i];
 }
 
+/*! Interpolate the grid velocity from shape points to flux points */
 void eles::set_grid_vel_fpts()
 {
-
+    int ic,fpt,j,k;
+    array<double> loc(n_dims);
+    for (ic=0; ic<n_eles; ic++) {
+        for (fpt=0; fpt<n_fpts_per_ele; fpt++) {
+            for(k=0;k<n_dims;k++) {
+                loc(k) = tloc_fpts(k,fpt);
+            }
+            for(k=0;k<n_dims;k++) {
+                for(j=0;j<n_spts_per_ele(ic);j++) {
+                    vel_fpts(k,fpt,ic)+=eval_nodal_s_basis(j,loc,n_spts_per_ele(ic))*vel_spts(ic)(j,k);
+                }
+            }
+        }
+    }
 }
