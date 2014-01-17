@@ -54,7 +54,7 @@ CSysMatrix::~CSysMatrix(void) {
   
 }
 
-void CSysMatrix::Initialize(mesh &Mesh) {
+void CSysMatrix::Initialize(const mesh &Mesh) {
 	unsigned long iPoint, *row_ptr, *col_ind, *vneighs, index, nnz;
     unsigned short iNeigh, nNeigh, Max_nNeigh, iEdge;
 
@@ -106,7 +106,7 @@ void CSysMatrix::Initialize(mesh &Mesh) {
 	delete[] vneighs;
 }
 
-void CSysMatrix::SetIndexes(unsigned long* val_row_ptr, unsigned long* val_col_ind, unsigned long val_nnz, mesh &Mesh) {
+void CSysMatrix::SetIndexes(unsigned long* val_row_ptr, unsigned long* val_col_ind, unsigned long val_nnz, const mesh &Mesh) {
   
     nPoint = Mesh->n_verts;              // Assign number of points in the mesh
     nPointDomain = Mesh->n_verts_global;  // Assign number of points in the mesh
@@ -459,7 +459,7 @@ void CSysMatrix::SendReceive_Solution(CSysVector & x, CGeometry *geometry, CConf
       Buffer_Receive = new double [nBufferR_Vector];
       Buffer_Send = new double[nBufferS_Vector];
       
-      /*--- Copy the solution that should be sended ---*/
+      /*--- Copy the solution that should be sent ---*/
       for (iVertex = 0; iVertex < nVertexS; iVertex++) {
         iPoint = geometry->vertex[MarkerS][iVertex]->GetNode();
         for (iVar = 0; iVar < nVar; iVar++)

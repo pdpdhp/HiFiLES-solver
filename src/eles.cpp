@@ -2661,6 +2661,33 @@ void eles::set_opp_r(void)
 	}
 }
 
+// set opp_vf (grid velocity at shape points to grid velocity at flux points)
+// u -> f
+void eles::set_opp_vf(int in_ele)
+{
+    int i,j,k;
+
+    array<double> loc(n_dims);
+
+    opp_vf(in_ele).setup(n_fpts_per_ele,n_spts_per_ele(in_ele));
+
+    for(i=0;i<n_spts_per_ele;i++)
+    {
+        for(j=0;j<n_fpts_per_ele;j++)
+        {
+            for(k=0;k<n_dims;k++)
+            {
+                loc(k)=tloc_fpts(k,j);
+            }
+            /* --- ** SWAP eval_nodal_basis FOR 1D INTERP ON FACE **
+            need to interp from spts (just endpoints of each face for
+            now) to flux points (at Gauss points)--- */
+            opp_vf(in_ele)(j,i)=eval_nodal_basis(i,loc);
+        }
+    }
+
+}
+
 array<double> eles::get_pos_ppt(int in_ele, int in_ppt)
 {
   return pos_ppts(in_ele,in_ppt);
@@ -3226,25 +3253,19 @@ void eles::set_transforms(int in_run_type)
   } // if n_eles!=0
 }
 
-void eles::set_mesh_motion(void)
+void eles::initialize_grid_vel(void)
 {
 	// Setup arrays
+    // n_fpts_per_ele = constant (w/o multigrid, at least)
+    // n_spts_per_ele = variable
 	vel_fpts.setup(n_eles,n_fpts_per_ele,n_dims);
+    vel_fpts.initialize_to_zero();
+
 	vel_spts.setup(n_eles);
 	for (int i=0;i<n_eles; i++) {
 		vel_spts(i).setup(n_spts_per_ele(i),n_dims);
-	}
-
-	// Initialize to zero
-	for (int i=0; i<n_eles; i++) {
-		for (int j=0; j<n_fpts_per_ele; j++)
-			for (int k=0; k<n_dims; k++)
-				vel_fpts(i,j,k) = 0;
-		
-		for (int j=0; j<n_spts_per_ele(i); j++)
-			for (int k=0; k<n_dims; k++)
-				vel_spts(i)(j,k) = 0;
-	}
+        vel_spts(i).initialize_to_zero();
+	}    
 }
 
 void eles::add_contribution_to_pnodes(array<double> &plotq_pnodes)
@@ -4736,3 +4757,13 @@ void eles::compute_wall_forces( array<double>& inv_force, array<double>& vis_for
   }
 }
 
+void eles::set_grid_vel_spt(int in_ele, int in_spt, array<double> in_vel)
+{
+    for (int i=0; i<n_dims; i++)
+        vel_spts(in_ele)(in_spt,i) = in_vel[i];
+}
+
+void eles::set_grid_vel_fpts()
+{
+
+}

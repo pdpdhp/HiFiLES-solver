@@ -59,23 +59,26 @@ public:
 	/** peform prescibed mesh motion using linear elasticity method*/
 	void deform(struct solution* FlowSol);
 
+    /** update grid velocity & apply to eles */
+    void set_grid_velocity(solution *FlowSol, double dt);
+
 	// #### members ####
 	
     int n_eles, n_verts, n_dims, n_verts_global, n_cells_global;
 
 	/** arrays which define the basic mesh geometry */
-	array<double> xv;
-    array<int> c2v,c2n_v,ctype,bctype_c,ic2icg,iv2ivg,
+    array<double> xv, xv_new, vel_old, vel_new;
+    array<int> c2v,c2n_v,ctype,bctype_c,ic2icg,iv2ivg,ic2loc_c,
                f2c,f2loc_f,c2f,c2e,f2v,f2n_v,e2v,v2n_e,v2e;
 
-	/** global stiffness matrix for linear-elasticity mesh motion */
-    array<array<double> > stiff_mat;
-	
 private:
 
 	/** Global stiffness matrix for linear elasticity solution */
 	CSysMatrix StiffnessMatrix;
     CSysVector LinSysRes, LinSysSol;
+
+    /** global stiffness psuedo-matrix for linear-elasticity mesh motion */
+    array<array<double> > stiff_mat;
 
     /** enumeration for cell type */
     enum CTYPE {
@@ -88,7 +91,7 @@ private:
 
     /** create individual-element stiffness matrix - triangles */
     // will I actually need the FlowSol variable for setting up the Stiffnexx Matrix?
-    bool set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
+    bool set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id);
 
     /** create individual-element stiffness matrix - triangles */
     bool set_2D_StiffMat_ele_quad(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
@@ -103,7 +106,9 @@ private:
      * transfrom single-element stiffness matrix to nodal contributions in order to
      * add to global stiffness matrix
      */
-    void Add_EleTri_StiffMat(array<double> StiffMatrix_Elem, int id_pt_0,
+    void add_StiffMat_EleTri(array<double> StiffMatrix_Elem, int id_pt_0,
                              int id_pt_1, int id_pt_2);
 
+    void add_StiffMat_EleQuad(array<double> StiffMatrix_Elem, int id_pt_0,
+                             int id_pt_1, int id_pt_2, int id_pt_3);
 };

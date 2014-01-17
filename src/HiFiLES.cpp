@@ -227,7 +227,8 @@ int main(int argc, char *argv[]) {
 		/*! Steps:
 		1) 
 		*/
-		// Mesh.deform(&FlowSol);
+        Mesh.deform(&FlowSol);
+        Mesh.set_grid_velocity(FlowSol,run_input.dt);
 	}
     
   }

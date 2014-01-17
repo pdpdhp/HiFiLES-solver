@@ -380,8 +380,7 @@ public:
 class CSysMatrixVectorProduct : public CMatrixVectorProduct {
 private:
 	CSysMatrix* sparse_matrix; /*!< \brief pointer to matrix that defines the product. */
-	CGeometry* geometry; /*!< \brief pointer to matrix that defines the geometry. */
-	CConfig* config; /*!< \brief pointer to matrix that defines the config. */
+    solution* FlowSol; /*!< \brief pointer to structure containing solution data & configuration. */
   
 public:
   
@@ -442,8 +441,7 @@ public:
 class CLU_SGSPreconditioner : public CPreconditioner {
 private:
 	CSysMatrix* sparse_matrix; /*!< \brief pointer to matrix that defines the preconditioner. */
-  CGeometry* geometry; /*!< \brief pointer to matrix that defines the geometry. */
-	CConfig* config; /*!< \brief pointer to matrix that defines the config. */
+    solution* FlowSol; /*!< \brief pointer to structure containing solution data & configuration. */
   
 public:
 	
@@ -473,8 +471,7 @@ public:
 class CLineletPreconditioner : public CPreconditioner {
 private:
 	CSysMatrix* sparse_matrix; /*!< \brief pointer to matrix that defines the preconditioner. */
-  CGeometry* geometry; /*!< \brief pointer to matrix that defines the geometry. */
-	CConfig* config; /*!< \brief pointer to matrix that defines the config. */
+    solution* FlowSol; /*!< \brief pointer to structure containing solution data & configuration. */
   
 public:
 	

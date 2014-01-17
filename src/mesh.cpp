@@ -15,39 +15,153 @@ using namespace std;
 
 void mesh::deform(struct solution* FlowSol) {
     array<double> stiff_mat_ele;
-
+    int failedIts = 0;
+    /*
     if (FlowSol->n_dims == 2) {
         stiff_mat_ele.setup(6,6);
     }else{
         FatalError("3D Mesh motion not implemented yet!");
     }
+    */
 
-    int block_i, block_j;
+    int pt_0,pt_1,pt_2,pt_3;
     bool check;
 
-    stiff_mat.setup(n_eles);
+    // Setup stiffness matrices for each individual element,
+    // combine all element-level matrices into global matrix
+    //stiff_mat.setup(n_eles);
+    LinSysSol.Initialize(*this);
+    LinSysRes.Initialize(*this);
+    StiffnessMatrix.Initialize(*this);
 
-    for (int i=0; i<n_eles; i++) {
-        switch(ctype(i))
-        {
-        case TRI:
-            set_2D_StiffMat_ele_tri(stiff_mat(i),i,FlowSol);
-            break;
-        case QUAD:
-            set_2D_StiffMat_ele_quad(stiff_mat(i),i,FlowSol);
-            break;
-        default:
-            FatalError("Element type not yet supported for mesh motion - supported types are tris and quads");
-            break;
+    /*--- Loop over the total number of grid deformation iterations. The surface
+    deformation can be divided into increments to help with stability. In
+    particular, the linear elasticity equations hold only for small deformations. ---*/
+    for (iGridDef_Iter = 0; iGridDef_Iter < config->GetGridDef_Iter(); iGridDef_Iter++) {
+
+        /*--- Initialize vector and sparse matrix ---*/
+
+        LinSysSol.SetValZero();
+        LinSysRes.SetValZero();
+        StiffnessMatrix.SetValZero();
+
+        /*--- Compute the stiffness matrix entries for all nodes/elements in the
+        mesh. FEA uses a finite element method discretization of the linear
+        elasticity equations (transfers element stiffnesses to point-to-point). ---*/
+        for (int ic=0; ic<n_eles; ic++) {
+            switch(ctype(ic))
+            {
+            case TRI:
+                pt_0 = iv2ivg(c2v(ic,0));
+                pt_1 = iv2ivg(c2v(ic,1));
+                pt_2 = iv2ivg(c2v(ic,2));
+                check = set_2D_StiffMat_ele_tri(stiff_mat_ele,ic);
+                add_StiffMat_EleTri(stiff_mat_ele,pt_0,pt_1,pt_2);
+                //set_2D_StiffMat_ele_tri(stiff_mat(i),i,FlowSol);
+                break;
+            case QUAD:
+                pt_0 = iv2ivg(c2v(ic,0));
+                pt_1 = iv2ivg(c2v(ic,1));
+                pt_2 = iv2ivg(c2v(ic,2));
+                pt_3 = iv2ivg(c2v(ic,3));
+                set_2D_StiffMat_ele_quad(stiff_mat_ele,ic);
+                add_StiffMat_EleQuad(stiff_mat_ele,pt_0,pt_1,pt_2,pt_3);
+                break;
+            default:
+                FatalError("Element type not yet supported for mesh motion - supported types are tris and quads");
+                break;
+            }
+            if (!check) {
+                failedIts++;
+                if (failedIts > 5) FatalError("ERROR: negative volumes encountered during mesh motion.");
+            }else{
+                failedIts=0;
+            }
+        }
+
+        /*--- Compute the tolerance of the linear solver using MinLength ---*/
+        NumError = MinLength * 1E-2;
+
+        /*--- Set the boundary displacements (as prescribed by the design variable
+        perturbations controlling the surface shape) as a Dirichlet BC. ---*/
+        SetBoundaryDisplacements(FlowSol);
+
+        /*--- Fix the location of any points in the domain, if requested. ---*/
+        if (config->GetHold_GridFixed())
+            SetDomainDisplacements(FlowSol);
+
+        /*--- Communicate any prescribed boundary displacements via MPI,
+        so that all nodes have the same solution and r.h.s. entries
+        across all paritions. ---*/
+        /// HELP!!! Need Tom/Francisco to decipher what's being sent & how it's used
+        StiffMatrix.SendReceive_Solution(LinSysSol, FlowSol);
+        StiffMatrix.SendReceive_Solution(LinSysRes, FlowSol);
+
+        /*--- Definition of the preconditioner matrix vector multiplication, and linear solver ---*/
+        CMatrixVectorProduct* mat_vec = new CSysMatrixVectorProduct(StiffnessMatrix, FlowSol);
+        CPreconditioner* precond      = new CLU_SGSPreconditioner(StiffnessMatrix, FlowSol);
+        CSysSolve *system             = new CSysSolve();
+
+        /*--- Solve the linear system ---*/
+        IterLinSol = system->FGMRES(LinSysRes, LinSysSol, *mat_vec, *precond, NumError, 100, false);
+
+        /*--- Deallocate memory needed by the Krylov linear solver ---*/
+        delete system;
+        delete mat_vec;
+        delete precond;
+
+        /*--- Update the grid coordinates and cell volumes using the solution
+        of the linear system (usol contains the x, y, z displacements). ---*/
+        UpdateGridCoord(FlowSol);
+        if (UpdateGeo)
+            UpdateDualGrid(FlowSol);
+
+        /*--- Check for failed deformation (negative volumes). ---*/
+        MinVol = Check_Grid();
+
+        if (rank == MASTER_NODE) {
+            cout << "Non-linear iter.: " << iGridDef_Iter << "/" << config->GetGridDef_Iter()
+                 << ". Linear iter.: " << IterLinSol << ". Min vol.: " << MinVol
+                 << ". Error: " << NumError << "." <<endl;
         }
     }
 
-    assemble_stiffness_matrix(); // will use stiff_mat to create StiffnessMatrix
+    /*--- Deallocate vectors for the linear system. ---*/
+    LinSysSol.~CSysVector();
+    LinSysRes.~CSysVector();
+    StiffnessMatrix.~CSysMatrix();
+
+    //assemble_stiffness_matrix(); // will use stiff_mat to create StiffnessMatrix
+}
+
+void mesh::set_grid_velocity(solution* FlowSol, double dt)
+{
+    // calculate velocity using simple backward-Euler
+    for (int i=0; i<n_verts; i++) {
+        for (int j=0; j<n_dims; j++) {
+            vel_new(i,j) = (xv_new(i,j) - xv(i,j))/dt;
+        }
+    }
+
+    // Apply to the eles classes
+    int local_ic;
+    array<double> vel(n_dims);
+
+    for (int ic=0; ic<n_eles; ic++) {
+        for (int j=0; j<c2n_v(i); j++) {
+            for (int dim=0; dim<n_dims; dim++) {
+                vel[dim] = vel_new(c2v(ic),dim);
+            }
+            local_ic = ic2loc_c(ic);
+            FlowSol->mesh_eles(ctype(ic))->set_grid_vel_spt(local_ic,j,vel);
+        }
+    }
 }
 
 /*! set individual-element stiffness matrix for a triangle */
-bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id, solution *FlowSol) {
-    int index;
+bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele, int ele_id)
+{
+    int iPoint;
 
     int n_spts = c2n_v(ele_id);
 
@@ -55,9 +169,9 @@ bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id, solut
     pos_spts.setup(n_spts,n_dims);
 
     for (int i=0; i<n_spts; i++) {
-        index = c2v(ele_id);
+        iPoint = c2v(ele_id);
         for (int j=0; j<n_dims; j++) {
-            pos_spts(i,j) = xv(index,j);
+            pos_spts(i,j) = xv(iPoint,j);
         }
     }
 
@@ -239,147 +353,12 @@ void mesh_deform(struct solution* FlowSol) {
         for (int j=0; j<FlowSol->mesh_eles(i)->n_eles; j++)
             set_2D_StiffMat_ele(FlowSol->mesh_eles(i)->setSti*/
 
-    // Build global stiffness matrix from individual elements
+    // 2) Build global stiffness matrix from individual elements
 
-    // Iteratively solve linear system
+    // 3) Iteratively solve linear system
 
-    // Update node positions
+    // 4) Update node positions ("shape points")
 
-    // Re-Set mesh transforms as needed
+    // 5) Re-initialize element transforms as needed
 
-}
-
-//void set_2D_StiffMat_ele(double **stiffMat_ele, array<double> xv, [individual element / data pertaining to specific element]) {
-bool set_2D_StiffMat_ele(array<double> stiffMat_ele,int ele_id, solution *FlowSol) {
-    /* need: c2v (cell to index of vertex)
-             c2n_v (# of vetices in each cell)
-             (coordindates of *physical* vertex) */
-
-    /*
-    mesh_file >> id;
-    index = index_locate_int(id-1,in_iv2ivg.get_ptr_cpu(),in_n_verts);
-        if (index!=-1) { // Vertex belongs to this processor
-            for (int m=0;m<FlowSol->n_dims;m++) {
-            mesh_file >> pos;
-            out_xv(index,m) = pos;
-        }
-    }
-    */
-
-    //n_dims = FlowSol->n_dims;
-    //n_spts = FlowSol->ele2n_vert(ele_id);
-    //get_ele_local(ele_id,local_id,local_ctype);  // create this function
-
-
-    // Probably move this up one function (to wrapper function "deform_mesh")
-    int global_id, n_spts, n_dims;
-    global_id = FlowSol->mesh_eles(i)->get_global_ele(ele_id);
-    n_spts = FlowSol->ele2n_vert;
-
-    /*----------------------------------------------------------------------------
-    CHANGE OF PLAN -- loop through each ele class (easier to go from local->global
-    than from global->local information on each ele)
-    Change again - really think this would best be done in each eles_*.cpp class file
-    (and length be damned)
-    */
-    double **pos_spts;
-    pos_spts = new double *[n_spts];
-    for (int i=0; i<n_spts; i++)
-        pos_spts[i] = new double[n_dims];
-
-    for (int i=0; i<FlowSol->n_ele_types; i++)
-        for (int j=0; j<FlowSol->mesh_eles(i)->get_n_eles; j++)
-            for (int i=0; i<FlowSol->mesh_eles(i)->n_spts_per_ele(j); i++)
-                pos_spts[i] = FlowSol->mesh_eles(i)->get_pos_spt(local_id,i);
-    //--------------------------------------------------------------------------
-
-    // ----------- Create single-element stiffness matrix ---------------
-    // Copied from SU2
-    unsigned short iDim, iVar, jVar, kVar;
-    double B_Matrix[6][12], BT_Matrix[12][6], D_Matrix[6][6], Aux_Matrix[12][6];
-    double a[3], b[3], c[3], Area, E, Mu, Lambda;
-
-    /*--- Initialize the element stuffness matrix to zero ---*/
-    for (iVar = 0; iVar < 6; iVar++)
-        for (jVar = 0; jVar < 6; jVar++)
-            stiffMat_ele(iVar,jVar) = 0.0;
-
-    for (iDim = 0; iDim < n_dims; iDim++) {
-        a[iDim] = pos_spts[0][iDim]-pos_spts[2][iDim];
-        b[iDim] = pos_spts[1][iDim]-pos_spts[2][iDim];
-    }
-
-    Area = 0.5*fabs(a[0]*b[1]-a[1]*b[0]);
-
-    if (Area < 0.0) {
-
-        /*--- The initial grid has degenerated elements ---*/
-        for (iVar = 0; iVar < 6; iVar++) {
-            for (jVar = 0; jVar < 6; jVar++) {
-                stiffMat_ele(iVar,jVar) = 0.0;
-            }
-        }
-        return false;
-    }else{
-
-        /*--- Each element uses their own stiffness which is inversely
-        proportional to the area/volume of the cell. Using Mu = E & Lambda = -E
-        is a modification to help allow rigid rotation of elements (see
-        "Robust Mesh Deformation using the Linear Elasticity Equations" by
-        R. P. Dwight. ---*/
-
-        E = 1.0 / Area * fabs(scale);
-        Mu = E;
-        Lambda = -E;
-
-        a[0] = 0.5 * (pos_spts[1][0]*pos_spts[2][1]-pos_spts[2][0]*pos_spts[1][1]) / Area;
-        a[1] = 0.5 * (pos_spts[2][0]*pos_spts[0][1]-pos_spts[0][0]*pos_spts[2][1]) / Area;
-        a[2] = 0.5 * (pos_spts[0][0]*pos_spts[1][1]-pos_spts[1][0]*pos_spts[0][1]) / Area;
-
-        b[0] = 0.5 * (pos_spts[1][1]-pos_spts[2][1]) / Area;
-        b[1] = 0.5 * (pos_spts[2][1]-pos_spts[0][1]) / Area;
-        b[2] = 0.5 * (pos_spts[0][1]-pos_spts[1][1]) / Area;
-
-        c[0] = 0.5 * (pos_spts[2][0]-pos_spts[1][0]) / Area;
-        c[1] = 0.5 * (pos_spts[0][0]-pos_spts[2][0]) / Area;
-        c[2] = 0.5 * (pos_spts[1][0]-pos_spts[0][0]) / Area;
-
-        /*--- Compute the B Matrix ---*/
-        B_Matrix[0][0] = b[0];  B_Matrix[0][1] = 0.0;   B_Matrix[0][2] = b[1];  B_Matrix[0][3] = 0.0;   B_Matrix[0][4] = b[2];  B_Matrix[0][5] = 0.0;
-        B_Matrix[1][0] = 0.0;   B_Matrix[1][1] = c[0];  B_Matrix[1][2] = 0.0;   B_Matrix[1][3] = c[1];  B_Matrix[1][4] = 0.0;   B_Matrix[1][5] = c[2];
-        B_Matrix[2][0] = c[0];  B_Matrix[2][1] = b[0];  B_Matrix[2][2] = c[1];  B_Matrix[2][3] = b[1];  B_Matrix[2][4] = c[2];  B_Matrix[2][5] = b[2];
-
-        for (iVar = 0; iVar < 3; iVar++)
-            for (jVar = 0; jVar < 6; jVar++)
-                BT_Matrix[jVar][iVar] = B_Matrix[iVar][jVar];
-
-        /*--- Compute the D Matrix (for plane strain and 3-D)---*/
-        D_Matrix[0][0] = Lambda + 2.0*Mu;		D_Matrix[0][1] = Lambda;            D_Matrix[0][2] = 0.0;
-        D_Matrix[1][0] = Lambda;            D_Matrix[1][1] = Lambda + 2.0*Mu;   D_Matrix[1][2] = 0.0;
-        D_Matrix[2][0] = 0.0;               D_Matrix[2][1] = 0.0;               D_Matrix[2][2] = Mu;
-
-        /*--- Compute the BT.D Matrix ---*/
-        for (iVar = 0; iVar < 6; iVar++) {
-            for (jVar = 0; jVar < 3; jVar++) {
-                Aux_Matrix[iVar][jVar] = 0.0;
-                for (kVar = 0; kVar < 3; kVar++)
-                    Aux_Matrix[iVar][jVar] += BT_Matrix[iVar][kVar]*D_Matrix[kVar][jVar];
-            }
-        }
-
-        /*--- Compute the BT.D.B Matrix (stiffness matrix) ---*/
-        for (iVar = 0; iVar < 6; iVar++) {
-            for (jVar = 0; jVar < 6; jVar++) {
-                stiffMat_ele(iVar,jVar) = 0.0;
-                for (kVar = 0; kVar < 3; kVar++)
-                    stiffMat_ele(iVar,jVar) += Area * Aux_Matrix[iVar][kVar]*B_Matrix[kVar][jVar];
-            }
-        }
-
-        for (int i=0; i<n_spts; i++)
-            delete pos_spts[i];
-        delete [] pos_spts;
-
-        return true;
-    }
 }

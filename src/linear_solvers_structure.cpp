@@ -246,135 +246,122 @@ unsigned long CSysSolve::ConjugateGradient(const CSysVector & b, CSysVector & x,
 }
 
 unsigned long CSysSolve::FGMRES(const CSysVector & b, CSysVector & x, CMatrixVectorProduct & mat_vec,
-                               CPreconditioner & precond, double tol, unsigned long m, bool monitoring) {
-	
-  int rank = 0;
+                                CPreconditioner & precond, double tol, unsigned long m, bool monitoring) {
+
+    int rank = 0;
 #ifndef NO_MPI
-	rank = MPI::COMM_WORLD.Get_rank();
+    rank = MPI::COMM_WORLD.Get_rank();
 #endif
-  
-  /*---  Check the subspace size ---*/
-  if (m < 1) {
-    if (rank == 0) cerr << "CSysSolve::FGMRES: illegal value for subspace size, m = " << m << endl;
+
+    /*---  Check the subspace size ---*/
+    if (m < 1) {
+        if (rank == 0) cerr << "CSysSolve::FGMRES: illegal value for subspace size, m = " << m << endl;
 #ifdef NO_MPI
-    exit(1);
+        exit(1);
 #else
-    MPI::COMM_WORLD.Abort(1);
-    MPI::Finalize();
+        MPI::COMM_WORLD.Abort(1);
+        MPI::Finalize();
 #endif
-  }
-
-  /*---  Check the subspace size ---*/
-  if (m > 1000) {
-    if (rank == 0) cerr << "CSysSolve::FGMRES: illegal value for subspace size (too high), m = " << m << endl;
+    }
+    
+    /*---  Check the subspace size ---*/
+    if (m > 1000) {
+        if (rank == 0) cerr << "CSysSolve::FGMRES: illegal value for subspace size (too high), m = " << m << endl;
 #ifdef NO_MPI
-    exit(1);
+        exit(1);
 #else
-    MPI::COMM_WORLD.Abort(1);
-    MPI::Finalize();
+        MPI::COMM_WORLD.Abort(1);
+        MPI::Finalize();
 #endif
-  }
-  
-  /*---  Define various arrays
-	 Note: elements in w and z are initialized to x to avoid creating
-	 a temporary CSysVector object for the copy constructor ---*/
-  vector<CSysVector> w(m+1, x);
-  vector<CSysVector> z(m+1, x);
-  vector<double> g(m+1, 0.0);
-  vector<double> sn(m+1, 0.0);
-  vector<double> cs(m+1, 0.0);
-  vector<double> y(m, 0.0);
-  vector<vector<double> > H(m+1, vector<double>(m, 0.0));
-  
-  /*---  Calculate the norm of the rhs vector ---*/
-  double norm0 = b.norm();
-  
-  /*---  Calculate the initial residual (actually the negative residual)
-	 and compute its norm ---*/
-  mat_vec(x,w[0]);
-  w[0] -= b;
-  
-  double beta = w[0].norm();
-  
-  if ( (beta < tol*norm0) || (beta < eps) ) {
-    /*---  System is already solved ---*/
-    if (rank == 0) cout << "CSysSolve::FGMRES(): system solved by initial guess." << endl;
-    return 0;
-  }
-  
-  /*---  Normalize residual to get w_{0} (the negative sign is because w[0]
-	 holds the negative residual, as mentioned above) ---*/
-  w[0] /= -beta;
-  
-  /*---  Initialize the RHS of the reduced system ---*/
-  g[0] = beta;
-  
-  /*--- Set the norm to the initial initial residual value ---*/
-  norm0 = beta;
+    }
 
-  /*---  Output header information including initial residual ---*/
-  int i = 0;
-  if ((monitoring) && (rank == 0)) {
-    writeHeader("FGMRES", tol, beta);
-    writeHistory(i, beta, norm0);
-  }
-  
-  /*---  Loop over all serach directions ---*/
-  for (i = 0; i < m; i++) {
-    
-    /*---  Check if solution has converged ---*/
-    if (beta < tol*norm0) break;
-    
-    /*---  Precondition the CSysVector w[i] and store result in z[i] ---*/
-    precond(w[i], z[i]);
-    
-    /*---  Add to Krylov subspace ---*/
-    mat_vec(z[i], w[i+1]);
-    
-    /*---  Modified Gram-Schmidt orthogonalization ---*/
-    modGramSchmidt(i, H, w);
-    
-    /*---  Apply old Givens rotations to new column of the Hessenberg matrix
-		 then generate the new Givens rotation matrix and apply it to
-		 the last two elements of H[:][i] and g ---*/
-    for (int k = 0; k < i; k++)
-      applyGivens(sn[k], cs[k], H[k][i], H[k+1][i]);
-    generateGivens(H[i][i], H[i+1][i], sn[i], cs[i]);
-    applyGivens(sn[i], cs[i], g[i], g[i+1]);
-    
-    /*---  Set L2 norm of residual and check if solution has converged ---*/
-    beta = fabs(g[i+1]);
-    
-    /*---  Output the relative residual if necessary ---*/
-    if ((((monitoring) && (rank == 0)) && ((i+1) % 5 == 0)) && (rank == 0)) writeHistory(i+1, beta, norm0);
-  }
+    /*---  Define various arrays
+     Note: elements in w and z are initialized to x to avoid creating
+     a temporary CSysVector object for the copy constructor ---*/
+    vector<CSysVector> w(m+1, x);
+    vector<CSysVector> z(m+1, x);
+    vector<double> g(m+1, 0.0);
+    vector<double> sn(m+1, 0.0);
+    vector<double> cs(m+1, 0.0);
+    vector<double> y(m, 0.0);
+    vector<vector<double> > H(m+1, vector<double>(m, 0.0));
 
-  /*---  Solve the least-squares system and update solution ---*/
-  solveReduced(i, H, g, y);
-  for (int k = 0; k < i; k++) {
-    x.Plus_AX(y[k], z[k]);
-  }
-  
-  if ((monitoring) && (rank == 0)) {
-    cout << "# FGMRES final (true) residual:" << endl;
-    cout << "# Iteration = " << i << ": |res|/|res0| = " << beta/norm0 << endl;
-  }
-  
-//  /*---  Recalculate final (neg.) residual (this should be optional) ---*/
-//  mat_vec(x, w[0]);
-//  w[0] -= b;
-//  double res = w[0].norm();
-//  
-//  if (fabs(res - beta) > tol*10) {
-//    if (rank == 0) {
-//      cout << "# WARNING in CSysSolve::FGMRES(): " << endl;
-//      cout << "# true residual norm and calculated residual norm do not agree." << endl;
-//      cout << "# res - beta = " << res - beta << endl;
-//    }
-//  }
-	
-	return i;
-  
+    /*---  Calculate the norm of the rhs vector ---*/
+    double norm0 = b.norm();
+
+    /*---  Calculate the initial residual (actually the negative residual)
+     and compute its norm ---*/
+    mat_vec(x,w[0]);
+    w[0] -= b;
+
+    double beta = w[0].norm();
+
+    if ( (beta < tol*norm0) || (beta < eps) ) {
+        /*---  System is already solved ---*/
+        if (rank == 0) cout << "CSysSolve::FGMRES(): system solved by initial guess." << endl;
+        return 0;
+    }
+
+    /*---  Normalize residual to get w_{0} (the negative sign is because w[0]
+     holds the negative residual, as mentioned above) ---*/
+    w[0] /= -beta;
+
+    /*---  Initialize the RHS of the reduced system ---*/
+    g[0] = beta;
+
+    /*--- Set the norm to the initial initial residual value ---*/
+    norm0 = beta;
+    
+    /*---  Output header information including initial residual ---*/
+    int i = 0;
+    if ((monitoring) && (rank == 0)) {
+        writeHeader("FGMRES", tol, beta);
+        writeHistory(i, beta, norm0);
+    }
+
+    /*---  Loop over all serach directions ---*/
+    for (i = 0; i < m; i++) {
+
+        /*---  Check if solution has converged ---*/
+        if (beta < tol*norm0) break;
+
+        /*---  Precondition the CSysVector w[i] and store result in z[i] ---*/
+        precond(w[i], z[i]);
+
+        /*---  Add to Krylov subspace ---*/
+        mat_vec(z[i], w[i+1]);
+
+        /*---  Modified Gram-Schmidt orthogonalization ---*/
+        modGramSchmidt(i, H, w);
+
+        /*---  Apply old Givens rotations to new column of the Hessenberg matrix
+         then generate the new Givens rotation matrix and apply it to
+         the last two elements of H[:][i] and g ---*/
+        for (int k = 0; k < i; k++)
+            applyGivens(sn[k], cs[k], H[k][i], H[k+1][i]);
+        generateGivens(H[i][i], H[i+1][i], sn[i], cs[i]);
+        applyGivens(sn[i], cs[i], g[i], g[i+1]);
+
+        /*---  Set L2 norm of residual and check if solution has converged ---*/
+        beta = fabs(g[i+1]);
+
+        /*---  Output the relative residual if necessary ---*/
+        if ((((monitoring) && (rank == 0)) && ((i+1) % 5 == 0)) && (rank == 0)) writeHistory(i+1, beta, norm0);
+    }
+    
+    /*---  Solve the least-squares system and update solution ---*/
+    solveReduced(i, H, g, y);
+    for (int k = 0; k < i; k++) {
+        x.Plus_AX(y[k], z[k]);
+    }
+
+    if ((monitoring) && (rank == 0)) {
+        cout << "# FGMRES final (true) residual:" << endl;
+        cout << "# Iteration = " << i << ": |res|/|res0| = " << beta/norm0 << endl;
+    }
+
+    return i;
+
 }
 
 unsigned long CSysSolve::BCGSTAB(const CSysVector & b, CSysVector & x, CMatrixVectorProduct & mat_vec,

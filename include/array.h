@@ -245,6 +245,10 @@ array<T>& array<T>::operator=(const array<T>& in_array)
 template <typename T>
 array<T>::~array()
 {
+    dim_0=0;
+    dim_1=0;
+    dim_2=0;
+    dim_3=0;
     delete[] cpu_data;
     // do we need to deallocate gpu memory here as well?
 }

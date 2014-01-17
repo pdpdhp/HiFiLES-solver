@@ -401,7 +401,12 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh* Mesh) {
 		if (FlowSol->rank==0) cout << "setting mesh motion parameters ... " << endl;
 		for(int i=0;i<FlowSol->n_ele_types;i++) {
 			if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
-				FlowSol->mesh_eles(i)->set_mesh_motion();
+                FlowSol->mesh_eles(i)->initialize_grid_vel();
+                //FlowSol->mesh_eles(i)->set_opp_vf();
+                    /*opp_vf.setup(n_eles);
+                    for (int ic=0; ic<n_eles; ic++)
+                        set_opp_vf(run_input.sparse_tri,ic);
+                }*/
 			}
 		}
 	}
@@ -771,7 +776,9 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh* Mesh) {
 			}
 		}
 	}
-  
+
+    Mesh->ic2loc_c = local_c;
+
 	// set on GPU
 #ifdef _GPU
   if (in_run_type==0)

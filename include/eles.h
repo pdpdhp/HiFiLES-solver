@@ -262,6 +262,9 @@ public:
     /*! set opp_r */
     void set_opp_r(void);
 
+    /*! set opp_vf */
+    void set_opp_vf(int in_ele);
+
     /*! calculate position of the plot points */
     void calc_pos_ppts(int in_ele, array<double>& out_pos_ppts);
 
@@ -318,6 +321,15 @@ public:
 
     /*! calculate second derivative of position */
     void calc_dd_pos(array<double> in_loc, int in_ele, array<double>& out_dd_pos);
+
+    /*! initialize arrays for storing grid velocities */
+    void initialize_grid_vel(void);
+
+    /*! set grid velocity on element shape points */
+    void set_grid_vel_spt(int in_ele, int in_spt, array<double> in_vel);
+
+    /*! interpolate grid velocity from shape points to flux points */
+    void set_grid_vel_fpts();
 
     // #### virtual methods ####
 
@@ -776,6 +788,9 @@ protected:
 
     /*! operator to go from discontinuous solution at the restart points to discontinuous solution at the solutoin points */
     array<double> opp_r;
+
+    /*! operator to go from grid velocity at shape points to grid velocity at flux points */
+    array<array<double> > opp_vf;
 
     /*! dimensions for blas calls */
     int Arows, Acols;
