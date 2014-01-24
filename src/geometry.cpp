@@ -123,678 +123,686 @@ int get_bc_number(string& bcname) {
   return bcflag;
 }
 
-void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh* Mesh) {
-  // ** TODO: clean up duplicate/redundant data here **
-  array<double> xv;
-  array<int> c2v,c2n_v,ctype,bctype_c,ic2icg,iv2ivg;
-  
-  /*! Reading vertices and cells, and partition mesh across processors. */
-  ReadMesh(run_input.mesh_file, xv, c2v, c2n_v, ctype, ic2icg, iv2ivg, FlowSol->num_eles, FlowSol->num_verts, FlowSol);
-  
-  if (in_run_type==1) // Plotting mode
-  {
-    /*! Store c2v, c2n_v, ctype. */
-    FlowSol->ele2vert = c2v;
-    FlowSol->ele2n_vert = c2n_v;
-    FlowSol->ele_type = ctype;
-  }
-  // ** TODO: clean up duplicate/redundant data **
-  Mesh->c2v = c2v;
-  Mesh->c2n_v = c2n_v;
-  Mesh->xv = xv;
-  Mesh->iv2ivg = iv2ivg;
-  Mesh->ctype = ctype;
-  Mesh->n_eles = FlowSol->num_eles;
-  Mesh->n_verts = FlowSol->num_verts;
-  
-  /////////////////////////////////////////////////
-  /// Set connectivity
-  /////////////////////////////////////////////////
-	
-	// ** TODO: clean up duplicate/redundant data **
+void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
+    // ** TODO: clean up duplicate/redundant data here **
+    array<double> xv;
+    array<int> c2v,c2n_v,ctype,bctype_c,ic2icg,iv2ivg;
+
+    /*! Reading vertices and cells, and partition mesh across processors. */
+    ReadMesh(run_input.mesh_file, xv, c2v, c2n_v, ctype, ic2icg, iv2ivg, FlowSol->num_eles, FlowSol->num_verts, Mesh.n_verts_global, FlowSol);
+
+    if (in_run_type==1) // Plotting mode
+    {
+        /*! Store c2v, c2n_v, ctype. */
+        FlowSol->ele2vert = c2v;
+        FlowSol->ele2n_vert = c2n_v;
+        FlowSol->ele_type = ctype;
+    }
+    // ** TODO: clean up duplicate/redundant data **
+    Mesh.c2v = c2v;
+    Mesh.c2n_v = c2n_v;
+    Mesh.xv = xv;
+    Mesh.iv2ivg = iv2ivg;
+    Mesh.ctype = ctype;
+    Mesh.n_eles = FlowSol->num_eles;
+    Mesh.n_verts = FlowSol->num_verts;
+
+    /////////////////////////////////////////////////
+    /// Set connectivity
+    /////////////////////////////////////////////////
+
+    // ** TODO: clean up duplicate/redundant data **
     array<int> f2c,f2loc_f,c2f,c2e,f2v,f2nv;
-	array<int> rot_tag,unmatched_inters;
-	int n_unmatched_inters;
-  
-	// cannot have more than num_eles*6 faces
-	int max_inters = FlowSol->num_eles*MAX_F_PER_C;
-  
-	f2c.setup(max_inters,2);
-	f2v.setup(max_inters,MAX_V_PER_F); // each edge/face cannot have more than 4 vertices
-	f2nv.setup(max_inters);
-	f2loc_f.setup(max_inters,2);
+    array<int> rot_tag,unmatched_inters;
+    int n_unmatched_inters;
+
+    // cannot have more than num_eles*6 faces
+    int max_inters = FlowSol->num_eles*MAX_F_PER_C;
+
+    f2c.setup(max_inters,2);
+    f2v.setup(max_inters,MAX_V_PER_F); // each edge/face cannot have more than 4 vertices
+    f2nv.setup(max_inters);
+    f2loc_f.setup(max_inters,2);
     c2f.setup(FlowSol->num_eles,MAX_F_PER_C); // one cell cannot have more than 6 faces
     c2e.setup(FlowSol->num_eles,MAX_E_PER_C); // one cell cannot have more than 12 edges
-	rot_tag.setup(max_inters);
-	unmatched_inters.setup(max_inters);
+    rot_tag.setup(max_inters);
+    unmatched_inters.setup(max_inters);
 
-    Mesh->v2n_e.setup(Mesh->n_verts);
+    Mesh.v2n_e.setup(Mesh.n_verts);
 
-	// Initialize arrays to -1
-	for (int i=0;i<max_inters;i++) {
-		f2c(i,0) = f2c(i,1) = -1;
-		f2loc_f(i,0) = f2loc_f(i,1) = -1;
-	}
-  
-	for (int i=0;i<FlowSol->num_eles;i++)
-		for(int k=0;k<MAX_F_PER_C;k++)
+    // Initialize arrays to -1
+    for (int i=0;i<max_inters;i++) {
+        f2c(i,0) = f2c(i,1) = -1;
+        f2loc_f(i,0) = f2loc_f(i,1) = -1;
+    }
+
+    for (int i=0;i<FlowSol->num_eles;i++)
+        for(int k=0;k<MAX_F_PER_C;k++)
             c2f(i,k)=-1;
-  
-  array<int> icvsta, icvert;
-  
-  // Compute connectivity
-    CompConnectivity(c2v, c2n_v, ctype, c2f, c2e, f2c, f2loc_f, f2v, f2nv, Mesh->e2v, Mesh->v2n_e, Mesh->v2e, rot_tag, unmatched_inters, n_unmatched_inters, icvsta, icvert, FlowSol->num_inters, FlowSol->num_edges, FlowSol);
-  
-  // Reading boundaries
-  ReadBound(run_input.mesh_file,c2v,c2n_v,ctype,bctype_c,ic2icg,icvsta,icvert,iv2ivg,FlowSol->num_eles,FlowSol->num_verts, FlowSol);
-  if (in_run_type==1)
-  {
-    // Store ele2face
-    FlowSol->ele2face = c2f;
-    FlowSol->ele2edge = c2e;
-    FlowSol->inter2loc_inter = f2loc_f;
-    FlowSol->inter2ele = f2c;
-  }
-  // ** TODO: clean up duplicate/redundant data **
-  Mesh->c2f = c2f;
-  Mesh->c2e = c2e;
-  Mesh->f2c = f2c;
-  Mesh->f2n_v = f2nv;
 
-  /////////////////////////////////////////////////
-  /// Initializing Elements
-  /////////////////////////////////////////////////
-  
-  // Count the number of elements of each type
-  int num_tris = 0;
-  int num_quads= 0;
-  int num_tets= 0;
-  int num_pris= 0;
-  int num_hexas= 0;
-  
-  for (int i=0;i<FlowSol->num_eles;i++) {
-    if (ctype(i)==0) num_tris++;
-    else if (ctype(i)==1) num_quads++;
-    else if (ctype(i)==2) num_tets++;
-    else if (ctype(i)==3) num_pris++;
-    else if (ctype(i)==4) num_hexas++;
-  }
-  
-  // Error checking
-  if (FlowSol->n_dims == 2 && (num_tets != 0 || num_pris != 0 || num_hexas != 0)) {
-    cout << "Error in mesh reader, n_dims=2 and 3d elements exists" << endl;
-    exit(1);
-  }
-  if (FlowSol->n_dims == 3 && (num_tris!= 0 || num_quads != 0)) {
-    cout << "Error in mesh reader, n_dims=3 and 2d elements exists" << endl;
-    exit(1);
-  }
-  
-  // For each element type, count the maximum number of shape points per element
-  int max_n_spts_per_tri = 0;
-  int max_n_spts_per_quad= 0;
-  int max_n_spts_per_tet = 0;
-  int max_n_spts_per_pri = 0;
-  int max_n_spts_per_hexa = 0;
-  
-  for (int i=0;i<FlowSol->num_eles;i++) {
-    if (ctype(i)==0 && c2n_v(i) > max_n_spts_per_tri ) // triangle
-      max_n_spts_per_tri = c2n_v(i);
-    else if (ctype(i)==1 && c2n_v(i) > max_n_spts_per_quad ) // quad
-      max_n_spts_per_quad = c2n_v(i);
-    else if (ctype(i)==2 && c2n_v(i) > max_n_spts_per_tet) // tet
-      max_n_spts_per_tet = c2n_v(i);
-    else if (ctype(i)==3 && c2n_v(i) > max_n_spts_per_pri) // pri
-      max_n_spts_per_pri = c2n_v(i);
-    else if (ctype(i)==4 && c2n_v(i) > max_n_spts_per_hexa) // hexa
-      max_n_spts_per_hexa = c2n_v(i);
-  }
-  
-  // Initialize the mesh_eles
-  FlowSol->n_ele_types=5;
-  FlowSol->mesh_eles.setup(FlowSol->n_ele_types);
-  
-  FlowSol->mesh_eles(0) = &FlowSol->mesh_eles_tris;
-  FlowSol->mesh_eles(1) = &FlowSol->mesh_eles_quads;
-  FlowSol->mesh_eles(2) = &FlowSol->mesh_eles_tets;
-  FlowSol->mesh_eles(3) = &FlowSol->mesh_eles_pris;
-  FlowSol->mesh_eles(4) = &FlowSol->mesh_eles_hexas;
-  
-  for (int i=0;i<FlowSol->n_ele_types;i++)
-  {
-    FlowSol->mesh_eles(i)->set_rank(FlowSol->rank);
-  }
-  
-  if (FlowSol->rank==0) cout << "initializing elements" << endl;
-  if (FlowSol->rank==0) cout << "tris" << endl;
-	FlowSol->mesh_eles_tris.setup(num_tris,max_n_spts_per_tri,in_run_type);
-  if (FlowSol->rank==0) cout << "quads" << endl;
-	FlowSol->mesh_eles_quads.setup(num_quads,max_n_spts_per_quad,in_run_type);
-  if (FlowSol->rank==0) cout << "tets" << endl;
-	FlowSol->mesh_eles_tets.setup(num_tets,max_n_spts_per_tet,in_run_type);
-  if (FlowSol->rank==0) cout << "pris" << endl;
-	FlowSol->mesh_eles_pris.setup(num_pris,max_n_spts_per_pri,in_run_type);
-  if (FlowSol->rank==0) cout << "hexas" << endl;
-	FlowSol->mesh_eles_hexas.setup(num_hexas,max_n_spts_per_hexa,in_run_type);
-  if (FlowSol->rank==0) cout << "done initializing elements" << endl;
-  
-  // Set shape for each cell
-  array<int> local_c(FlowSol->num_eles);
-  
-  int tris_count = 0;
-  int quads_count = 0;
-  int tets_count = 0;
-  int pris_count = 0;
-  int hexas_count = 0;
-  
-  array<double> pos(FlowSol->n_dims);
-  
-  if (FlowSol->rank==0) cout << "setting elements shape" << endl;
-  for (int i=0;i<FlowSol->num_eles;i++) {
-    if (ctype(i) == 0) //tri
-    {
-      local_c(i) = tris_count;
-      FlowSol->mesh_eles_tris.set_n_spts(tris_count,c2n_v(i));
-      FlowSol->mesh_eles_tris.set_ele2global_ele(tris_count,ic2icg(i));
+    array<int> icvsta, icvert;
 
-      for (int j=0;j<c2n_v(i);j++)
-      {
-        pos(0) = xv(c2v(i,j),0);
-        pos(1) = xv(c2v(i,j),1);
-        FlowSol->mesh_eles_tris.set_shape_node(j,tris_count,pos);
-      }
-      
-      for (int j=0;j<3;j++) {
-        FlowSol->mesh_eles_tris.set_bctype(tris_count,j,bctype_c(i,j));
-      }
-      
-      tris_count++;
-    }
-    else if (ctype(i) == 1) // quad
+    // Compute connectivity
+    CompConnectivity(c2v, c2n_v, ctype, c2f, c2e, f2c, f2loc_f, f2v, f2nv, Mesh.e2v, Mesh.v2n_e, Mesh.v2e, rot_tag,
+                     unmatched_inters, n_unmatched_inters, icvsta, icvert, FlowSol->num_inters, FlowSol->num_edges, FlowSol);
+
+    // list of global vertices & bc flags
+    array<int>& bcverts;
+    bcverts.setup(Mesh.n_verts_global);
+
+    // Reading boundaries
+    ReadBound(run_input.mesh_file,c2v,c2n_v,ctype,bctype_c,bcverts,ic2icg,icvsta,icvert,iv2ivg,FlowSol->num_eles,FlowSol->num_verts, FlowSol);
+    if (in_run_type==1)
     {
-      local_c(i) = quads_count;
-      FlowSol->mesh_eles_quads.set_n_spts(quads_count,c2n_v(i));
-      FlowSol->mesh_eles_quads.set_ele2global_ele(quads_count,ic2icg(i));
-      for (int j=0;j<c2n_v(i);j++)
-      {
-        pos(0) = xv(c2v(i,j),0);
-        pos(1) = xv(c2v(i,j),1);
-        FlowSol->mesh_eles_quads.set_shape_node(j,quads_count,pos);
-      }
-      
-      for (int j=0;j<4;j++) {
-        FlowSol->mesh_eles_quads.set_bctype(quads_count,j,bctype_c(i,j));
-      }
-      
-      quads_count++;
+        // Store ele2face
+        FlowSol->ele2face = c2f;
+        FlowSol->ele2edge = c2e;
+        FlowSol->inter2loc_inter = f2loc_f;
+        FlowSol->inter2ele = f2c;
     }
-    else if (ctype(i) == 2) //tet
+    // ** TODO: clean up duplicate/redundant data **
+    Mesh.c2f = c2f;
+    Mesh.c2e = c2e;
+    Mesh.f2c = f2c;
+    Mesh.f2n_v = f2nv;
+    Mesh.n_faces = FlowSol->num_inters;
+    Mesh.v2bc = bcverts;
+
+    /////////////////////////////////////////////////
+    /// Initializing Elements
+    /////////////////////////////////////////////////
+
+    // Count the number of elements of each type
+    int num_tris = 0;
+    int num_quads= 0;
+    int num_tets= 0;
+    int num_pris= 0;
+    int num_hexas= 0;
+
+    for (int i=0;i<FlowSol->num_eles;i++) {
+        if (ctype(i)==0) num_tris++;
+        else if (ctype(i)==1) num_quads++;
+        else if (ctype(i)==2) num_tets++;
+        else if (ctype(i)==3) num_pris++;
+        else if (ctype(i)==4) num_hexas++;
+    }
+
+    // Error checking
+    if (FlowSol->n_dims == 2 && (num_tets != 0 || num_pris != 0 || num_hexas != 0)) {
+        cout << "Error in mesh reader, n_dims=2 and 3d elements exists" << endl;
+        exit(1);
+    }
+    if (FlowSol->n_dims == 3 && (num_tris!= 0 || num_quads != 0)) {
+        cout << "Error in mesh reader, n_dims=3 and 2d elements exists" << endl;
+        exit(1);
+    }
+
+    // For each element type, count the maximum number of shape points per element
+    int max_n_spts_per_tri = 0;
+    int max_n_spts_per_quad= 0;
+    int max_n_spts_per_tet = 0;
+    int max_n_spts_per_pri = 0;
+    int max_n_spts_per_hexa = 0;
+
+    for (int i=0;i<FlowSol->num_eles;i++) {
+        if (ctype(i)==0 && c2n_v(i) > max_n_spts_per_tri ) // triangle
+            max_n_spts_per_tri = c2n_v(i);
+        else if (ctype(i)==1 && c2n_v(i) > max_n_spts_per_quad ) // quad
+            max_n_spts_per_quad = c2n_v(i);
+        else if (ctype(i)==2 && c2n_v(i) > max_n_spts_per_tet) // tet
+            max_n_spts_per_tet = c2n_v(i);
+        else if (ctype(i)==3 && c2n_v(i) > max_n_spts_per_pri) // pri
+            max_n_spts_per_pri = c2n_v(i);
+        else if (ctype(i)==4 && c2n_v(i) > max_n_spts_per_hexa) // hexa
+            max_n_spts_per_hexa = c2n_v(i);
+    }
+
+    // Initialize the mesh_eles
+    FlowSol->n_ele_types=5;
+    FlowSol->mesh_eles.setup(FlowSol->n_ele_types);
+
+    FlowSol->mesh_eles(0) = &FlowSol->mesh_eles_tris;
+    FlowSol->mesh_eles(1) = &FlowSol->mesh_eles_quads;
+    FlowSol->mesh_eles(2) = &FlowSol->mesh_eles_tets;
+    FlowSol->mesh_eles(3) = &FlowSol->mesh_eles_pris;
+    FlowSol->mesh_eles(4) = &FlowSol->mesh_eles_hexas;
+
+    for (int i=0;i<FlowSol->n_ele_types;i++)
     {
-      local_c(i) = tets_count;
-      FlowSol->mesh_eles_tets.set_n_spts(tets_count,c2n_v(i));
-      FlowSol->mesh_eles_tets.set_ele2global_ele(tets_count,ic2icg(i));
-      for (int j=0;j<c2n_v(i);j++)
-      {
-        pos(0) = xv(c2v(i,j),0);
-        pos(1) = xv(c2v(i,j),1);
-        pos(2) = xv(c2v(i,j),2);
-        FlowSol->mesh_eles_tets.set_shape_node(j,tets_count,pos);
-      }
-      
-      for (int j=0;j<4;j++) {
-        FlowSol->mesh_eles_tets.set_bctype(tets_count,j,bctype_c(i,j));
-      }
-      
-      tets_count++;
+        FlowSol->mesh_eles(i)->set_rank(FlowSol->rank);
     }
-    else if (ctype(i) == 3) //pri
-    {
-      local_c(i) = pris_count;
-      FlowSol->mesh_eles_pris.set_n_spts(pris_count,c2n_v(i));
-      FlowSol->mesh_eles_pris.set_ele2global_ele(pris_count,ic2icg(i));
-      for (int j=0;j<c2n_v(i);j++)
-      {
-        pos(0) = xv(c2v(i,j),0);
-        pos(1) = xv(c2v(i,j),1);
-        pos(2) = xv(c2v(i,j),2);
-        FlowSol->mesh_eles_pris.set_shape_node(j,pris_count,pos);
-      }
-      
-      for (int j=0;j<5;j++) {
-        FlowSol->mesh_eles_pris.set_bctype(pris_count,j,bctype_c(i,j));
-      }
-      
-      pris_count++;
+
+    if (FlowSol->rank==0) cout << "initializing elements" << endl;
+    if (FlowSol->rank==0) cout << "tris" << endl;
+    FlowSol->mesh_eles_tris.setup(num_tris,max_n_spts_per_tri,in_run_type);
+    if (FlowSol->rank==0) cout << "quads" << endl;
+    FlowSol->mesh_eles_quads.setup(num_quads,max_n_spts_per_quad,in_run_type);
+    if (FlowSol->rank==0) cout << "tets" << endl;
+    FlowSol->mesh_eles_tets.setup(num_tets,max_n_spts_per_tet,in_run_type);
+    if (FlowSol->rank==0) cout << "pris" << endl;
+    FlowSol->mesh_eles_pris.setup(num_pris,max_n_spts_per_pri,in_run_type);
+    if (FlowSol->rank==0) cout << "hexas" << endl;
+    FlowSol->mesh_eles_hexas.setup(num_hexas,max_n_spts_per_hexa,in_run_type);
+    if (FlowSol->rank==0) cout << "done initializing elements" << endl;
+
+    // Set shape for each cell
+    array<int> local_c(FlowSol->num_eles);
+
+    int tris_count = 0;
+    int quads_count = 0;
+    int tets_count = 0;
+    int pris_count = 0;
+    int hexas_count = 0;
+
+    array<double> pos(FlowSol->n_dims);
+
+    if (FlowSol->rank==0) cout << "setting elements shape" << endl;
+    for (int i=0;i<FlowSol->num_eles;i++) {
+        if (ctype(i) == 0) //tri
+        {
+            local_c(i) = tris_count;
+            FlowSol->mesh_eles_tris.set_n_spts(tris_count,c2n_v(i));
+            FlowSol->mesh_eles_tris.set_ele2global_ele(tris_count,ic2icg(i));
+
+            for (int j=0;j<c2n_v(i);j++)
+            {
+                pos(0) = xv(c2v(i,j),0);
+                pos(1) = xv(c2v(i,j),1);
+                FlowSol->mesh_eles_tris.set_shape_node(j,tris_count,pos);
+            }
+
+            for (int j=0;j<3;j++) {
+                FlowSol->mesh_eles_tris.set_bctype(tris_count,j,bctype_c(i,j));
+            }
+
+            tris_count++;
+        }
+        else if (ctype(i) == 1) // quad
+        {
+            local_c(i) = quads_count;
+            FlowSol->mesh_eles_quads.set_n_spts(quads_count,c2n_v(i));
+            FlowSol->mesh_eles_quads.set_ele2global_ele(quads_count,ic2icg(i));
+            for (int j=0;j<c2n_v(i);j++)
+            {
+                pos(0) = xv(c2v(i,j),0);
+                pos(1) = xv(c2v(i,j),1);
+                FlowSol->mesh_eles_quads.set_shape_node(j,quads_count,pos);
+            }
+
+            for (int j=0;j<4;j++) {
+                FlowSol->mesh_eles_quads.set_bctype(quads_count,j,bctype_c(i,j));
+            }
+
+            quads_count++;
+        }
+        else if (ctype(i) == 2) //tet
+        {
+            local_c(i) = tets_count;
+            FlowSol->mesh_eles_tets.set_n_spts(tets_count,c2n_v(i));
+            FlowSol->mesh_eles_tets.set_ele2global_ele(tets_count,ic2icg(i));
+            for (int j=0;j<c2n_v(i);j++)
+            {
+                pos(0) = xv(c2v(i,j),0);
+                pos(1) = xv(c2v(i,j),1);
+                pos(2) = xv(c2v(i,j),2);
+                FlowSol->mesh_eles_tets.set_shape_node(j,tets_count,pos);
+            }
+
+            for (int j=0;j<4;j++) {
+                FlowSol->mesh_eles_tets.set_bctype(tets_count,j,bctype_c(i,j));
+            }
+
+            tets_count++;
+        }
+        else if (ctype(i) == 3) //pri
+        {
+            local_c(i) = pris_count;
+            FlowSol->mesh_eles_pris.set_n_spts(pris_count,c2n_v(i));
+            FlowSol->mesh_eles_pris.set_ele2global_ele(pris_count,ic2icg(i));
+            for (int j=0;j<c2n_v(i);j++)
+            {
+                pos(0) = xv(c2v(i,j),0);
+                pos(1) = xv(c2v(i,j),1);
+                pos(2) = xv(c2v(i,j),2);
+                FlowSol->mesh_eles_pris.set_shape_node(j,pris_count,pos);
+            }
+
+            for (int j=0;j<5;j++) {
+                FlowSol->mesh_eles_pris.set_bctype(pris_count,j,bctype_c(i,j));
+            }
+
+            pris_count++;
+        }
+        else if (ctype(i) == 4) //hex
+        {
+            local_c(i) = hexas_count;
+            FlowSol->mesh_eles_hexas.set_n_spts(hexas_count,c2n_v(i));
+            FlowSol->mesh_eles_hexas.set_ele2global_ele(hexas_count,ic2icg(i));
+            for (int j=0;j<c2n_v(i);j++)
+            {
+                pos(0) = xv(c2v(i,j),0);
+                pos(1) = xv(c2v(i,j),1);
+                pos(2) = xv(c2v(i,j),2);
+                FlowSol->mesh_eles_hexas.set_shape_node(j,hexas_count,pos);
+            }
+
+            for (int j=0;j<6;j++) {
+                FlowSol->mesh_eles_hexas.set_bctype(hexas_count,j,bctype_c(i,j));
+            }
+
+            hexas_count++;
+        }
     }
-    else if (ctype(i) == 4) //hex
-    {
-      local_c(i) = hexas_count;
-      FlowSol->mesh_eles_hexas.set_n_spts(hexas_count,c2n_v(i));
-      FlowSol->mesh_eles_hexas.set_ele2global_ele(hexas_count,ic2icg(i));
-      for (int j=0;j<c2n_v(i);j++)
-      {
-        pos(0) = xv(c2v(i,j),0);
-        pos(1) = xv(c2v(i,j),1);
-        pos(2) = xv(c2v(i,j),2);
-        FlowSol->mesh_eles_hexas.set_shape_node(j,hexas_count,pos);
-      }
-      
-      for (int j=0;j<6;j++) {
-        FlowSol->mesh_eles_hexas.set_bctype(hexas_count,j,bctype_c(i,j));
-      }
-      
-      hexas_count++;
+    if (FlowSol->rank==0) cout << "done setting elements shape" << endl;
+
+    // set transforms
+    if (FlowSol->rank==0) cout << "setting element transforms ... " << endl;
+    for(int i=0;i<FlowSol->n_ele_types;i++) {
+        if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
+            FlowSol->mesh_eles(i)->set_transforms(in_run_type);
+        }
     }
-  }
-  if (FlowSol->rank==0) cout << "done setting elements shape" << endl;
-  
-	// set transforms
-	if (FlowSol->rank==0) cout << "setting element transforms ... " << endl;
-	for(int i=0;i<FlowSol->n_ele_types;i++) {
-    if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
-		  FlowSol->mesh_eles(i)->set_transforms(in_run_type);
-    }
-  }
-	
-	// ** Placeholder for misc mesh motion setup **
-	if (run_input.motion) {
-		if (FlowSol->rank==0) cout << "setting mesh motion parameters ... " << endl;
-		for(int i=0;i<FlowSol->n_ele_types;i++) {
-			if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
+
+    // ** Placeholder for misc mesh motion setup **
+    if (run_input.motion) {
+        if (FlowSol->rank==0) cout << "setting mesh motion parameters ... " << endl;
+        for(int i=0;i<FlowSol->n_ele_types;i++) {
+            if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
                 FlowSol->mesh_eles(i)->initialize_grid_vel();
                 //FlowSol->mesh_eles(i)->set_opp_vf();
-                    /*opp_vf.setup(n_eles);
+                /*opp_vf.setup(n_eles);
                     for (int ic=0; ic<n_eles; ic++)
                         set_opp_vf(run_input.sparse_tri,ic);
                 }*/
-			}
-		}
-	}
-
-  // Set metrics at interface cubpts
-	if (FlowSol->rank==0) cout << "setting element transforms at interface cubpts ... " << endl;
-	for(int i=0;i<FlowSol->n_ele_types;i++) {
-    if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
-		  FlowSol->mesh_eles(i)->set_transforms_inters_cubpts();
-    }
-  }
-  
-  // Set metrics at volume cubpts
-	if (FlowSol->rank==0) cout << "setting element transforms at volume cubpts ... " << endl;
-	for(int i=0;i<FlowSol->n_ele_types;i++) {
-    if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
-		  FlowSol->mesh_eles(i)->set_transforms_vol_cubpts();
-    }
-  }
-  
-	// set on gpu (important - need to do this before we set connectivity, so that pointers point to GPU memory)
-#ifdef _GPU
-  if (in_run_type==0)
-  {
-	  for(int i=0;i<FlowSol->n_ele_types;i++) {
-      if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
-        
-	      if (FlowSol->rank==0) cout << "Moving eles to GPU ... " << endl;
-	  	  FlowSol->mesh_eles(i)->mv_all_cpu_gpu();
-      }
-    }
-  }
-#endif
-  
-  // ------------------------------------
-  // Initializing Interfaces
-  // ------------------------------------
-  
-	int n_int_inters= 0;
-	int n_bdy_inters= 0;
-	int n_cyc_loc = 0;
-  
-  // -------------------------------------------------------
-	// Split the cyclic faces as being internal or mpi faces
-  // -------------------------------------------------------
-  
-	array<double> loc_center_inter_0(FlowSol->n_dims),loc_center_inter_1(FlowSol->n_dims);
-	array<double> loc_vert_0(MAX_V_PER_F,FlowSol->n_dims),loc_vert_1(MAX_V_PER_F,FlowSol->n_dims);
-  
-  array<double> delta_cyclic(FlowSol->n_dims);
-  delta_cyclic(0) = run_input.dx_cyclic;
-  delta_cyclic(1) = run_input.dy_cyclic;
-  if (FlowSol->n_dims==3) {
-    delta_cyclic(2) = run_input.dz_cyclic;
-  }
-  
-	double tol = 1.e-8;
-	int bctype_f, found, rtag;
-  int ic_l,ic_r;
-  
-	for(int i=0;i<FlowSol->num_inters;i++)
-	{
-		bctype_f = bctype_c( f2c(i,0),f2loc_f(i,0));
-		if (bctype_f==9) {
-      
-      for (int m=0;m<FlowSol->n_dims;m++)
-        loc_center_inter_0(m) = 0.;
-      
-      for (int k=0;k<f2nv(i);k++)
-        for (int m=0;m<FlowSol->n_dims;m++)
-          loc_center_inter_0(m) += xv(f2v(i,k),m)/f2nv(i);
-      
-      found = 0;
-      for (int j=0;j<n_unmatched_inters;j++) {
-        
-        int i2 = unmatched_inters(j);
-        
-        for (int m=0;m<FlowSol->n_dims;m++)
-          loc_center_inter_1(m) = 0.;
-        
-        for (int k=0;k<f2nv(i2);k++)
-          for (int m=0;m<FlowSol->n_dims;m++)
-            loc_center_inter_1(m) += xv(f2v(i2,k),m)/f2nv(i2);
-        
-        if (check_cyclic(delta_cyclic,loc_center_inter_0,loc_center_inter_1,tol,FlowSol))
-        {
-          
-					found = 1;
-          f2c(i,1) = f2c(i2,0);
-					bctype_c(f2c(i,0),f2loc_f(i,0)) = 0;
-					// Change the flag of matching cyclic inter so that it's not counted as interior inter
-					bctype_c(f2c(i2,0),f2loc_f(i2,0)) = 99;
-          
-					f2loc_f(i,1) = f2loc_f(i2,0);
-					n_cyc_loc++;
-          
-					for(int k=0;k<f2nv(i);k++)
-					{
-            for (int m=0;m<FlowSol->n_dims;m++)
-            {
-              loc_vert_0(k,m) = xv(f2v(i,k),m);
-              loc_vert_1(k,m) = xv(f2v(i2,k),m);
             }
-					}
-          
-          
-					compare_cyclic_faces(loc_vert_0,loc_vert_1,f2nv(i),rtag,delta_cyclic,tol,FlowSol);
-					rot_tag(i) = rtag;
-          break;
         }
-      }
-			if (found==0) // Corresponding cyclic edges belongs to another processsor
-			{
-				f2c(i,1) = -1;
-				bctype_c(f2c(i,0),f2loc_f(i,0)) = 0;
-			}
-		}
-	}
-  
-#ifdef _MPI
-  
-  
-  // ---------------------------------
-  //  Initialize MPI faces
-  //  --------------------------------
-  
-	array<int> f_mpi2f(max_inters);
-  FlowSol->n_mpi_inters = 0;
-  int n_seg_mpi_inters=0;
-  int n_tri_mpi_inters=0;
-  int n_quad_mpi_inters=0;
-  
-  for (int i=0;i<FlowSol->num_inters;i++) {
-    bctype_f = bctype_c( f2c(i,0),f2loc_f(i,0));
-    ic_r = f2c(i,1);
-    
-    if (bctype_f==0 && ic_r==-1) { // mpi_face
-      
-      if (FlowSol->nproc==1)
-      {
-        cout << "ic=" << f2c(i,0) << endl;
-        cout << "local_face=" << f2loc_f(i,0) << endl;
-        FatalError("Should not be here");
-      }
-      
-      bctype_c( f2c(i,0),f2loc_f(i,0)) = 10;
-      f_mpi2f(FlowSol->n_mpi_inters) = i;
-      FlowSol->n_mpi_inters++;
-      
-      if (f2nv(i)==2) n_seg_mpi_inters++;
-      if (f2nv(i)==3) n_tri_mpi_inters++;
-      if (f2nv(i)==4) n_quad_mpi_inters++;
     }
-  }
-  
-	FlowSol->n_mpi_inter_types=3;
-	FlowSol->mesh_mpi_inters.setup(FlowSol->n_mpi_inter_types);
-  
-  for (int i=0;i<FlowSol->n_mpi_inter_types;i++)
-    FlowSol->mesh_mpi_inters(i).set_nproc(FlowSol->nproc,FlowSol->rank);
-  
-  FlowSol->mesh_mpi_inters(0).setup(n_seg_mpi_inters,0,in_run_type);
-  FlowSol->mesh_mpi_inters(1).setup(n_tri_mpi_inters,1,in_run_type);
-  FlowSol->mesh_mpi_inters(2).setup(n_quad_mpi_inters,2,in_run_type);
-  
-  array<int> mpifaces_part(FlowSol->nproc);
-  
-	// Call function that takes in f_mpi2f,f2v and returns a new array f_mpi2f, and an array mpiface_part
-  // that contains the number of faces to send to each processor
-	// the new array f_mpi2f is in good order i.e. proc1,proc2,....
-  
-  match_mpifaces(f2v,f2nv,xv,f_mpi2f,mpifaces_part,delta_cyclic,FlowSol->n_mpi_inters,tol,FlowSol);
-  
-  if (in_run_type==1)
-  {
-    FlowSol->inter_mpi2inter = f_mpi2f;
-  }
-  
-  array<int> rot_tag_mpi(FlowSol->n_mpi_inters);
-	find_rot_mpifaces(f2v,f2nv,xv,f_mpi2f,rot_tag_mpi,mpifaces_part,delta_cyclic,FlowSol->n_mpi_inters,tol,FlowSol);
-  
-  //Initialize the mpi faces
-  
-  int i_seg_mpi = 0;
-  int i_tri_mpi = 0;
-  int i_quad_mpi = 0;
-  
-	for(int i_mpi=0;i_mpi<FlowSol->n_mpi_inters;i_mpi++)
-	{
-    int i = f_mpi2f(i_mpi);
-		bctype_f = bctype_c( f2c(i,0),f2loc_f(i,0) );
-		ic_l = f2c(i,0);
-    
-    if (f2nv(i)==2) {
-      FlowSol->mesh_mpi_inters(0).set_mpi(i_seg_mpi,ctype(ic_l),local_c(ic_l),f2loc_f(i,0),rot_tag_mpi(i_mpi),in_run_type,FlowSol);
-      i_seg_mpi++;
+
+    // Set metrics at interface cubpts
+    if (FlowSol->rank==0) cout << "setting element transforms at interface cubpts ... " << endl;
+    for(int i=0;i<FlowSol->n_ele_types;i++) {
+        if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
+            FlowSol->mesh_eles(i)->set_transforms_inters_cubpts();
+        }
     }
-    else if (f2nv(i)==3) {
-      FlowSol->mesh_mpi_inters(1).set_mpi(i_tri_mpi,ctype(ic_l),local_c(ic_l),f2loc_f(i,0),rot_tag_mpi(i_mpi),in_run_type,FlowSol);
-		  i_tri_mpi++;
+
+    // Set metrics at volume cubpts
+    if (FlowSol->rank==0) cout << "setting element transforms at volume cubpts ... " << endl;
+    for(int i=0;i<FlowSol->n_ele_types;i++) {
+        if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
+            FlowSol->mesh_eles(i)->set_transforms_vol_cubpts();
+        }
     }
-    else if (f2nv(i)==4) {
-      FlowSol->mesh_mpi_inters(2).set_mpi(i_quad_mpi,ctype(ic_l),local_c(ic_l),f2loc_f(i,0),rot_tag_mpi(i_mpi),in_run_type,FlowSol);
-		  i_quad_mpi++;
-    }
-  }
-  
-  // Initialize Nout_proc
-  int icount = 0;
-  
-  int request_seg=0;
-  int request_tri=0;
-  int request_quad=0;
-  
-  for (int p=0;p<FlowSol->nproc;p++)
-  {
-    // For all faces to send to processor p, split between face types
-    int Nout_seg = 0;
-    int Nout_tri = 0;
-    int Nout_quad = 0;
-    
-    for (int j=0;j<mpifaces_part(p);j++)
-    {
-      int i_mpi = icount + j;
-      int i = f_mpi2f(i_mpi);
-      if (f2nv(i)==2)  Nout_seg++;
-      else if (f2nv(i)==3)  Nout_tri++;
-      else if (f2nv(i)==4)  Nout_quad++;
-    }
-    icount += mpifaces_part(p);
-    
-    if (Nout_seg!=0) {
-      FlowSol->mesh_mpi_inters(0).set_nout_proc(Nout_seg,p);
-      request_seg++;
-    }
-    if (Nout_tri!=0) {
-      FlowSol->mesh_mpi_inters(1).set_nout_proc(Nout_tri,p);
-      request_tri++;
-    }
-    if (Nout_quad!=0) {
-      FlowSol->mesh_mpi_inters(2).set_nout_proc(Nout_quad,p);
-      request_quad++;
-    }
-  }
-  
-  FlowSol->mesh_mpi_inters(0).set_mpi_requests(request_seg);
-  FlowSol->mesh_mpi_inters(1).set_mpi_requests(request_tri);
-  FlowSol->mesh_mpi_inters(2).set_mpi_requests(request_quad);
-  
+
+    // set on gpu (important - need to do this before we set connectivity, so that pointers point to GPU memory)
 #ifdef _GPU
-  if (in_run_type==0)
-  {
-	  for(int i=0;i<FlowSol->n_mpi_inter_types;i++)
-	  	FlowSol->mesh_mpi_inters(i).mv_all_cpu_gpu();
-  }
+    if (in_run_type==0)
+    {
+        for(int i=0;i<FlowSol->n_ele_types;i++) {
+            if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
+
+                if (FlowSol->rank==0) cout << "Moving eles to GPU ... " << endl;
+                FlowSol->mesh_eles(i)->mv_all_cpu_gpu();
+            }
+        }
+    }
 #endif
-  
-#endif
-  
-	// ---------------------------------------
-	// Initializing internal and bdy faces
-	// ---------------------------------------
-  
-  // TODO: Need to count quad and triangle faces
-  
-	// Count the number of int_inters and bdy_inters
-  int n_seg_int_inters = 0;
-  int n_tri_int_inters = 0;
-  int n_quad_int_inters = 0;
-  
-  int n_seg_bdy_inters = 0;
-  int n_tri_bdy_inters = 0;
-  int n_quad_bdy_inters = 0;
-  
-	for (int i=0; i<FlowSol->num_inters; i++)
-	{
-		bctype_f = bctype_c( f2c(i,0),f2loc_f(i,0));
-		ic_r = f2c(i,1);
-    
-		if (bctype_f!=10)
-		{
-			if (bctype_f==0)	// internal interface
-			{
-				if (ic_r==-1)
-				{
-					cout << "Error: Interior interface has ic_r=-1. Should not be here, exiting" << endl;
-					exit(1);
-				}
-				n_int_inters++;
-        if (f2nv(i)==2) n_seg_int_inters++;
-        if (f2nv(i)==3) n_tri_int_inters++;
-        if (f2nv(i)==4) n_quad_int_inters++;
-			}
-			else // boundary interface
-			{
-				if (bctype_f!=99) //  Not a deleted cyclic interface
-				{
-					n_bdy_inters++;
-          if (f2nv(i)==2) n_seg_bdy_inters++;
-          if (f2nv(i)==3) n_tri_bdy_inters++;
-          if (f2nv(i)==4) n_quad_bdy_inters++;
-				}
-			}
-		}
-	}
-  
-	FlowSol->n_int_inter_types=3;
-	FlowSol->mesh_int_inters.setup(FlowSol->n_int_inter_types);
-  FlowSol->mesh_int_inters(0).setup(n_seg_int_inters,0,in_run_type);
-  FlowSol->mesh_int_inters(1).setup(n_tri_int_inters,1,in_run_type);
-  FlowSol->mesh_int_inters(2).setup(n_quad_int_inters,2,in_run_type);
-  
-	FlowSol->n_bdy_inter_types=3;
-	FlowSol->mesh_bdy_inters.setup(FlowSol->n_bdy_inter_types);
-  FlowSol->mesh_bdy_inters(0).setup(n_seg_bdy_inters,0,in_run_type);
-  FlowSol->mesh_bdy_inters(1).setup(n_tri_bdy_inters,1,in_run_type);
-  FlowSol->mesh_bdy_inters(2).setup(n_quad_bdy_inters,2,in_run_type);
-  
-  int i_seg_int=0;
-  int i_tri_int=0;
-  int i_quad_int=0;
-  
-  int i_seg_bdy=0;
-  int i_tri_bdy=0;
-  int i_quad_bdy=0;
-  
-	for(int i=0;i<FlowSol->num_inters;i++)
-	{
-		bctype_f = bctype_c( f2c(i,0),f2loc_f(i,0) );
-		ic_l = f2c(i,0);
-		ic_r = f2c(i,1);
-    
-		if(bctype_f!=10) // internal or boundary edge
-		{
-			if(bctype_f==0)
-			{
+
+    // ------------------------------------
+    // Initializing Interfaces
+    // ------------------------------------
+
+    int n_int_inters= 0;
+    int n_bdy_inters= 0;
+    int n_cyc_loc = 0;
+
+    // -------------------------------------------------------
+    // Split the cyclic faces as being internal or mpi faces
+    // -------------------------------------------------------
+
+    array<double> loc_center_inter_0(FlowSol->n_dims),loc_center_inter_1(FlowSol->n_dims);
+    array<double> loc_vert_0(MAX_V_PER_F,FlowSol->n_dims),loc_vert_1(MAX_V_PER_F,FlowSol->n_dims);
+
+    array<double> delta_cyclic(FlowSol->n_dims);
+    delta_cyclic(0) = run_input.dx_cyclic;
+    delta_cyclic(1) = run_input.dy_cyclic;
+    if (FlowSol->n_dims==3) {
+        delta_cyclic(2) = run_input.dz_cyclic;
+    }
+
+    double tol = 1.e-8;
+    int bctype_f, found, rtag;
+    int ic_l,ic_r;
+
+    for(int i=0;i<FlowSol->num_inters;i++)
+    {
+        bctype_f = bctype_c( f2c(i,0),f2loc_f(i,0));
+        if (bctype_f==9) {
+
+            for (int m=0;m<FlowSol->n_dims;m++)
+                loc_center_inter_0(m) = 0.;
+
+            for (int k=0;k<f2nv(i);k++)
+                for (int m=0;m<FlowSol->n_dims;m++)
+                    loc_center_inter_0(m) += xv(f2v(i,k),m)/f2nv(i);
+
+            found = 0;
+            for (int j=0;j<n_unmatched_inters;j++) {
+
+                int i2 = unmatched_inters(j);
+
+                for (int m=0;m<FlowSol->n_dims;m++)
+                    loc_center_inter_1(m) = 0.;
+
+                for (int k=0;k<f2nv(i2);k++)
+                    for (int m=0;m<FlowSol->n_dims;m++)
+                        loc_center_inter_1(m) += xv(f2v(i2,k),m)/f2nv(i2);
+
+                if (check_cyclic(delta_cyclic,loc_center_inter_0,loc_center_inter_1,tol,FlowSol))
+                {
+
+                    found = 1;
+                    f2c(i,1) = f2c(i2,0);
+                    bctype_c(f2c(i,0),f2loc_f(i,0)) = 0;
+                    // Change the flag of matching cyclic inter so that it's not counted as interior inter
+                    bctype_c(f2c(i2,0),f2loc_f(i2,0)) = 99;
+
+                    f2loc_f(i,1) = f2loc_f(i2,0);
+                    n_cyc_loc++;
+
+                    for(int k=0;k<f2nv(i);k++)
+                    {
+                        for (int m=0;m<FlowSol->n_dims;m++)
+                        {
+                            loc_vert_0(k,m) = xv(f2v(i,k),m);
+                            loc_vert_1(k,m) = xv(f2v(i2,k),m);
+                        }
+                    }
+
+
+                    compare_cyclic_faces(loc_vert_0,loc_vert_1,f2nv(i),rtag,delta_cyclic,tol,FlowSol);
+                    rot_tag(i) = rtag;
+                    break;
+                }
+            }
+            if (found==0) // Corresponding cyclic edges belongs to another processsor
+            {
+                f2c(i,1) = -1;
+                bctype_c(f2c(i,0),f2loc_f(i,0)) = 0;
+            }
+        }
+    }
+
+#ifdef _MPI
+
+
+    // ---------------------------------
+    //  Initialize MPI faces
+    //  --------------------------------
+
+    array<int> f_mpi2f(max_inters);
+    FlowSol->n_mpi_inters = 0;
+    int n_seg_mpi_inters=0;
+    int n_tri_mpi_inters=0;
+    int n_quad_mpi_inters=0;
+
+    for (int i=0;i<FlowSol->num_inters;i++) {
+        bctype_f = bctype_c( f2c(i,0),f2loc_f(i,0));
+        ic_r = f2c(i,1);
+
+        if (bctype_f==0 && ic_r==-1) { // mpi_face
+
+            if (FlowSol->nproc==1)
+            {
+                cout << "ic=" << f2c(i,0) << endl;
+                cout << "local_face=" << f2loc_f(i,0) << endl;
+                FatalError("Should not be here");
+            }
+
+            bctype_c( f2c(i,0),f2loc_f(i,0)) = 10;
+            f_mpi2f(FlowSol->n_mpi_inters) = i;
+            FlowSol->n_mpi_inters++;
+
+            if (f2nv(i)==2) n_seg_mpi_inters++;
+            if (f2nv(i)==3) n_tri_mpi_inters++;
+            if (f2nv(i)==4) n_quad_mpi_inters++;
+        }
+    }
+
+    FlowSol->n_mpi_inter_types=3;
+    FlowSol->mesh_mpi_inters.setup(FlowSol->n_mpi_inter_types);
+
+    for (int i=0;i<FlowSol->n_mpi_inter_types;i++)
+        FlowSol->mesh_mpi_inters(i).set_nproc(FlowSol->nproc,FlowSol->rank);
+
+    FlowSol->mesh_mpi_inters(0).setup(n_seg_mpi_inters,0,in_run_type);
+    FlowSol->mesh_mpi_inters(1).setup(n_tri_mpi_inters,1,in_run_type);
+    FlowSol->mesh_mpi_inters(2).setup(n_quad_mpi_inters,2,in_run_type);
+
+    array<int> mpifaces_part(FlowSol->nproc);
+
+    // Call function that takes in f_mpi2f,f2v and returns a new array f_mpi2f, and an array mpiface_part
+    // that contains the number of faces to send to each processor
+    // the new array f_mpi2f is in good order i.e. proc1,proc2,....
+
+    match_mpifaces(f2v,f2nv,xv,f_mpi2f,mpifaces_part,delta_cyclic,FlowSol->n_mpi_inters,tol,FlowSol);
+
+    if (in_run_type==1)
+    {
+        FlowSol->inter_mpi2inter = f_mpi2f;
+    }
+
+    array<int> rot_tag_mpi(FlowSol->n_mpi_inters);
+    find_rot_mpifaces(f2v,f2nv,xv,f_mpi2f,rot_tag_mpi,mpifaces_part,delta_cyclic,FlowSol->n_mpi_inters,tol,FlowSol);
+
+    //Initialize the mpi faces
+
+    int i_seg_mpi = 0;
+    int i_tri_mpi = 0;
+    int i_quad_mpi = 0;
+
+    for(int i_mpi=0;i_mpi<FlowSol->n_mpi_inters;i_mpi++)
+    {
+        int i = f_mpi2f(i_mpi);
+        bctype_f = bctype_c( f2c(i,0),f2loc_f(i,0) );
+        ic_l = f2c(i,0);
+
         if (f2nv(i)==2) {
-          FlowSol->mesh_int_inters(0).set_interior(i_seg_int,ctype(ic_l),ctype(ic_r),local_c(ic_l),local_c(ic_r),f2loc_f(i,0),f2loc_f(i,1),rot_tag(i),in_run_type,FlowSol);
-          i_seg_int++;
+            FlowSol->mesh_mpi_inters(0).set_mpi(i_seg_mpi,ctype(ic_l),local_c(ic_l),f2loc_f(i,0),rot_tag_mpi(i_mpi),in_run_type,FlowSol);
+            i_seg_mpi++;
         }
-        if (f2nv(i)==3) {
-          FlowSol->mesh_int_inters(1).set_interior(i_tri_int,ctype(ic_l),ctype(ic_r),local_c(ic_l),local_c(ic_r),f2loc_f(i,0),f2loc_f(i,1),rot_tag(i),in_run_type,FlowSol);
-				  i_tri_int++;
+        else if (f2nv(i)==3) {
+            FlowSol->mesh_mpi_inters(1).set_mpi(i_tri_mpi,ctype(ic_l),local_c(ic_l),f2loc_f(i,0),rot_tag_mpi(i_mpi),in_run_type,FlowSol);
+            i_tri_mpi++;
         }
-        if (f2nv(i)==4) {
-          FlowSol->mesh_int_inters(2).set_interior(i_quad_int,ctype(ic_l),ctype(ic_r),local_c(ic_l),local_c(ic_r),f2loc_f(i,0),f2loc_f(i,1),rot_tag(i),in_run_type,FlowSol);
-				  i_quad_int++;
+        else if (f2nv(i)==4) {
+            FlowSol->mesh_mpi_inters(2).set_mpi(i_quad_mpi,ctype(ic_l),local_c(ic_l),f2loc_f(i,0),rot_tag_mpi(i_mpi),in_run_type,FlowSol);
+            i_quad_mpi++;
         }
-			}
-			else // boundary face other than cyclic face
-			{
-				if (bctype_f!=99) //  Not a deleted cyclic face
-				{
-          if (f2nv(i)==2){
-            FlowSol->mesh_bdy_inters(0).set_boundary(i_seg_bdy,bctype_f,ctype(ic_l),local_c(ic_l),f2loc_f(i,0),in_run_type,FlowSol);
-					  i_seg_bdy++;
-          }
-          else if (f2nv(i)==3){
-            FlowSol->mesh_bdy_inters(1).set_boundary(i_tri_bdy,bctype_f,ctype(ic_l),local_c(ic_l),f2loc_f(i,0),in_run_type,FlowSol);
-					  i_tri_bdy++;
-          }
-          else if (f2nv(i)==4){
-            FlowSol->mesh_bdy_inters(2).set_boundary(i_quad_bdy,bctype_f,ctype(ic_l),local_c(ic_l),f2loc_f(i,0),in_run_type,FlowSol);
-					  i_quad_bdy++;
-          }
-				}
-			}
-		}
-	}
+    }
+
+    // Initialize Nout_proc
+    int icount = 0;
+
+    int request_seg=0;
+    int request_tri=0;
+    int request_quad=0;
+
+    for (int p=0;p<FlowSol->nproc;p++)
+    {
+        // For all faces to send to processor p, split between face types
+        int Nout_seg = 0;
+        int Nout_tri = 0;
+        int Nout_quad = 0;
+
+        for (int j=0;j<mpifaces_part(p);j++)
+        {
+            int i_mpi = icount + j;
+            int i = f_mpi2f(i_mpi);
+            if (f2nv(i)==2)  Nout_seg++;
+            else if (f2nv(i)==3)  Nout_tri++;
+            else if (f2nv(i)==4)  Nout_quad++;
+        }
+        icount += mpifaces_part(p);
+
+        if (Nout_seg!=0) {
+            FlowSol->mesh_mpi_inters(0).set_nout_proc(Nout_seg,p);
+            request_seg++;
+        }
+        if (Nout_tri!=0) {
+            FlowSol->mesh_mpi_inters(1).set_nout_proc(Nout_tri,p);
+            request_tri++;
+        }
+        if (Nout_quad!=0) {
+            FlowSol->mesh_mpi_inters(2).set_nout_proc(Nout_quad,p);
+            request_quad++;
+        }
+    }
+
+    FlowSol->mesh_mpi_inters(0).set_mpi_requests(request_seg);
+    FlowSol->mesh_mpi_inters(1).set_mpi_requests(request_tri);
+    FlowSol->mesh_mpi_inters(2).set_mpi_requests(request_quad);
+
+#ifdef _GPU
+    if (in_run_type==0)
+    {
+        for(int i=0;i<FlowSol->n_mpi_inter_types;i++)
+            FlowSol->mesh_mpi_inters(i).mv_all_cpu_gpu();
+    }
+#endif
+
+#endif
+
+    // ---------------------------------------
+    // Initializing internal and bdy faces
+    // ---------------------------------------
+
+    // TODO: Need to count quad and triangle faces
+
+    // Count the number of int_inters and bdy_inters
+    int n_seg_int_inters = 0;
+    int n_tri_int_inters = 0;
+    int n_quad_int_inters = 0;
+
+    int n_seg_bdy_inters = 0;
+    int n_tri_bdy_inters = 0;
+    int n_quad_bdy_inters = 0;
+
+    for (int i=0; i<FlowSol->num_inters; i++)
+    {
+        bctype_f = bctype_c( f2c(i,0),f2loc_f(i,0));
+        ic_r = f2c(i,1);
+
+        if (bctype_f!=10)
+        {
+            if (bctype_f==0)	// internal interface
+            {
+                if (ic_r==-1)
+                {
+                    cout << "Error: Interior interface has ic_r=-1. Should not be here, exiting" << endl;
+                    exit(1);
+                }
+                n_int_inters++;
+                if (f2nv(i)==2) n_seg_int_inters++;
+                if (f2nv(i)==3) n_tri_int_inters++;
+                if (f2nv(i)==4) n_quad_int_inters++;
+            }
+            else // boundary interface
+            {
+                if (bctype_f!=99) //  Not a deleted cyclic interface
+                {
+                    n_bdy_inters++;
+                    if (f2nv(i)==2) n_seg_bdy_inters++;
+                    if (f2nv(i)==3) n_tri_bdy_inters++;
+                    if (f2nv(i)==4) n_quad_bdy_inters++;
+                }
+            }
+        }
+    }
+
+    FlowSol->n_int_inter_types=3;
+    FlowSol->mesh_int_inters.setup(FlowSol->n_int_inter_types);
+    FlowSol->mesh_int_inters(0).setup(n_seg_int_inters,0,in_run_type);
+    FlowSol->mesh_int_inters(1).setup(n_tri_int_inters,1,in_run_type);
+    FlowSol->mesh_int_inters(2).setup(n_quad_int_inters,2,in_run_type);
+
+    FlowSol->n_bdy_inter_types=3;
+    FlowSol->mesh_bdy_inters.setup(FlowSol->n_bdy_inter_types);
+    FlowSol->mesh_bdy_inters(0).setup(n_seg_bdy_inters,0,in_run_type);
+    FlowSol->mesh_bdy_inters(1).setup(n_tri_bdy_inters,1,in_run_type);
+    FlowSol->mesh_bdy_inters(2).setup(n_quad_bdy_inters,2,in_run_type);
+
+    int i_seg_int=0;
+    int i_tri_int=0;
+    int i_quad_int=0;
+
+    int i_seg_bdy=0;
+    int i_tri_bdy=0;
+    int i_quad_bdy=0;
+
+    for(int i=0;i<FlowSol->num_inters;i++)
+    {
+        bctype_f = bctype_c( f2c(i,0),f2loc_f(i,0) );
+        ic_l = f2c(i,0);
+        ic_r = f2c(i,1);
+
+        if(bctype_f!=10) // internal or boundary edge
+        {
+            if(bctype_f==0)
+            {
+                if (f2nv(i)==2) {
+                    FlowSol->mesh_int_inters(0).set_interior(i_seg_int,ctype(ic_l),ctype(ic_r),local_c(ic_l),local_c(ic_r),f2loc_f(i,0),f2loc_f(i,1),rot_tag(i),in_run_type,FlowSol);
+                    i_seg_int++;
+                }
+                if (f2nv(i)==3) {
+                    FlowSol->mesh_int_inters(1).set_interior(i_tri_int,ctype(ic_l),ctype(ic_r),local_c(ic_l),local_c(ic_r),f2loc_f(i,0),f2loc_f(i,1),rot_tag(i),in_run_type,FlowSol);
+                    i_tri_int++;
+                }
+                if (f2nv(i)==4) {
+                    FlowSol->mesh_int_inters(2).set_interior(i_quad_int,ctype(ic_l),ctype(ic_r),local_c(ic_l),local_c(ic_r),f2loc_f(i,0),f2loc_f(i,1),rot_tag(i),in_run_type,FlowSol);
+                    i_quad_int++;
+                }
+            }
+            else // boundary face other than cyclic face
+            {
+                if (bctype_f!=99) //  Not a deleted cyclic face
+                {
+                    if (f2nv(i)==2){
+                        FlowSol->mesh_bdy_inters(0).set_boundary(i_seg_bdy,bctype_f,ctype(ic_l),local_c(ic_l),f2loc_f(i,0),in_run_type,FlowSol);
+                        i_seg_bdy++;
+                    }
+                    else if (f2nv(i)==3){
+                        FlowSol->mesh_bdy_inters(1).set_boundary(i_tri_bdy,bctype_f,ctype(ic_l),local_c(ic_l),f2loc_f(i,0),in_run_type,FlowSol);
+                        i_tri_bdy++;
+                    }
+                    else if (f2nv(i)==4){
+                        FlowSol->mesh_bdy_inters(2).set_boundary(i_quad_bdy,bctype_f,ctype(ic_l),local_c(ic_l),f2loc_f(i,0),in_run_type,FlowSol);
+                        i_quad_bdy++;
+                    }
+                }
+            }
+        }
+    }
 
     Mesh->ic2loc_c = local_c;
 
-	// set on GPU
+    // set on GPU
 #ifdef _GPU
-  if (in_run_type==0)
-  {
-	  if (FlowSol->rank==0) cout << "Moving interfaces to GPU ... " << endl;
-	  for(int i=0;i<FlowSol->n_int_inter_types;i++)
-	  	FlowSol->mesh_int_inters(i).mv_all_cpu_gpu();
-    
-	  for(int i=0;i<FlowSol->n_bdy_inter_types;i++)
-	  	FlowSol->mesh_bdy_inters(i).mv_all_cpu_gpu();
-  }
+    if (in_run_type==0)
+    {
+        if (FlowSol->rank==0) cout << "Moving interfaces to GPU ... " << endl;
+        for(int i=0;i<FlowSol->n_int_inter_types;i++)
+            FlowSol->mesh_int_inters(i).mv_all_cpu_gpu();
+
+        for(int i=0;i<FlowSol->n_bdy_inter_types;i++)
+            FlowSol->mesh_bdy_inters(i).mv_all_cpu_gpu();
+    }
 #endif
-  
+
 }
 
-void ReadMesh(string& in_file_name, array<double>& out_xv, array<int>& out_c2v, array<int>& out_c2n_v, array<int>& out_ctype, array<int>& out_ic2icg, array<int>& out_iv2ivg, int& out_n_cells, int& out_n_verts, struct solution* FlowSol) {
+void ReadMesh(string& in_file_name, array<double>& out_xv, array<int>& out_c2v, array<int>& out_c2n_v, array<int>& out_ctype, array<int>& out_ic2icg, array<int>& out_iv2ivg, int& out_n_cells, int& out_n_verts, int& out_n_verts_global, struct solution* FlowSol)
+{
   
   if (FlowSol->rank==0) cout << "reading connectivity" << endl;
   if (run_input.mesh_format==0) { // Gambit
@@ -825,8 +833,8 @@ void ReadMesh(string& in_file_name, array<double>& out_xv, array<int>& out_c2v, 
   // Now read position of vertices in mesh file
   out_xv.setup(n_verts,FlowSol->n_dims);
   
-  if (run_input.mesh_format==0) { read_vertices_gambit(in_file_name, n_verts, out_iv2ivg, out_xv, FlowSol); }
-  else if (run_input.mesh_format==1) { read_vertices_gmsh(in_file_name, n_verts, out_iv2ivg, out_xv, FlowSol); }
+  if (run_input.mesh_format==0) { read_vertices_gambit(in_file_name, n_verts, out_n_verts_global, out_iv2ivg, out_xv, FlowSol); }
+  else if (run_input.mesh_format==1) { read_vertices_gmsh(in_file_name, n_verts, out_n_verts_global, out_iv2ivg, out_xv, FlowSol); }
   else { FatalError("Mesh format not recognized"); }
   
   out_n_verts = n_verts;
@@ -834,404 +842,498 @@ void ReadMesh(string& in_file_name, array<double>& out_xv, array<int>& out_c2v, 
 
 }
 
-void ReadBound(string& in_file_name, array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_ctype, array<int>& out_bctype, array<int>& in_ic2icg, array<int>& in_icvsta, array<int>&in_icvert, array<int>& in_iv2ivg, int& in_n_cells, int& in_n_verts, struct solution* FlowSol)
+void ReadBound(string& in_file_name, array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c2f, array<int>& in_f2v, array<int>& in_ctype, array<int>& out_bctype, array<array<int> >& out_boundpts, array<int>& in_ic2icg, array<int>& in_icvsta, array<int>&in_icvert, array<int>& in_iv2ivg, int& in_n_cells, int& in_n_verts, struct solution* FlowSol)
 {
-  
-  if (FlowSol->rank==0) cout << "reading boundary conditions" << endl;
-  // Set the boundary conditions
-  // HACK
-  out_bctype.setup(in_n_cells,MAX_F_PER_C);
-  
-	// initialize to 0 (as interior edges)
-	for (int i=0;i<in_n_cells;i++)
-		for (int k=0;k<MAX_F_PER_C;k++)
-      out_bctype(i,k) = 0;
-  
-  if (run_input.mesh_format==0) {
-    read_boundary_gambit(in_file_name, in_n_cells, in_ic2icg, out_bctype);
-  }
-  else if (run_input.mesh_format==1) {
-    read_boundary_gmsh(in_file_name, in_n_cells, in_ic2icg, in_c2v, in_c2n_v, out_bctype, in_iv2ivg, in_n_verts, in_ctype, in_icvsta, in_icvert, FlowSol);
-    
-  }
-  else {
-    FatalError("Mesh format not recognized");
-  }
-  
-  if (FlowSol->rank==0) cout << "done reading boundary conditions" << endl;
+
+    if (FlowSol->rank==0) cout << "reading boundary conditions" << endl;
+    // Set the boundary conditions
+    // HACK
+    out_bctype.setup(in_n_cells,MAX_F_PER_C);
+
+    // initialize to 0 (as interior edges)
+    out_bctype.initialize_to_zero();
+
+    if (run_input.mesh_format==0) {
+        array<array<int> > bccells, bcfaces;
+        array<int> bc_list;
+        // want: iv_global = bounds(bcflag,ivert);
+        read_boundary_gambit(in_file_name, in_n_cells, in_ic2icg, out_bctype, bc_list, bccells, bcfaces);
+        create_boundpts(out_boundpts, bc_list, bccells, bcfaces, in_c2f, in_f2v, in_iv2ivg);
+    }
+    else if (run_input.mesh_format==1) {
+        read_boundary_gmsh(in_file_name, in_n_cells, in_ic2icg, in_c2v, in_c2n_v, out_bctype, out_boundpts, in_iv2ivg, in_n_verts, in_ctype, in_icvsta, in_icvert, FlowSol);
+    }
+    else {
+        FatalError("Mesh format not recognized");
+    }
+    if (FlowSol->rank==0) cout << "done reading boundary conditions" << endl;
 }
 
+void create_boundpts(array<array<int> >& out_boundpts, array<int>& in_bclist, array<int>& out_bctype, array<array<int> >& in_bccells, array<array<int> >& in_bcfaces,
+                    array<int>& in_c2f, array<int>& in_f2v, array<int>& in_f2nv, array<int>& in_iv2ivg)
+{
+    int iv, ivg, ic, k, loc_k, nv;
+    int n_faces, bcflag;
+
+    int n_bcs = in_bclist.get_dim(0);
+
+    /** --- VERSION 2.0 : CREATE BOUNDS STRUCTURE --- */
+    /// want: iv_global = bounds(bcflag,ivert);
+    out_boundpts.setup(n_bcs);
+    array<vector<int> > Bounds;
+    Bounds.setup(n_bcs);
+    for (int i=0; i<in_bclist; i++) {
+        nv = 0;
+        bcflag = in_bcs(i);
+        n_faces = in_bcfaces(i).get_dim(0);
+        for (int j=0; j<n_faces; j++) {
+            // find face index
+            ic = in_bccells(i)(j);
+            loc_k = in_bcfaces(i)(j);
+            k = in_c2f(ic,loc_k);
+            for (int m=0; m<in_f2nv(k); m++) {
+                // find vertex index
+                iv = in_f2v(k,m);
+                ivg = in_iv2ivg(iv);
+                // add vertex to bc
+                Bounds(i).push_back(ivg);
+                nv++;
+            }
+        }
+        out_boundpts(i).setup(nv);
+        for (int j=0; j<nv; j++) {
+            out_boundpts(i)(j) = Bounds(i)[j];
+        }
+    }
+
+    /** --- ORIGINAL VERSTION : bcflag = bcvert(ivg) --- */
+    /*
+    for (int i=0; i<n_bcs; i++) {
+        bcflag = in_bcs(i);
+        /// create something like this: list of moving bounds; check to see if it is one
+        //if (findBC(in_bcs(i),run_input.MotionBounds)) {
+
+            n_faces = in_bcfaces(i).get_dim(0);
+            for (int j=0; j<n_faces; j++) {
+
+                // find face index
+                ic = in_bccells(i)(j);
+                loc_k = in_bcfaces(i)(j);
+                k = in_c2f(ic,loc_k);
+                for (int m=0; m<in_f2nv(k); m++) {
+
+                    // find vertex index
+                    iv = in_f2v(k,m);
+                    ivg = in_iv2ivg(iv);
+                    // set bcflag for vertex
+                    out_bcverts(ivg) = bcflag;
+                }
+            }
+        //}
+    }*/
+}
 
 // Method to read boundary edges in mesh file
-void read_boundary_gambit(string& in_file_name, int &in_n_cells, array<int>& in_ic2icg, array<int>& out_bctype)
+void read_boundary_gambit(string& in_file_name, int &in_n_cells, array<int>& in_ic2icg, array<int>& out_bctype, array<int>& out_bcs, array<array<int> >& out_bccells, array<array<int> >& out_bcfaces)
 {
-  
-	// input: ic2icg
-	// output: bctype
-  
-  char buf[BUFSIZ]={""};
-  ifstream mesh_file;
-  
-  array<int> cell_list(in_n_cells);
-  
-	for (int i=0;i<in_n_cells;i++)
-		cell_list(i) = in_ic2icg(i);
-  
-	// Sort the cells
-	qsort(cell_list.get_ptr_cpu(),in_n_cells,sizeof(int),compare_ints);
-  
-  // Read Gambit Neutral file format
-  
-  mesh_file.open(&in_file_name[0]);
-	if (!mesh_file)
-    FatalError("Unable to open mesh file");
-  
-  // Skip 6-line header
-  for (int i=0;i<6;i++) mesh_file.getline(buf,BUFSIZ);
-  
-  int n_verts_global,n_cells_global;
-  int n_mats,n_bcs,dummy;
-  // Find number of vertices and number of cells
-  mesh_file       >> n_verts_global       // num vertices in mesh
-  >> n_cells_global // num elements
-  >> n_mats       // num material groups
-  >> n_bcs        // num boundary groups
-  >> dummy;        // num space dimensions
-  
-  mesh_file.getline(buf,BUFSIZ);  // clear rest of line
-  mesh_file.getline(buf,BUFSIZ);  // Skip 2 lines
-  mesh_file.getline(buf,BUFSIZ);
-  
-	// ------------------------------
-	// Skip a bunch of lines
-	// ------------------------------
-  
-	// Skip the x,y,z location of vertices
-  for (int i=0;i<n_verts_global;i++)
-		mesh_file.getline(buf,BUFSIZ);
-  
-	mesh_file.getline(buf,BUFSIZ); // Skip "ENDOFSECTION"
-	mesh_file.getline(buf,BUFSIZ); // Skip "ELEMENTS/CELLS"
-  
-	// Skip the Elements connectivity
-  int c2n_v;
-	for (int i=0;i<n_cells_global;i++)
-	{
-		mesh_file >> dummy >> dummy >> c2n_v;
-		mesh_file.getline(buf,BUFSIZ); // skip end of line
-		if (c2n_v>7) mesh_file.getline(buf,BUFSIZ); // skip another line
-		if (c2n_v>14) mesh_file.getline(buf,BUFSIZ); // skip another line
-		if (c2n_v>21) mesh_file.getline(buf,BUFSIZ); // skip another line
-	}
-	mesh_file.getline(buf,BUFSIZ); // Skip "ENDOFSECTION"
-	mesh_file.getline(buf,BUFSIZ); // Skip "ELEMENTS GROUP"
-  
-	// Skip materials section
-  int gnel,dummy2;
-	for (int i=0;i<n_mats;i++)
-	{
-		mesh_file.getline(buf,BUFSIZ); // Read GROUP: 1 ELEMENTS
-		int nread = sscanf(buf,"%*s%d%*s%d%*s%d",&dummy,&gnel,&dummy2);
-		if (3!=nread) {cout << "ERROR while reading Gambit file" << endl; cout << "nread =" << nread << endl; exit(1); }
-		mesh_file.getline(buf,BUFSIZ); // Read group name
-		mesh_file.getline(buf,BUFSIZ); // Skip solver dependant flag
-		for (int k=0;k<gnel;k++) mesh_file >> dummy;
-		mesh_file.getline(buf,BUFSIZ); // Clear end of line
-		mesh_file.getline(buf,BUFSIZ); // skip "ENDOFSECTION"
-		mesh_file.getline(buf,BUFSIZ); // skip "Element Group"
-	}
-  
-	// ---------------------------------
-	// Read the boundary regions
-	// --------------------------------
-  
-  int bcNF, bcID, bcflag,icg,k, real_k, index;
-  string bcname;
-  char bcTXT[100];
-  
-	for (int i=0;i<n_bcs;i++)
-	{
-		mesh_file.getline(buf,BUFSIZ);	// Load ith boundary group
-		if (strstr(buf,"ENDOFSECTION")){
-			continue; // may not have a boundary section
-		}
-    
-		sscanf(buf,"%s %d %d", bcTXT, &bcID, &bcNF);
-    
-		bcname.assign(bcTXT,0,14);
-    bcflag = get_bc_number(bcname);
-    
-    int bdy_count = 0;
-		for (int bf=0;bf<bcNF;bf++)
-		{
-			mesh_file >> icg >> dummy >> k;
-			icg--;
-			// Matching Gambit faces with face convention in code
-      if (dummy==2 || dummy==3)
-        real_k = k-1;
-      // Hex
-      else if (dummy==4)
-			{
-				if (k==1)
-					real_k = 0;
-				else if (k==2)
-					real_k = 3;
-				else if (k==3)
-					real_k = 5;
-				else if (k==4)
-					real_k = 1;
-				else if (k==5)
-					real_k = 4;
-				else if (k==6)
-					real_k = 2;
-			}
-      // Tet
-			else if (dummy==6)
-			{
-				if (k==1)
-					real_k = 3;
-				else if (k==2)
-					real_k = 2;
-				else if (k==3)
-					real_k = 0;
-				else if (k==4)
-					real_k = 1;
-			}
-			else if (dummy==5)
-			{
-				if (k==1)
-					real_k = 2;
-				else if (k==2)
-					real_k = 3;
-				else if (k==3)
-					real_k = 4;
-				else if (k==4)
-					real_k = 0;
-				else if (k==5)
-					real_k = 1;
-			}
-			else
-			{
-				cout << "ERROR: cannot handle other element type in readbnd" << endl;
-				exit(1);
-        
-			}
-			// Check if cell icg belongs to processor
-			index = index_locate_int(icg,cell_list.get_ptr_cpu(),in_n_cells);
-      
-			// If it does, find local cell ic corresponding to icg
-			if (index!=-1)
-			{
-        bdy_count++;
-        out_bctype(index,real_k) = bcflag;
-        /*
-         // Loop over the array ic2icg and find ic
-         for (int ic=0;ic<in_n_cells;ic++)
-         {
-         if (in_ic2icg(ic)==icg)
-         {
-         out_bctype(ic,real_k) = bcflag;
-         cout << "ic=" << ic << endl;
-         cout << "index=" << index << endl;
-         }
-         }
-         */
-        
-			}
-		}
-    
-		mesh_file.getline(buf,BUFSIZ); // Clear "end of line"
-		mesh_file.getline(buf,BUFSIZ); // Skip "ENDOFSECTION"
-		mesh_file.getline(buf,BUFSIZ); // Skip "Element group"
-	}
-  
-  mesh_file.close();
-}
 
-void read_boundary_gmsh(string& in_file_name, int &in_n_cells, array<int>& in_ic2icg, array<int>& in_c2v, array<int>& in_c2n_v, array<int>& out_bctype, array<int>& in_iv2ivg, int in_n_verts, array<int>& in_ctype, array<int>& in_icvsta, array<int>& in_icvert, struct solution* FlowSol)
-{
-  string str;
-  
-  ifstream mesh_file;
-  
-	mesh_file.open(&in_file_name[0]);
-	if (!mesh_file)
-    FatalError("Unable to open mesh file");
-  
-  // Move cursor to $PhysicalNames
-  while(1) {
-    getline(mesh_file,str);
-    if (str=="$PhysicalNames") break;
-  }
-  
-	// Read number of boundaries and fields defined
-  int dummy,dummy2;
-  int id,elmtype,ntags,bcid,bcdim,bcflag;
-  
-	char buf[BUFSIZ]={""};
-	char bcTXT[100][100];// can read up to 100 different boundary conditions
-	char bc_txt_temp[100];
-  
-	mesh_file >> dummy;
-	mesh_file.getline(buf,BUFSIZ);	// clear rest of line
-	for(int i=0;i<dummy;i++)
-	{
-		mesh_file.getline(buf,BUFSIZ);
-		sscanf(buf,"%d %d \"%s", &bcdim, &bcid, bc_txt_temp);
-		strcpy(bcTXT[bcid],bc_txt_temp);
-	}
-  
-  // Move cursor to $Elements
-  while(1) {
-    getline(mesh_file,str);
-    if (str=="$Elements") break;
-  }
-  
-  // Each processor reads number of entities
-  int n_entities;
-	// Read number of elements and bdys
-  mesh_file 	>> n_entities; 	// num cells in mesh
-	mesh_file.getline(buf,BUFSIZ);	// clear rest of line
-  
-  array<int> vlist_boun(4), vlist_cell(4);
-  array<int> vlist_local(4);
-  
-  int found, num_v_per_f;
-  int num_face_vert;
-  
-  string bcname;
-  int bdy_count=0;
-  
-  int sta_ind,end_ind;
-  
-  for (int i=0;i<n_entities;i++)
-  {
-		mesh_file >> id >> elmtype >> ntags;
-    
-		if (ntags!=2)
-      FatalError("ntags != 2,exiting");
-    
-		mesh_file >> bcid >> dummy;
-    
-		if (strstr(bcTXT[bcid],"FLUID"))
+    // input: ic2icg
+    // output: bctype
+
+    char buf[BUFSIZ]={""};
+    ifstream mesh_file;
+
+    array<int> cell_list(in_n_cells);
+
+    for (int i=0;i<in_n_cells;i++)
+        cell_list(i) = in_ic2icg(i);
+
+    // Sort the cells
+    qsort(cell_list.get_ptr_cpu(),in_n_cells,sizeof(int),compare_ints);
+
+    // Read Gambit Neutral file format
+
+    mesh_file.open(&in_file_name[0]);
+    if (!mesh_file)
+        FatalError("Unable to open mesh file");
+
+    // Skip 6-line header
+    for (int i=0;i<6;i++) mesh_file.getline(buf,BUFSIZ);
+
+    int n_verts_global, n_cells_global;
+    int n_mats,n_bcs,dummy;
+    // Find number of vertices and number of cells
+    mesh_file       >> n_verts_global       // num vertices in mesh
+                    >> n_cells_global // num elements
+                    >> n_mats       // num material groups
+                    >> n_bcs        // num boundary groups
+                    >> dummy;        // num space dimensions
+
+    mesh_file.getline(buf,BUFSIZ);  // clear rest of line
+    mesh_file.getline(buf,BUFSIZ);  // Skip 2 lines
+    mesh_file.getline(buf,BUFSIZ);
+
+    // ------------------------------
+    // Skip a bunch of lines
+    // ------------------------------
+
+    // Skip the x,y,z location of vertices
+    for (int i=0;i<n_verts_global;i++)
+        mesh_file.getline(buf,BUFSIZ);
+
+    mesh_file.getline(buf,BUFSIZ); // Skip "ENDOFSECTION"
+    mesh_file.getline(buf,BUFSIZ); // Skip "ELEMENTS/CELLS"
+
+    // Skip the Elements connectivity
+    int c2n_v;
+    for (int i=0;i<n_cells_global;i++)
     {
-	    mesh_file.getline(buf,BUFSIZ);	// skip line
-      continue;
+        mesh_file >> dummy >> dummy >> c2n_v;
+        mesh_file.getline(buf,BUFSIZ); // skip end of line
+        if (c2n_v>7) mesh_file.getline(buf,BUFSIZ); // skip another line
+        if (c2n_v>14) mesh_file.getline(buf,BUFSIZ); // skip another line
+        if (c2n_v>21) mesh_file.getline(buf,BUFSIZ); // skip another line
     }
-    else
+    mesh_file.getline(buf,BUFSIZ); // Skip "ENDOFSECTION"
+    mesh_file.getline(buf,BUFSIZ); // Skip "ELEMENTS GROUP"
+
+    // Skip materials section
+    int gnel,dummy2;
+    for (int i=0;i<n_mats;i++)
     {
-		  bcname.assign(bcTXT[bcid],0,14);
-      bcname.erase(bcname.find_last_not_of(" \n\r\t")+1);
-      bcname.erase(bcname.find_last_not_of("\"")+1);
-      bcflag = get_bc_number(bcname);
+        mesh_file.getline(buf,BUFSIZ); // Read GROUP: 1 ELEMENTS
+        int nread = sscanf(buf,"%*s%d%*s%d%*s%d",&dummy,&gnel,&dummy2);
+        if (3!=nread) {cout << "ERROR while reading Gambit file" << endl; cout << "nread =" << nread << endl; exit(1); }
+        mesh_file.getline(buf,BUFSIZ); // Read group name
+        mesh_file.getline(buf,BUFSIZ); // Skip solver dependant flag
+        for (int k=0;k<gnel;k++) mesh_file >> dummy;
+        mesh_file.getline(buf,BUFSIZ); // Clear end of line
+        mesh_file.getline(buf,BUFSIZ); // skip "ENDOFSECTION"
+        mesh_file.getline(buf,BUFSIZ); // skip "Element Group"
     }
-    
-    bdy_count++;
-    
-    if (elmtype==1 || elmtype==8) // Edge
+
+    // ---------------------------------
+    // Read the boundary regions
+    // --------------------------------
+
+    int bcNF, bcID, bcflag,icg,k, real_k, index;
+    string bcname;
+    char bcTXT[100];   
+    out_bcfaces.setup(n_bcs);
+    out_bcs.setup(n_bcs);
+
+    for (int i=0;i<n_bcs;i++)
     {
-      num_face_vert = 2;
-      // Read the two vertices
-      mesh_file >> vlist_boun(0) >> vlist_boun(1);
-    }
-    else if (elmtype==3) // Quad face
-    {
-      num_face_vert = 4;
-      mesh_file >> vlist_boun(0) >> vlist_boun(1) >> vlist_boun(3) >> vlist_boun(2);
-    }
-    else
-      FatalError("Boundary elmtype not recognized");
-    
-    // Shift by -1
-    
-    for (int j=0;j<num_face_vert;j++)
-    {
-      vlist_boun(j)--;
-    }
-    
-	  mesh_file.getline(buf,BUFSIZ);	// Get rest of line
-    
-    // Check if two vertices belong to processor
-    bool belong_to_proc = 1;
-    for (int j=0;j<num_face_vert;j++)
-    {
-      vlist_local(j) = index_locate_int(vlist_boun(j),in_iv2ivg.get_ptr_cpu(),in_n_verts);
-      if (vlist_local(j) == -1)
-        belong_to_proc = 0;
-    }
-    
-    if (belong_to_proc)
-    {
-      // Both vertices belong to processor
-      // Try to find the cell that they belong to
-      found=0;
-      
-      // Loop over cells touching that vertex
-	    sta_ind = in_icvsta(vlist_local(0));
-	    end_ind = in_icvsta(vlist_local(0)+1)-1;
-      
-      //for (int ic=0;ic<in_n_cells;ic++)
-      for (int ind=sta_ind;ind<=end_ind;ind++)
-      {
-        int ic=in_icvert(ind);
-        for (int k=0;k<FlowSol->num_f_per_c(in_ctype(ic));k++)
-        {
-          // Get local vertices of local face k of cell ic
-          //cout << "ctype(ic)=" << in_ctype(ic) << "n_v=" << in_c2n_v(ic) << endl;
-          get_vlist_loc_face(in_ctype(ic),in_c2n_v(ic),k,vlist_cell,num_v_per_f);
-          
-          //cout << "Before, vlist_cell(0)=" << vlist_cell(0) << endl;
-          //cout << "Before, vlist_cell(1)=" << vlist_cell(1) << endl;
-          
-          if (num_v_per_f!= num_face_vert)
-            continue;
-          
-          for (int j=0;j<num_v_per_f;j++)
-          {
-            //cout << "ic=" << ic << endl;
-            vlist_cell(j) = in_c2v(ic,vlist_cell(j));
-          }
-          
-          //cout << "vlist_cell(0)=" << vlist_cell(0) << endl;
-          //cout << "vlist_cell(1)=" << vlist_cell(1) << endl;
-          compare_faces_boundary(vlist_local,vlist_cell,num_v_per_f,found);
-          
-          if (found==1)
-          {
-            out_bctype(ic,k)=bcflag;
-            break;
-          }
+        mesh_file.getline(buf,BUFSIZ);	// Load ith boundary group
+        if (strstr(buf,"ENDOFSECTION")){
+            continue; // may not have a boundary section
         }
-        if (found==1)
-          break;
-      }
-      if (found==0)
-      {
-        cout << "num_v_per_face=" << num_v_per_f << endl;
-        cout << "vlist_boun(0)=" << vlist_boun(0) << " vlist_boun(1)=" << vlist_boun(1) << endl;
-        cout << "vlist_boun(2)=" << vlist_boun(2) << " vlist_boun(3)=" << vlist_boun(3) << endl;
-        cout << "Warning, all nodes of boundary face belong to processor but could not find the coresponding faces" << endl;
-        exit(1);
-      }
-      
-    } // If all vertices belong to processor
-    
-  } // Loop over entities
-  
-  
-  /*
-   for (int i=0;i<in_n_cells;i++)
-   for (int j=0;j<MAX_F_PER_C;j++)
-   cout << out_bctype(i,j) << endl;
-   */
-  
-  mesh_file.close();
-  
-  cout << "bdy_count=" << bdy_count << endl;
-  
+
+        sscanf(buf,"%s %d %d", bcTXT, &bcID, &bcNF);
+
+        bcname.assign(bcnTXT,0,14);
+        bcflag = get_bc_number(bcname);
+
+        out_bcs(i) = bcflag;
+        out_bcfaces(i).setup(bcNF);
+
+        int bdy_count = 0;
+        int eleType;
+        for (int bf=0;bf<bcNF;bf++)
+        {
+            mesh_file >> icg >> eleType >> k;
+            icg--;  // 1-indexed -> 0-indexed
+
+            // Matching Gambit faces with face convention in code
+            // k = face index in cell
+            if (eleType==2 || eleType==3)
+                real_k = k-1;
+            // Hex
+            else if (eleType==4)
+            {
+                if (k==1)
+                    real_k = 0;
+                else if (k==2)
+                    real_k = 3;
+                else if (k==3)
+                    real_k = 5;
+                else if (k==4)
+                    real_k = 1;
+                else if (k==5)
+                    real_k = 4;
+                else if (k==6)
+                    real_k = 2;
+            }
+            // Tet
+            else if (eleType==6)
+            {
+                if (k==1)
+                    real_k = 3;
+                else if (k==2)
+                    real_k = 2;
+                else if (k==3)
+                    real_k = 0;
+                else if (k==4)
+                    real_k = 1;
+            }
+            else if (eleType==5)
+            {
+                if (k==1)
+                    real_k = 2;
+                else if (k==2)
+                    real_k = 3;
+                else if (k==3)
+                    real_k = 4;
+                else if (k==4)
+                    real_k = 0;
+                else if (k==5)
+                    real_k = 1;
+            }
+            else
+            {
+                cout << "ERROR: cannot handle other element type in readbnd" << endl;
+                exit(1);
+
+            }
+            // Check if cell icg belongs to processor & return local index
+            index = index_locate_int(icg,cell_list.get_ptr_cpu(),in_n_cells);
+
+            // If it does, find local cell ic corresponding to icg
+            if (index!=-1)
+            {
+                bdy_count++;
+                out_bctype(index,real_k) = bcflag;
+                out_bccells(i,bf) = index;
+                out_bcfaces(i,bf) = real_k;
+            }
+        }
+
+        mesh_file.getline(buf,BUFSIZ); // Clear "end of line"
+        mesh_file.getline(buf,BUFSIZ); // Skip "ENDOFSECTION"
+        mesh_file.getline(buf,BUFSIZ); // Skip "Element group"
+    }
+
+    mesh_file.close();
 }
 
-void read_vertices_gambit(string& in_file_name, int in_n_verts, array<int> &in_iv2ivg, array<double> &out_xv, struct solution* FlowSol)
+void read_boundary_gmsh(string& in_file_name, int &in_n_cells, array<int>& in_ic2icg, array<int>& in_c2v, array<int>& in_c2n_v,
+                        array<int>& out_bctype, array<array<int> >& out_boundpts, array<int>& in_iv2ivg, int in_n_verts,
+                        array<int>& in_ctype, array<int>& in_icvsta, array<int>& in_icvert, struct solution* FlowSol)
+{
+    string str;
+
+    ifstream mesh_file;
+
+    mesh_file.open(&in_file_name[0]);
+    if (!mesh_file)
+        FatalError("Unable to open mesh file");
+
+    // Move cursor to $PhysicalNames
+    while(1) {
+        getline(mesh_file,str);
+        if (str=="$PhysicalNames") break;
+    }
+
+    // Read number of boundaries and fields defined
+    int dummy;
+    int n_bcs;
+    int id,elmtype,ntags,bcid,bcdim,bcflag;
+
+    char buf[BUFSIZ]={""};
+    char bcTXT[100][100];// can read up to 100 different boundary conditions
+    char bc_txt_temp[100];
+
+    mesh_file >> n_bcs;
+    mesh_file.getline(buf,BUFSIZ);	// clear rest of line
+    array<int> out_bclist;  /// NEW ****
+    out_bclist.setup(n_bcs);  /// NEW ****
+    for(int i=0;i<n_bcs;i++)
+    {
+        mesh_file.getline(buf,BUFSIZ);
+        sscanf(buf,"%d %d \"%s", &bcdim, &bcid, bc_txt_temp);
+        strcpy(bcTXT[bcid],bc_txt_temp);
+        out_bclist(i) = bcid;
+    }
+
+    // Move cursor to $Nodes
+    while(1) {
+        getline(mesh_file,str);
+        if (str=="$Nodes") break;
+    }
+    int n_nodes_global;
+    // Read number of nodes
+    mesh_file >> n_nodes_global;
+    mesh_file.getline(buf,BUFSIZ);	// clear rest of line
+
+    // Move cursor to $Elements
+    while(1) {
+        getline(mesh_file,str);
+        if (str=="$Elements") break;
+    }
+
+    // Each processor reads number of entities
+    int n_entities;
+    // Read number of elements and bdys
+    mesh_file 	>> n_entities; 	// num cells in mesh
+    mesh_file.getline(buf,BUFSIZ);	// clear rest of line
+
+    array<int> vlist_bound(4), vlist_cell(4);
+    array<int> vlist_local(4);
+
+    int found, num_v_per_f;
+    int num_face_vert;
+
+    string bcname;
+    int bdy_count=0;
+
+    int sta_ind,end_ind;
+
+    // setup vertex->bcflag array -----------
+    out_boundpts.setup(n_bcs);
+    //out_bcverts.setup(n_nodes_global);
+    array<int> bc2nv(n_bcs);
+    array<vector<int> > Bounds;
+    Bounds.setup(n_bcs);
+    for (int i=0; i<n_bcs; i++) {
+        bcname.assign(bcTXT[out_bclist(i)],0,14);
+        bcname.erase(bcname.find_last_not_of(" \n\r\t")+1);
+        bcname.erase(bcname.find_last_not_of("\"")+1);
+        bcflag = get_bc_number(bcname);
+        out_bclist(i) = bcflag;
+    }
+    // ---------------------------------------
+
+    for (int i=0;i<n_entities;i++)
+    {
+        mesh_file >> id >> elmtype >> ntags;
+
+        if (ntags!=2)
+            FatalError("ntags != 2,exiting");
+
+        mesh_file >> bcid >> dummy;
+
+        if (strstr(bcTXT[bcid],"FLUID"))
+        {
+            mesh_file.getline(buf,BUFSIZ);	// skip line
+            continue;
+        }
+        else
+        {
+            bcname.assign(bcTXT[bcid],0,14);
+            bcname.erase(bcname.find_last_not_of(" \n\r\t")+1);
+            bcname.erase(bcname.find_last_not_of("\"")+1);
+            bcflag = get_bc_number(bcname);
+        }
+
+        bdy_count++;
+
+        if (elmtype==1 || elmtype==8) // Edge
+        {
+            num_face_vert = 2;
+            // Read the two vertices
+            mesh_file >> vlist_bound(0) >> vlist_bound(1);
+        }
+        else if (elmtype==3) // Quad face
+        {
+            num_face_vert = 4;
+            mesh_file >> vlist_bound(0) >> vlist_bound(1) >> vlist_bound(3) >> vlist_bound(2);
+        }
+        else
+            FatalError("Boundary elmtype not recognized");
+
+        // Shift by -1 (1 indexed -> 0 indexed) & store bcflag
+        for (int j=0;j<num_face_vert;j++)
+        {
+            vlist_bound(j)--;
+            int k;
+            for (k=0; k<n_bcs; k++) {
+                if (out_bclist(k) == bcflag) break;
+            }
+            Bounds(k).push_back(ivg);
+            //out_bcverts(vlist_bound(j)) = bcflag;
+            bc2nv(k)++;
+        }
+
+        mesh_file.getline(buf,BUFSIZ);	// Get rest of line
+
+        // Check if two vertices belong to processor
+        bool belong_to_proc = 1;
+        for (int j=0;j<num_face_vert;j++)
+        {
+            vlist_local(j) = index_locate_int(vlist_bound(j),in_iv2ivg.get_ptr_cpu(),in_n_verts);
+            if (vlist_local(j) == -1)
+                belong_to_proc = 0;
+        }
+
+        if (belong_to_proc)
+        {
+            // Both vertices belong to processor
+            // Try to find the cell that they belong to
+            found=0;
+
+            // Loop over cells touching that vertex
+            sta_ind = in_icvsta(vlist_local(0));
+            end_ind = in_icvsta(vlist_local(0)+1)-1;
+
+            //for (int ic=0;ic<in_n_cells;ic++)
+            for (int ind=sta_ind;ind<=end_ind;ind++)
+            {
+                int ic=in_icvert(ind);
+                for (int k=0;k<FlowSol->num_f_per_c(in_ctype(ic));k++)
+                {
+                    // Get local vertices of local face k of cell ic
+                    get_vlist_loc_face(in_ctype(ic),in_c2n_v(ic),k,vlist_cell,num_v_per_f);
+
+                    if (num_v_per_f!= num_face_vert)
+                        continue;
+
+                    for (int j=0;j<num_v_per_f;j++)
+                    {
+                        //cout << "ic=" << ic << endl;
+                        vlist_cell(j) = in_c2v(ic,vlist_cell(j));
+                    }
+
+                    compare_faces_boundary(vlist_local,vlist_cell,num_v_per_f,found);
+
+                    if (found==1)
+                    {
+                        out_bctype(ic,k)=bcflag;
+                        break;
+                    }
+                }
+                if (found==1)
+                    break;
+            }
+            if (found==0)
+            {
+                cout << "num_v_per_face=" << num_v_per_f << endl;
+                cout << "vlist_bound(0)=" << vlist_bound(0) << " vlist_bound(1)=" << vlist_bound(1) << endl;
+                cout << "vlist_bound(2)=" << vlist_bound(2) << " vlist_bound(3)=" << vlist_bound(3) << endl;
+                cout << "Warning, all nodes of boundary face belong to processor but could not find the coresponding faces" << endl;
+                exit(1);
+            }
+
+        } // If all vertices belong to processor
+
+    } // Loop over entities
+    
+    /// ********** DOUBLE CHECK ME!!!!! *************
+    int nv;
+    for (int i=0; i<n_bcs; i++) {
+        nv = bv2nv(i);
+        out_boundpts(i).setup(nv);
+        for (int j=0; j<nv; j++) {
+            out_boundpts(i)(j) = Bounds(i)[j];
+        }
+    }
+
+    mesh_file.close();
+
+    cout << "bdy_count=" << bdy_count << endl;
+
+}
+
+void read_vertices_gambit(string& in_file_name, int in_n_verts, int& out_n_verts_global, array<int> &in_iv2ivg, array<double> &out_xv, struct solution* FlowSol)
 {
   
 	// Now open gambit file and read the vertices
@@ -1247,8 +1349,8 @@ void read_vertices_gambit(string& in_file_name, int in_n_verts, array<int> &in_i
   for (int i=0;i<6;i++) mesh_file.getline(buf,BUFSIZ);
   
   // Find number of vertices and number of cells
-  int n_verts_global, dummy;
-  mesh_file       >> n_verts_global // num vertices in mesh
+  int dummy;
+  mesh_file       >> out_n_verts_global // num vertices in mesh
   >> dummy 	// num elements
   >> dummy 	// num material groups
   >> dummy 	// num boundary groups
@@ -1262,7 +1364,7 @@ void read_vertices_gambit(string& in_file_name, int in_n_verts, array<int> &in_i
 	int icount = 0;
   int id,index;
   double pos;
-	for (int i=0;i<n_verts_global;i++)
+    for (int i=0;i<out_n_verts_global;i++)
 	{
     mesh_file >> id;
 		index = index_locate_int(id-1,in_iv2ivg.get_ptr_cpu(),in_n_verts);
@@ -1281,7 +1383,7 @@ void read_vertices_gambit(string& in_file_name, int in_n_verts, array<int> &in_i
   
 }
 
-void read_vertices_gmsh(string& in_file_name, int in_n_verts, array<int> &in_iv2ivg, array<double> &out_xv, struct solution* FlowSol)
+void read_vertices_gmsh(string& in_file_name, int in_n_verts, int& out_n_verts_global, array<int> &in_iv2ivg, array<double> &out_xv, struct solution* FlowSol)
 {
   
   string str;
@@ -1301,16 +1403,15 @@ void read_vertices_gmsh(string& in_file_name, int in_n_verts, array<int> &in_iv2
     if (str=="$Nodes") break;
   }
   
-  int n_verts_global;
   double pos;
   
-  mesh_file       >> n_verts_global ;// num vertices in mesh
+  mesh_file       >> out_n_verts_global ;// num vertices in mesh
   mesh_file.getline(buf,BUFSIZ);
   
   int id;
   int index;
   
-  for (int i=0;i<n_verts_global;i++)
+  for (int i=0;i<out_n_verts_global;i++)
   {
     mesh_file >> id;
 		index = index_locate_int(id-1,in_iv2ivg.get_ptr_cpu(),in_n_verts);
@@ -1396,7 +1497,7 @@ void create_iv2ivg(array<int> &inout_iv2ivg, array<int> &inout_c2v, int &out_n_v
 void read_connectivity_gambit(string& in_file_name, int &out_n_cells, array<int> &out_c2v, array<int> &out_c2n_v, array<int> &out_ctype, array<int> &out_ic2icg, struct solution* FlowSol)
 {
   
-	int n_verts_global,n_cells_global;
+    int n_verts_global, n_cells_global;
     int ctype;
     int dummy,dummy2;
   
@@ -2271,9 +2372,7 @@ void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c
             iface_old = iface;
             if(out_c2f(ic,k) != -1) continue; // we have counted that face already
 
-            //cout << "ctype=" << in_ctype(ic) << "n_v=" << in_c2n_v(ic) << endl;
             // Get local vertices of local face k of cell ic
-            //cout << "ic=" << ic << endl;
             get_vlist_loc_face(in_ctype(ic),in_c2n_v(ic),k,vlist_loc,num_v_per_f);
 
             // get global vertices corresponding to local vertices
@@ -2290,10 +2389,8 @@ void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c
             {
                 ic2 = out_icvert(ind);
 
-                if(ic2==ic) continue; // ic2 is the same as ic1 so skip it
+                if(ic2==ic) continue; // cell2 is cell1 so skip it
 
-                //cout << "ic2=" << ic2 << endl;
-                //cout << "ctype=" << in_ctype(ic2) << endl;
                 // Loop over faces of cell ic2 touching vertex vlist_glob(0)
                 for(k2=0;k2<FlowSol->num_f_per_c(in_ctype(ic2));k2++)
                 {

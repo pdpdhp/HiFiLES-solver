@@ -105,7 +105,10 @@ public:
 
     int mesh_format;
     string mesh_file;
+
+    // Mesh deformation options
     int motion;
+    int n_deform_iters;
 
     double dx_cyclic;
     double dy_cyclic;

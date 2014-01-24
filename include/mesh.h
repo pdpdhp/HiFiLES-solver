@@ -65,6 +65,9 @@ public:
     /** update the mesh: re-set spts, transforms, etc. */
     void update(solution *FlowSol);
 
+    /** setup information for boundary motion */
+    void setup_boundaries(array<int> bctype);
+
 	// #### members ####
 	
     int n_eles, n_verts, n_dims, n_verts_global, n_cells_global;
@@ -73,6 +76,12 @@ public:
     array<double> xv, xv_new, vel_old, vel_new;
     array<int> c2v,c2n_v,ctype,bctype_c,ic2icg,iv2ivg,ic2loc_c,
                f2c,f2loc_f,c2f,c2e,f2v,f2n_v,e2v,v2n_e,v2e;
+
+    /** Boundary information */
+    int n_bnds, n_faces;
+    array<int> nBndPts, boundPts;
+    array<int> v2bc;
+    // nBndPts.setup(n_bnds); boundPts.setup(nBnds,nPtsPerBnd);
 
 private:
 
@@ -114,4 +123,7 @@ private:
 
     void add_StiffMat_EleQuad(array<double> StiffMatrix_Elem, int id_pt_0,
                              int id_pt_1, int id_pt_2, int id_pt_3);
+
+    /** Set given/known displacement on moving boundaries in linear system */
+    void set_boundary_displacements(solution *FlowSol);
 };

@@ -215,7 +215,7 @@ bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele, int ele_id)
         "Robust Mesh Deformation using the Linear Elasticity Equations" by
         R. P. Dwight. ---*/
 
-        E = 1.0 / Area * fabs(scale);
+        E = 1.0 / Area * fabs(scale); // implement scale = min_vol() function
         Mu = E;
         Lambda = -E;
 
@@ -372,6 +372,104 @@ void mesh::update(solution* FlowSol)
             FlowSol->mesh_eles(i)->set_transforms_vol_cubpts();
         }
     }
+}
+
+void mesh::setup_boundaries()
+{
+    // have vertex -> bcflag
+    // setup (bcflags,vertices)
+}
+
+void mesh::SetBoundaryDisplacements(solution *FlowSol)
+{
+
+    unsigned short iDim, nDim = FlowSol->n_dims, iBound, axis = 0;
+    unsigned long iPoint, total_index, iVertex;
+    double *VarCoord, MeanCoord[3], VarIncrement = 1.0;
+
+    /*--- If requested (no by default) impose the surface deflections in
+    increments and solve the grid deformation equations iteratively with
+    successive small deformations. ---*/
+
+    VarIncrement = 1.0/((double)run_input.n_deform_iters);
+
+    /*--- As initialization, set to zero displacements of all the surfaces except the symmetry
+     plane and the receive boundaries. ---*/
+
+    for (iBound = 0; iBound < n_bounds; iBound++) {
+        if ((config->GetMarker_All_Boundary(iBound) != SYMMETRY_PLANE) && (config->GetMarker_All_Boundary(iBound) != SEND_RECEIVE)) {
+            for (iVertex = 0; iVertex < geometry->nVertex[iBound]; iVertex++) {
+                iPoint = geometry->vertex[iBound][iVertex]->GetNode();
+                for (iDim = 0; iDim < nDim; iDim++) {
+                    total_index = iPoint*nDim + iDim;
+                    LinSysRes[total_index] = 0.0;
+                    LinSysSol[total_index] = 0.0;
+                    StiffMatrix.DeleteValsRowi(total_index);
+                }
+            }
+        }
+    }
+
+    /*--- Set to zero displacements of the normal component for the symmetry plane condition ---*/
+    for (iBound = 0; iBound < config->GetnMarker_All(); iBound++) {
+        if ((config->GetMarker_All_Boundary(iBound) == SYMMETRY_PLANE) && (nDim == 3)) {
+
+            for (iDim = 0; iDim < nDim; iDim++) MeanCoord[iDim] = 0.0;
+            for (iVertex = 0; iVertex < geometry->nVertex[iBound]; iVertex++) {
+                iPoint = geometry->vertex[iBound][iVertex]->GetNode();
+                VarCoord = geometry->node[iPoint]->GetCoord();
+                for (iDim = 0; iDim < nDim; iDim++)
+                    MeanCoord[iDim] += VarCoord[iDim]*VarCoord[iDim];
+            }
+            for (iDim = 0; iDim < nDim; iDim++) MeanCoord[iDim] = sqrt(MeanCoord[iDim]);
+
+            if ((MeanCoord[0] <= MeanCoord[1]) && (MeanCoord[0] <= MeanCoord[2])) axis = 0;
+            if ((MeanCoord[1] <= MeanCoord[0]) && (MeanCoord[1] <= MeanCoord[2])) axis = 1;
+            if ((MeanCoord[2] <= MeanCoord[0]) && (MeanCoord[2] <= MeanCoord[1])) axis = 2;
+
+            for (iVertex = 0; iVertex < geometry->nVertex[iBound]; iVertex++) {
+                iPoint = geometry->vertex[iBound][iVertex]->GetNode();
+                total_index = iPoint*nDim + axis;
+                LinSysRes[total_index] = 0.0;
+                LinSysSol[total_index] = 0.0;
+                StiffMatrix.DeleteValsRowi(total_index);
+            }
+        }
+    }
+
+    /*--- Set the known displacements, note that some points of the moving surfaces
+   could be on on the symmetry plane, we should specify DeleteValsRowi again (just in case) ---*/
+    for (iBound = 0; iBound < config->GetnMarker_All(); iBound++) {
+        if (((config->GetMarker_All_Moving(iBound) == YES) && (Kind_SU2 == SU2_CFD)) ||
+                ((config->GetMarker_All_DV(iBound) == YES) && (Kind_SU2 == SU2_MDC))) {
+            for (iVertex = 0; iVertex < geometry->nVertex[iBound]; iVertex++) {
+                iPoint = geometry->vertex[iBound][iVertex]->GetNode();
+                VarCoord = geometry->vertex[iBound][iVertex]->GetVarCoord();
+                for (iDim = 0; iDim < nDim; iDim++) {
+                    total_index = iPoint*nDim + iDim;
+                    LinSysRes[total_index] = VarCoord[iDim] * VarIncrement;
+                    LinSysSol[total_index] = VarCoord[iDim] * VarIncrement;
+                    StiffMatrix.DeleteValsRowi(total_index);
+                }
+            }
+        }
+    }
+
+    /*--- Don't move the nearfield plane ---*/
+    for (iBound = 0; iBound < config->GetnMarker_All(); iBound++) {
+        if (config->GetMarker_All_Boundary(iBound) == NEARFIELD_BOUNDARY) {
+            for (iVertex = 0; iVertex < geometry->nVertex[iBound]; iVertex++) {
+                iPoint = geometry->vertex[iBound][iVertex]->GetNode();
+                for (iDim = 0; iDim < nDim; iDim++) {
+                    total_index = iPoint*nDim + iDim;
+                    LinSysRes[total_index] = 0.0;
+                    LinSysSol[total_index] = 0.0;
+                    StiffMatrix.DeleteValsRowi(total_index);
+                }
+            }
+        }
+    }
+
 }
 
 /// original try at the top-level structure, just hangin' around for reference
