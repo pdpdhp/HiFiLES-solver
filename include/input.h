@@ -20,7 +20,7 @@
 class input
 {	
 public:
-
+	
     // #### constructors ####
 
     // default constructor
@@ -97,11 +97,12 @@ public:
 
     int ic_form;
 
-
     // boundary_conditions
     double rho_bound;
     array<double> v_bound;
     double p_bound;
+    double p_total_bound;
+    double T_total_bound;
 
     int mesh_format;
     string mesh_file;
@@ -113,7 +114,6 @@ public:
     double dx_cyclic;
     double dy_cyclic;
     double dz_cyclic;
-
 
     int p_res;
     int write_type;
@@ -215,5 +215,4 @@ public:
     array<double> y_coeffs;
     array<double> z_coeffs;
     int perturb_ic;
-
 };

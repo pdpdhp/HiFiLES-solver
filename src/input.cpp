@@ -49,24 +49,24 @@ void input::set_dt(double in_dt)
 
 void input::set_c(double in_c_tri, double in_c_quad)
 {
-  c_tri = in_c_tri;
-  c_quad = in_c_quad; 
+    c_tri = in_c_tri;
+    c_quad = in_c_quad;
 
-	double a_k = eval_gamma(2.*order+1)/( pow(2.,order)*pow(eval_gamma(order+1),2) );
-	eta_quad=in_c_quad*0.5*(2.*order+1.)*a_k*eval_gamma(order+1)*a_k*eval_gamma(order+1);
+    double a_k = eval_gamma(2.*order+1)/( pow(2.,order)*pow(eval_gamma(order+1),2) );
+    eta_quad=in_c_quad*0.5*(2.*order+1.)*a_k*eval_gamma(order+1)*a_k*eval_gamma(order+1);
 }
 
 void input::set_vcjh_scheme_tri(int in_vcjh_scheme_tri)
 {
-  vcjh_scheme_tri = in_vcjh_scheme_tri;
+    vcjh_scheme_tri = in_vcjh_scheme_tri;
 }
 void input::set_vcjh_scheme_hexa(int in_vcjh_scheme_hexa)
 {
-  vcjh_scheme_hexa= in_vcjh_scheme_hexa;
+    vcjh_scheme_hexa= in_vcjh_scheme_hexa;
 }
 void input::set_vcjh_scheme_pri_1d(int in_vcjh_scheme_pri_1d)
 {
-  vcjh_scheme_pri_1d= in_vcjh_scheme_pri_1d;
+    vcjh_scheme_pri_1d= in_vcjh_scheme_pri_1d;
 }
 
 void input::setup(ifstream& in_run_input_file, int rank)
@@ -647,6 +647,8 @@ void input::setup(ifstream& in_run_input_file, int rank)
             v_bound(1) = v_free_stream/uvw_ref;
             v_bound(2) = w_free_stream/uvw_ref;
             p_bound = p_free_stream/p_ref;
+            T_total_bound = (T_free_stream/T_ref)*(1.0 + 0.5*(gamma-1.0)*Mach_free_stream*Mach_free_stream);
+            p_total_bound = p_bound*pow(1.0 + 0.5*(gamma-1.0)*Mach_free_stream*Mach_free_stream, gamma/(gamma-1.0));
 
             uvw_wall  = Mach_wall*sqrt(gamma*R_gas*T_wall);
             v_wall(0) = (uvw_wall*nx_wall)/uvw_ref;
@@ -688,7 +690,6 @@ void input::setup(ifstream& in_run_input_file, int rank)
         }
     }
 }
-
 
 void input::reset(int c_ind, int p_ind, int grid_ind, int vis_ind, int tau_ind, int dev_ind, int dim_ind)
 {
