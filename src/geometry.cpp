@@ -13,6 +13,7 @@
 // Just for the purpose of code highlighting
 #define _MPI
 #define _CPU
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <cmath>
@@ -878,28 +879,31 @@ void create_boundpts(array<array<int> >& out_boundpts, array<int>& in_bclist, ar
     int n_bcs = in_bclist.get_dim(0);
 
     /** --- VERSION 2.0 : CREATE BOUNDS STRUCTURE --- */
-    /// want: iv_global = bounds(bcflag,ivert);
+    /// want: iv_global = boundpts(bcflag,ivert);
+    // actually, just iv - can easily get iv_global later
     out_boundpts.setup(n_bcs);
     array<vector<int> > Bounds;
     Bounds.setup(n_bcs);
-    for (int i=0; i<in_bclist; i++) {
+    for (int i=0; i<n_bcs; i++) {
         nv = 0;
-        bcflag = in_bcs(i);
+        bcflag = in_bclist(i);
         n_faces = in_bcfaces(i).get_dim(0);
         for (int j=0; j<n_faces; j++) {
-            // find face index
+            // find semi-global face index
             ic = in_bccells(i)(j);
             loc_k = in_bcfaces(i)(j);
             k = in_c2f(ic,loc_k);
             for (int m=0; m<in_f2nv(k); m++) {
                 // find vertex index
                 iv = in_f2v(k,m);
-                ivg = in_iv2ivg(iv);
+                //ivg = in_iv2ivg(iv);
                 // add vertex to bc
-                Bounds(i).push_back(ivg);
+                Bounds(i).push_back(iv);
                 nv++;
             }
         }
+        sort(Bounds(i).begin(),Bounds(i).end());
+
         out_boundpts(i).setup(nv);
         for (int j=0; j<nv; j++) {
             out_boundpts(i)(j) = Bounds(i)[j];
@@ -1316,11 +1320,16 @@ void read_boundary_gmsh(string& in_file_name, int &in_n_cells, array<int>& in_ic
         } // If all vertices belong to processor
 
     } // Loop over entities
-    
+
     /// ********** DOUBLE CHECK ME!!!!! *************
     int nv;
+    vector<int>::iterator it;
     for (int i=0; i<n_bcs; i++) {
-        nv = bv2nv(i);
+//        nv = bc2nv(i);
+        sort(Bounds(i).begin(),Bounds(i).end());
+        it = std::unique(Bounds(i).begin(), Bounds(i).end());
+        Bounds(i).resize( std::distance(Bounds(i).begin(),it) );
+        nv = Bounds(i).size();
         out_boundpts(i).setup(nv);
         for (int j=0; j<nv; j++) {
             out_boundpts(i)(j) = Bounds(i)[j];

@@ -22,5 +22,6 @@
 *.vcxproj.user
 
 # Other files
-*.syctex.gz
+*.aux
+*.synctex.gz
 *.log
