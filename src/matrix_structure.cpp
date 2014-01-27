@@ -58,34 +58,34 @@ void CSysMatrix::Initialize(const mesh &Mesh) {
 	unsigned long iPoint, *row_ptr, *col_ind, *vneighs, index, nnz;
     unsigned short iNeigh, nNeigh, Max_nNeigh, iEdge;
 
-    nPoint = Mesh->n_verts;
-    nVar = Mesh->n_dims;
-    nEqn = Mesh->n_dims;
+    nPoint = Mesh.n_verts;
+    nVar = Mesh.n_dims;
+    nEqn = Mesh.n_dims;
 
 	/*--- Don't delete *row_ptr, *col_ind because they are asigned to the Jacobian structure. ---*/
 	row_ptr = new unsigned long [nPoint+1];
 	row_ptr[0] = 0;
 	for (iPoint = 0; iPoint < nPoint; iPoint++)
-        row_ptr[iPoint+1] = row_ptr[iPoint]+(Mesh->v2n_e(iPoint)+1); // +1 -> to include diagonal element
+        row_ptr[iPoint+1] = row_ptr[iPoint]+(Mesh.v2n_e(iPoint)+1); // +1 -> to include diagonal element
 	nnz = row_ptr[nPoint];
   
 	col_ind = new unsigned long [nnz];
   
     Max_nNeigh = 0;
     for (iPoint = 0; iPoint < nPoint; iPoint++) {
-        nNeigh = Mesh->v2n_e(iPoint);
+        nNeigh = Mesh.v2n_e(iPoint);
         if (nNeigh > Max_nNeigh) Max_nNeigh = nNeigh;
     }
 	vneighs = new unsigned long [Max_nNeigh+1]; // +1 -> to include diagonal
   
 	for (iPoint = 0; iPoint < nPoint; iPoint++) {
-        nNeigh = Mesh->v2n_e(iPoint);
+        nNeigh = Mesh.v2n_e(iPoint);
         for (iNeigh = 0; iNeigh < nNeigh; iNeigh++) {
-            iEdge = Mesh->v2e(iPoint,iNeigh);
-            if (Mesh->e2v(iEdge,0) == iPoint) {
-                vneighs[iNeigh] = Mesh->e2v(iEdge,1);
+            iEdge = Mesh.v2e(iPoint,iNeigh);
+            if (Mesh.e2v(iEdge,0) == iPoint) {
+                vneighs[iNeigh] = Mesh.e2v(iEdge,1);
             }else{
-                vneighs[iNeigh] = Mesh->e2v(iEdge,0);
+                vneighs[iNeigh] = Mesh.e2v(iEdge,0);
             }
         }
 		vneighs[nNeigh] = iPoint;
@@ -108,10 +108,10 @@ void CSysMatrix::Initialize(const mesh &Mesh) {
 
 void CSysMatrix::SetIndexes(unsigned long* val_row_ptr, unsigned long* val_col_ind, unsigned long val_nnz, const mesh &Mesh) {
   
-    nPoint = Mesh->n_verts;              // Assign number of points in the mesh
-    nPointDomain = Mesh->n_verts_global;  // Assign number of points in the mesh
-    nVar = Mesh->n_dims;                  // Assign number of vars in each block system
-    nEqn = Mesh->n_dims;                   // Assign number of eqns in each block system
+    nPoint = Mesh.n_verts;              // Assign number of points in the mesh (on processor)
+    nPointDomain = Mesh.n_verts_global;  // Assign number of points in the mesh (across all procs)
+    nVar = Mesh.n_dims;                  // Assign number of vars in each block system
+    nEqn = Mesh.n_dims;                   // Assign number of eqns in each block system
 	nnz = val_nnz;                    // Assign number of possible non zero blocks
 	row_ptr = val_row_ptr;
 	col_ind = val_col_ind;
@@ -431,91 +431,89 @@ void CSysMatrix::DiagonalProduct(CSysVector & vec, unsigned long row_i) {
 	}
 }
 
+#ifdef MPI
 void CSysMatrix::SendReceive_Solution(CSysVector & x, CGeometry *geometry, CConfig *config) {
-    // not needed
-}
-
-//void CSysMatrix::SendReceive_Solution(CSysVector & x, CGeometry *geometry, CConfig *config) {
-//  unsigned short iVar, iMarker, MarkerS, MarkerR;
-//	unsigned long iVertex, iPoint, nVertexS, nVertexR, nBufferS_Vector, nBufferR_Vector;
-//	double *Buffer_Receive = NULL, *Buffer_Send = NULL;
-//	int send_to, receive_from;
+  unsigned short iVar, iMarker, MarkerS, MarkerR;
+    unsigned long iVertex, iPoint, nVertexS, nVertexR, nBufferS_Vector, nBufferR_Vector;
+    double *Buffer_Receive = NULL, *Buffer_Send = NULL;
+    int send_to, receive_from;
   
-//#ifndef NO_MPI
-//  MPI::Status status;
-//  MPI::Request send_request, recv_request;
-//#endif
+#ifdef _MPI
+  MPI::Status status;
+  MPI::Request send_request, recv_request;
+#endif
   
-//	for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++) {
-//        // only used in serial if perodic boundaries
-//		if ((config->GetMarker_All_Boundary(iMarker) == SEND_RECEIVE) &&
-//        (config->GetMarker_All_SendRecv(iMarker) > 0)) {
+    for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++) {
+        // only used in serial if perodic boundaries
+        if ((config->GetMarker_All_Boundary(iMarker) == SEND_RECEIVE) &&
+        (config->GetMarker_All_SendRecv(iMarker) > 0)) {
 			
-//			MarkerS = iMarker;  MarkerR = iMarker+1;
+            MarkerS = iMarker;  MarkerR = iMarker+1;
       
-//      send_to = config->GetMarker_All_SendRecv(MarkerS)-1;
-//			receive_from = abs(config->GetMarker_All_SendRecv(MarkerR))-1;
+      send_to = config->GetMarker_All_SendRecv(MarkerS)-1;
+            receive_from = abs(config->GetMarker_All_SendRecv(MarkerR))-1;
 			
-//			nVertexS = geometry->nVertex[MarkerS];  nVertexR = geometry->nVertex[MarkerR];
-//			nBufferS_Vector = nVertexS*nVar;        nBufferR_Vector = nVertexR*nVar;
+            nVertexS = geometry->nVertex[MarkerS];  nVertexR = geometry->nVertex[MarkerR];
+            nBufferS_Vector = nVertexS*nVar;        nBufferR_Vector = nVertexR*nVar;
       
-//      /*--- Allocate Receive and send buffers  ---*/
-//      Buffer_Receive = new double [nBufferR_Vector];
-//      Buffer_Send = new double[nBufferS_Vector];
+      /*--- Allocate Receive and send buffers  ---*/
+      Buffer_Receive = new double [nBufferR_Vector];
+      Buffer_Send = new double[nBufferS_Vector];
       
-//      /*--- Copy the solution that should be sent ---*/
-//      for (iVertex = 0; iVertex < nVertexS; iVertex++) {
-//        iPoint = geometry->vertex[MarkerS][iVertex]->GetNode();
-//        for (iVar = 0; iVar < nVar; iVar++)
-//          Buffer_Send[iVertex*nVar+iVar] = x[iPoint*nVar+iVar];
-//      }
+      /*--- Copy the solution that should be sent ---*/
+      for (iVertex = 0; iVertex < nVertexS; iVertex++) {
+        iPoint = geometry->vertex[MarkerS][iVertex]->GetNode();
+        for (iVar = 0; iVar < nVar; iVar++)
+          Buffer_Send[iVertex*nVar+iVar] = x[iPoint*nVar+iVar];
+      }
       
-//#ifndef NO_MPI
+#ifdef _MPI
       
-//      //      /*--- Send/Receive using non-blocking communications ---*/
-//      //      send_request = MPI::COMM_WORLD.Isend(Buffer_Send, nBufferS_Vector, MPI::DOUBLE, 0, send_to);
-//      //      recv_request = MPI::COMM_WORLD.Irecv(Buffer_Receive, nBufferR_Vector, MPI::DOUBLE, 0, receive_from);
-//      //      send_request.Wait(status);
-//      //      recv_request.Wait(status);
+      //      /*--- Send/Receive using non-blocking communications ---*/
+      //      send_request = MPI::COMM_WORLD.Isend(Buffer_Send, nBufferS_Vector, MPI::DOUBLE, 0, send_to);
+      //      recv_request = MPI::COMM_WORLD.Irecv(Buffer_Receive, nBufferR_Vector, MPI::DOUBLE, 0, receive_from);
+      //      send_request.Wait(status);
+      //      recv_request.Wait(status);
       
-//      /*--- Send/Receive information using Sendrecv ---*/
-//      MPI::COMM_WORLD.Sendrecv(Buffer_Send, nBufferS_Vector, MPI::DOUBLE, send_to, 0,
-//                               Buffer_Receive, nBufferR_Vector, MPI::DOUBLE, receive_from, 0);
+      /*--- Send/Receive information using Sendrecv ---*/
+      MPI::COMM_WORLD.Sendrecv(Buffer_Send, nBufferS_Vector, MPI::DOUBLE, send_to, 0,
+                               Buffer_Receive, nBufferR_Vector, MPI::DOUBLE, receive_from, 0);
       
-//#else
+#else
       
-//      /*--- Receive information without MPI ---*/
-//      for (iVertex = 0; iVertex < nVertexR; iVertex++) {
-//        iPoint = geometry->vertex[MarkerR][iVertex]->GetNode();
-//        for (iVar = 0; iVar < nVar; iVar++)
-//          Buffer_Receive[iVar*nVertexR+iVertex] = Buffer_Send[iVar*nVertexR+iVertex];
-//      }
+      /*--- Receive information without MPI ---*/
+      for (iVertex = 0; iVertex < nVertexR; iVertex++) {
+        iPoint = geometry->vertex[MarkerR][iVertex]->GetNode();
+        for (iVar = 0; iVar < nVar; iVar++)
+          Buffer_Receive[iVar*nVertexR+iVertex] = Buffer_Send[iVar*nVertexR+iVertex];
+      }
       
-//#endif
+#endif
       
-//      /*--- Deallocate send buffer ---*/
-//      delete [] Buffer_Send;
+      /*--- Deallocate send buffer ---*/
+      delete [] Buffer_Send;
       
-//      /*--- Do the coordinate transformation ---*/
-//      for (iVertex = 0; iVertex < nVertexR; iVertex++) {
+      /*--- Do the coordinate transformation ---*/
+      for (iVertex = 0; iVertex < nVertexR; iVertex++) {
         
-//        /*--- Find point and its type of transformation ---*/
-//        iPoint = geometry->vertex[MarkerR][iVertex]->GetNode();
+        /*--- Find point and its type of transformation ---*/
+        iPoint = geometry->vertex[MarkerR][iVertex]->GetNode();
         
-//        /*--- Copy transformed conserved variables back into buffer. ---*/
-//        for (iVar = 0; iVar < nVar; iVar++)
-//          x[iPoint*nVar+iVar] = Buffer_Receive[iVertex*nVar+iVar];
+        /*--- Copy transformed conserved variables back into buffer. ---*/
+        for (iVar = 0; iVar < nVar; iVar++)
+          x[iPoint*nVar+iVar] = Buffer_Receive[iVertex*nVar+iVar];
         
-//      }
+      }
       
-//      /*--- Deallocate receive buffer ---*/
-//      delete [] Buffer_Receive;
+      /*--- Deallocate receive buffer ---*/
+      delete [] Buffer_Receive;
       
-//    }
+    }
     
-//	}
+    }
   
-//}
+}
+#endif
 
 void CSysMatrix::RowProduct(const CSysVector & vec, unsigned long row_i) {
 	unsigned long iVar, index;
@@ -529,7 +527,7 @@ void CSysMatrix::RowProduct(const CSysVector & vec, unsigned long row_i) {
 			prod_row_vector[iVar] += prod_block_vector[iVar];
 	}
 }
-
+/*
 void CSysMatrix::MatrixVectorProduct(const CSysVector & vec, CSysVector & prod) {
 	unsigned long iPoint, iVar;
 
@@ -540,11 +538,11 @@ void CSysMatrix::MatrixVectorProduct(const CSysVector & vec, CSysVector & prod) 
 	}
   
 }
-
-void CSysMatrix::MatrixVectorProduct(const CSysVector & vec, CSysVector & prod, CGeometry *geometry, CConfig *config) {
+*/
+void CSysMatrix::MatrixVectorProduct(const CSysVector & vec, CSysVector & prod) {
 	unsigned long prod_begin, vec_begin, mat_begin, index, iVar, jVar, row_i;
-  
-#ifndef NO_MPI
+
+#ifdef MPI
   MPI::Status status;
   MPI::Request send_request, recv_request;
 #endif
@@ -576,8 +574,7 @@ void CSysMatrix::MatrixVectorProduct(const CSysVector & vec, CSysVector & prod, 
 	}
   
   /*--- MPI Parallelization ---*/
-	SendReceive_Solution(prod, geometry, config);
-  
+    //SendReceive_Solution(prod, geometry, config);
 }
 
 void CSysMatrix::GetMultBlockBlock(double *c, double *a, double *b) {
@@ -675,6 +672,46 @@ void CSysMatrix::BuildJacobiPreconditioner(void) {
 	delete [] invBlock;
 }
 
+void CSysMatrix::ComputeLU_SGSPreconditioner(const CSysVector & vec, CSysVector & prod) {
+  unsigned long iPoint, iVar;
+
+  /*--- There are two approaches to the parallelization (AIAA-2000-0927):
+   1. Use a special scheduling algorithm which enables data parallelism by regrouping edges. This method has the advantage of producing exactly the same result as the single processor case, but it suffers from severe overhead penalties for parallel loop initiation, heavy interprocessor communications and poor load balance.
+   2. Split the computational domain into several nonoverlapping regions according to the number of processors, and apply the SGS method inside of each region with (or without) some special interprocessor boundary treatment. This approach may suffer from convergence degradation but takes advantage of minimal parallelization overhead and good load balance. ---*/
+
+    /*--- First part of the symmetric iteration: (D+L).x* = b ---*/
+    for (iPoint = 0; iPoint < nPointDomain; iPoint++) {
+        LowerProduct(prod, iPoint);                                        // Compute L.x*
+        for (iVar = 0; iVar < nVar; iVar++)
+            aux_vector[iVar] = vec[iPoint*nVar+iVar] - prod_row_vector[iVar]; // Compute aux_vector = b - L.x*
+        Gauss_Elimination(iPoint, aux_vector);                            // Solve D.x* = aux_vector
+        for (iVar = 0; iVar < nVar; iVar++)
+            prod[iPoint*nVar+iVar] = aux_vector[iVar];                       // Assesing x* = solution
+    }
+
+    /*--- Inner send-receive operation the solution vector ---*/
+    //SendReceive_Solution(prod, geometry, config);
+
+    /*--- Second part of the symmetric iteration: (D+U).x_(1) = D.x* ---*/
+    for (iPoint = nPointDomain-1; (int)iPoint >= 0; iPoint--) {
+        DiagonalProduct(prod, iPoint);                 // Compute D.x*
+        for (iVar = 0; iVar < nVar; iVar++)
+            aux_vector[iVar] = prod_row_vector[iVar];   // Compute aux_vector = D.x*
+        UpperProduct(prod, iPoint);                    // Compute U.x_(n+1)
+        for (iVar = 0; iVar < nVar; iVar++)
+            aux_vector[iVar] -= prod_row_vector[iVar];  // Compute aux_vector = D.x*-U.x_(n+1)
+        Gauss_Elimination(iPoint, aux_vector);        // Solve D.x* = aux_vector
+        for (iVar = 0; iVar < nVar; iVar++)
+            prod[iPoint*nVar + iVar] = aux_vector[iVar]; // Assesing x_(1) = solution
+    }
+
+  /*--- Final send-receive operation the solution vector (redundant in CFD simulations) ---*/
+    //SendReceive_Solution(prod, geometry, config);
+
+}
+
+// easiest way to comment out unneeded stuff for now
+#ifdef PRECONDITIONERS
 void CSysMatrix::BuildLineletPreconditioner(CGeometry *geometry, CConfig *config) {
 	
 	/*--- Identify the linelets of the grid ---*/
@@ -826,49 +863,11 @@ void CSysMatrix::ComputeJacobiPreconditioner(const CSysVector & vec, CSysVector 
   
 }
 
-void CSysMatrix::ComputeLU_SGSPreconditioner(const CSysVector & vec, CSysVector & prod, CGeometry *geometry, CConfig *config) {
-  unsigned long iPoint, iVar;
-  
-  /*--- There are two approaches to the parallelization (AIAA-2000-0927):
-   1. Use a special scheduling algorithm which enables data parallelism by regrouping edges. This method has the advantage of producing exactly the same result as the single processor case, but it suffers from severe overhead penalties for parallel loop initiation, heavy interprocessor communications and poor load balance.
-   2. Split the computational domain into several nonoverlapping regions according to the number of processors, and apply the SGS method inside of each region with (or without) some special interprocessor boundary treatment. This approach may suffer from convergence degradation but takes advantage of minimal parallelization overhead and good load balance. ---*/
-	
-	/*--- First part of the symmetric iteration: (D+L).x* = b ---*/
-	for (iPoint = 0; iPoint < nPointDomain; iPoint++) {
-		LowerProduct(prod, iPoint);                                        // Compute L.x*
-		for (iVar = 0; iVar < nVar; iVar++)
-			aux_vector[iVar] = vec[iPoint*nVar+iVar] - prod_row_vector[iVar]; // Compute aux_vector = b - L.x*
-		Gauss_Elimination(iPoint, aux_vector);                            // Solve D.x* = aux_vector
-		for (iVar = 0; iVar < nVar; iVar++)
-			prod[iPoint*nVar+iVar] = aux_vector[iVar];                       // Assesing x* = solution
-	}
-  
-	/*--- Inner send-receive operation the solution vector ---*/
-	SendReceive_Solution(prod, geometry, config);
-	
-	/*--- Second part of the symmetric iteration: (D+U).x_(1) = D.x* ---*/
-	for (iPoint = nPointDomain-1; (int)iPoint >= 0; iPoint--) {
-		DiagonalProduct(prod, iPoint);                 // Compute D.x*
-		for (iVar = 0; iVar < nVar; iVar++)
-			aux_vector[iVar] = prod_row_vector[iVar];   // Compute aux_vector = D.x*
-		UpperProduct(prod, iPoint);                    // Compute U.x_(n+1)
-		for (iVar = 0; iVar < nVar; iVar++)
-			aux_vector[iVar] -= prod_row_vector[iVar];  // Compute aux_vector = D.x*-U.x_(n+1)
-		Gauss_Elimination(iPoint, aux_vector);        // Solve D.x* = aux_vector
-		for (iVar = 0; iVar < nVar; iVar++)
-			prod[iPoint*nVar + iVar] = aux_vector[iVar]; // Assesing x_(1) = solution
-	}
-  
-  /*--- Final send-receive operation the solution vector (redundant in CFD simulations) ---*/
-	SendReceive_Solution(prod, geometry, config);
-  
-}
-
 void CSysMatrix::ComputeLineletPreconditioner(const CSysVector & vec, CSysVector & prod, CGeometry *geometry, CConfig *config) {
 	unsigned long iVar, jVar, nElem = 0, iLinelet, im1Point, iPoint, ip1Point, iElem;
 	long iElemLoop;
 	
-#ifndef NO_MPI
+#ifdef _MPI
   MPI::Status status;
   MPI::Request send_request, recv_request;
 #endif
@@ -995,3 +994,4 @@ void CSysMatrix::ComputeResidual(const CSysVector & sol, const CSysVector & f, C
     }
 	}
 }
+#endif // PRECONDITIONERS (not needed for HiFiLES)

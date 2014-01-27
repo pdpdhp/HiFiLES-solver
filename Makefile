@@ -14,7 +14,7 @@
 # TODO: add config script to build parmetis and look for BLAS, parmetis, CUDA, MPI and TECIO libraries
 
 # TODO: include makefile.machine.in by looking for current machine name
-include makefiles/makefile.aphrodite_MPI.in
+include makefile.in
 
 # Compiler
 
@@ -112,10 +112,11 @@ BIN	= bin/
 vpath %.cpp src
 vpath %.cu src
 vpath %.h include
+vpath %.hpp include
 
 # Objects
 
-OBJS    = $(OBJ)HiFiLES.o $(OBJ)geometry.o $(OBJ)solver.o $(OBJ)output.o $(OBJ)eles.o $(OBJ)eles_tris.o $(OBJ)eles_quads.o $(OBJ)eles_hexas.o $(OBJ)eles_tets.o $(OBJ)eles_pris.o $(OBJ)inters.o $(OBJ)int_inters.o $(OBJ)bdy_inters.o $(OBJ)funcs.o $(OBJ)flux.o $(OBJ)global.o $(OBJ)input.o $(OBJ)cubature_1d.o $(OBJ)cubature_tri.o $(OBJ)cubature_quad.o $(OBJ)cubature_hexa.o $(OBJ)cubature_tet.o
+OBJS    = $(OBJ)HiFiLES.o $(OBJ)geometry.o $(OBJ)mesh.o $(OBJ)matrix_structure.o $(OBJ)vector_structure.o $(OBJ)linear_solvers_structure.o $(OBJ)solver.o $(OBJ)output.o $(OBJ)eles.o $(OBJ)eles_tris.o $(OBJ)eles_quads.o $(OBJ)eles_hexas.o $(OBJ)eles_tets.o $(OBJ)eles_pris.o $(OBJ)inters.o $(OBJ)int_inters.o $(OBJ)bdy_inters.o $(OBJ)funcs.o $(OBJ)flux.o $(OBJ)global.o $(OBJ)input.o $(OBJ)cubature_1d.o $(OBJ)cubature_tri.o $(OBJ)cubature_quad.o $(OBJ)cubature_hexa.o $(OBJ)cubature_tet.o
 
 ifeq ($(NODE),GPU)
 	OBJS	+=  $(OBJ)cuda_kernels.o
@@ -150,10 +151,24 @@ HiFiLES: $(OBJS)
 $(OBJ)HiFiLES.o: HiFiLES.cpp geometry.h input.h flux.h error.h
 	$(CC) $(OPTS)  -c -o $@ $<
 	
-$(OBJ)geometry.o: geometry.cpp geometry.h input.h  error.h
+$(OBJ)geometry.o: geometry.cpp geometry.h input.h error.h
 	$(CC) $(OPTS)  -c -o $@ $<
 
-$(OBJ)solver.o: solver.cpp solver.h input.h  error.h
+# added mesh-deformation-related files
+$(OBJ)mesh.o: mesh.cpp mesh.h geometry.h matrix_structure.hpp vector_structure.hpp linear_solvers_structure.hpp input.h error.h
+	$(CC) $(OPTS)  -c -o $@ $<
+
+$(OBJ)matrix_structure.o: matrix_structure.cpp matrix_structure.hpp matrix_structure.inl mesh.h vector_structure.hpp input.h error.h
+	$(CC) $(OPTS)  -c -o $@ $<
+
+$(OBJ)vector_structure.o: vector_structure.cpp vector_structure.hpp vector_structure.inl matrix_structure.hpp input.h error.h
+	$(CC) $(OPTS)  -c -o $@ $<
+
+$(OBJ)linear_solver_structure.o: linear_solvers_structure.cpp linear_solvers_structure.hpp linear_solvers_structure.inl vector_structure.hpp matrix_structure.hpp input.h error.h
+	$(CC) $(OPTS)  -c -o $@ $<
+# end mesh-def files
+
+$(OBJ)solver.o: solver.cpp solver.h input.h error.h
 	$(CC) $(OPTS)  -c -o $@ $<
 
 $(OBJ)output.o: output.cpp output.h input.h error.h

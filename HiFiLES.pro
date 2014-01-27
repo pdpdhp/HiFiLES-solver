@@ -88,4 +88,5 @@ OTHER_FILES += \
     data/cubature_1d.dat \
     makefile.in \
     GMSH_Element_Node_Ordering.txt \
-    TODO.txt
+    TODO.txt \
+    Makefile

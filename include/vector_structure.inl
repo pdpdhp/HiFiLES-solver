@@ -31,7 +31,7 @@ inline void CSysVector::SetValZero(void) {
 inline unsigned long CSysVector::GetLocSize() const { return nElm; }
 
 inline unsigned long CSysVector::GetSize() const {
-#ifndef NO_MPI
+#ifdef _MPI
   return nElmGlobal;
 #else
   return (unsigned long)nElm;

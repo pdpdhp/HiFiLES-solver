@@ -11,7 +11,7 @@
  * Copyright (C) 2013 Aerospace Computing Laboratory.
  */
 // Just for the purpose of code highlighting
-#define _MPI
+//#define _MPI
 #define _CPU
 // -----------------------------------------
 #include <iostream>
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
   SetInput(&FlowSol);
 
   /*! Read the mesh file from a file. */
-  GeoPreprocess(run_input.run_type, &FlowSol, &Mesh);
+  GeoPreprocess(run_input.run_type, &FlowSol, Mesh);
   
   InitSolution(&FlowSol);
   
@@ -227,8 +227,8 @@ int main(int argc, char *argv[]) {
 		/*! Steps:
 		1) 
 		*/
-        Mesh.deform(&FlowSol,run_input);
-        Mesh.set_grid_velocity(&FlowSol,run_input.dt);
+        Mesh.deform(&FlowSol);
+        //Mesh.set_grid_velocity(&FlowSol,run_input.dt);
         Mesh.update(&FlowSol);
 	}
     

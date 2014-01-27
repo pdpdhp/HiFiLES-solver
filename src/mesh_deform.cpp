@@ -11,7 +11,7 @@ double CVolumetricMovement::SetFEAMethodContributions_Elem(CGeometry *geometry) 
     bool RightVol;
 
     int rank = MASTER_NODE;
-#ifndef NO_MPI
+#ifdef _MPI
     rank = MPI::COMM_WORLD.Get_rank();
 #endif
 
@@ -45,7 +45,7 @@ double CVolumetricMovement::SetFEAMethodContributions_Elem(CGeometry *geometry) 
 
     }
 
-#ifndef NO_MPI
+#ifdef _MPI
     double MinLength_Local = MinLength; MinLength = 0.0;
     MPI::COMM_WORLD.Allreduce(&MinLength_Local, &MinLength, 1, MPI::DOUBLE, MPI::MIN);
 #endif
@@ -85,7 +85,7 @@ double CVolumetricMovement::SetFEAMethodContributions_Elem(CGeometry *geometry) 
 
     }
 
-#ifndef NO_MPI
+#ifdef _MPI
     unsigned long ElemCounter_Local = ElemCounter; ElemCounter = 0;
     MPI::COMM_WORLD.Allreduce(&ElemCounter_Local, &ElemCounter, 1, MPI::UNSIGNED_LONG, MPI::SUM);
 #endif
@@ -216,7 +216,7 @@ void CVolumetricMovement::SetVolume_Deformation(CGeometry *geometry, CConfig *co
     double MinLength, NumError, MinVol;
 
     int rank = MASTER_NODE;
-#ifndef NO_MPI
+#ifdef _MPI
     rank = MPI::COMM_WORLD.Get_rank();
 #endif
 

@@ -11,12 +11,13 @@
  * Copyright (C) 2013 Aerospace Computing Laboratory.
  */
 // Just for the purpose of code highlighting
-#define _MPI
-#define _CPU
+//#define _MPI
+//#define _CPU
 #include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <cmath>
+#include <set>
 
 #include "../include/global.h"
 #include "../include/array.h"
@@ -55,18 +56,18 @@ using namespace std;
 
 void SetInput(struct solution* FlowSol) {
   
-  /*! Basic allocation using the input file. */
-  FlowSol->rank               = 0;
+    /*! Basic allocation using the input file. */
+    FlowSol->rank               = 0;
 	FlowSol->n_steps            = run_input.n_steps;
 	FlowSol->adv_type           = run_input.adv_type;
 	FlowSol->viscous            = run_input.viscous;
 	FlowSol->plot_freq          = run_input.plot_freq;
 	FlowSol->restart_dump_freq  = run_input.restart_dump_freq;
 	FlowSol->write_type         = run_input.write_type;
-  FlowSol->ini_iter           = 0;
+    FlowSol->ini_iter           = 0;
   
-  /*! Number of edges/faces for different type of cells. */
-  FlowSol->num_f_per_c.setup(5);
+    /*! Number of edges/faces for different type of cells. */
+    FlowSol->num_f_per_c.setup(5);
 	FlowSol->num_f_per_c(0) = 3;
 	FlowSol->num_f_per_c(1) = 4;
 	FlowSol->num_f_per_c(2) = 4;
@@ -183,12 +184,8 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     CompConnectivity(c2v, c2n_v, ctype, c2f, c2e, f2c, f2loc_f, f2v, f2nv, Mesh.e2v, Mesh.v2n_e, Mesh.v2e, rot_tag,
                      unmatched_inters, n_unmatched_inters, icvsta, icvert, FlowSol->num_inters, FlowSol->num_edges, FlowSol);
 
-    // list of global vertices & bc flags
-    array<int>& bcverts;
-    bcverts.setup(Mesh.n_verts_global);
-
     // Reading boundaries
-    ReadBound(run_input.mesh_file,c2v,c2n_v,ctype,bctype_c,bcverts,ic2icg,icvsta,icvert,iv2ivg,FlowSol->num_eles,FlowSol->num_verts, FlowSol);
+    ReadBound(run_input.mesh_file,c2v,c2n_v,c2f,f2v,f2nv,ctype,bctype_c,Mesh.boundpts,Mesh.bc_list,Mesh.bound_flags,ic2icg,icvsta,icvert,iv2ivg,FlowSol->num_eles,FlowSol->num_verts,FlowSol);
     if (in_run_type==1)
     {
         // Store ele2face
@@ -203,7 +200,6 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     Mesh.f2c = f2c;
     Mesh.f2n_v = f2nv;
     Mesh.n_faces = FlowSol->num_inters;
-    Mesh.v2bc = bcverts;
 
     /////////////////////////////////////////////////
     /// Initializing Elements
@@ -781,7 +777,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
         }
     }
 
-    Mesh->ic2loc_c = local_c;
+    Mesh.ic2loc_c = local_c;
 
     // set on GPU
 #ifdef _GPU
@@ -839,7 +835,10 @@ void ReadMesh(string& in_file_name, array<double>& out_xv, array<int>& out_c2v, 
 
 }
 
-void ReadBound(string& in_file_name, array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c2f, array<int>& in_f2v, array<int>& in_ctype, array<int>& out_bctype, array<array<int> >& out_boundpts, array<int>& in_ic2icg, array<int>& in_icvsta, array<int>&in_icvert, array<int>& in_iv2ivg, int& in_n_cells, int& in_n_verts, struct solution* FlowSol)
+void ReadBound(string& in_file_name, array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c2f, array<int>& in_f2v, array<int>& in_f2nv,
+               array<int>& in_ctype, array<int>& out_bctype, array<array<int> >& out_boundpts, array<int> &out_bc_list, array<int>& out_bound_flag,
+               array<int>& in_ic2icg, array<int>& in_icvsta, array<int>&in_icvert, array<int>& in_iv2ivg, int& in_n_cells, int& in_n_verts,
+               struct solution* FlowSol)
 {
 
     if (FlowSol->rank==0) cout << "reading boundary conditions" << endl;
@@ -852,89 +851,72 @@ void ReadBound(string& in_file_name, array<int>& in_c2v, array<int>& in_c2n_v, a
 
     if (run_input.mesh_format==0) {
         array<array<int> > bccells, bcfaces;
-        array<int> bc_list;
-        // want: iv_global = bounds(bcflag,ivert);
-        read_boundary_gambit(in_file_name, in_n_cells, in_ic2icg, out_bctype, bc_list, bccells, bcfaces);
-        create_boundpts(out_boundpts, bc_list, bccells, bcfaces, in_c2f, in_f2v, in_iv2ivg);
+        read_boundary_gambit(in_file_name, in_n_cells, in_ic2icg, out_bctype, out_bc_list, bccells, bcfaces);
+        if (run_input.motion)
+            create_boundpts(out_boundpts, out_bc_list, out_bound_flag, bccells, bcfaces, in_c2f, in_f2v, in_f2nv);
     }
     else if (run_input.mesh_format==1) {
-        read_boundary_gmsh(in_file_name, in_n_cells, in_ic2icg, in_c2v, in_c2n_v, out_bctype, out_boundpts, in_iv2ivg, in_n_verts, in_ctype, in_icvsta, in_icvert, FlowSol);
+        read_boundary_gmsh(in_file_name, in_n_cells, in_ic2icg, in_c2v, in_c2n_v, out_bctype, out_bc_list, out_boundpts, in_iv2ivg, in_n_verts, in_ctype, in_icvsta, in_icvert, FlowSol);
     }
     else {
         FatalError("Mesh format not recognized");
     }
+
     if (FlowSol->rank==0) cout << "done reading boundary conditions" << endl;
 }
 
-void create_boundpts(array<array<int> >& out_boundpts, array<int>& in_bclist, array<int>& out_bctype, array<array<int> >& in_bccells, array<array<int> >& in_bcfaces,
-                    array<int>& in_c2f, array<int>& in_f2v, array<int>& in_f2nv, array<int>& in_iv2ivg)
+void create_boundpts(array<array<int> >& out_boundpts, array<int>& in_bclist, array<int>& out_bound_flag, array<array<int> >& in_bccells,
+                     array<array<int> >& in_bcfaces, array<int>& in_c2f, array<int>& in_f2v, array<int>& in_f2nv)
 {
     int iv, ivg, ic, k, loc_k, nv;
     int n_faces, bcflag;
 
     int n_bcs = in_bclist.get_dim(0);
 
-    /** --- VERSION 2.0 : CREATE BOUNDS STRUCTURE --- */
-    /// want: iv_global = boundpts(bcflag,ivert);
-    // actually, just iv - can easily get iv_global later
+    /** Find boundaries which are moving */
+    for (int i=0; i<run_input.n_moving_bnds; i++) {
+        bcflag = get_bc_number(run_input.boundry_flags(i));
+        for (int j=0; j<n_bcs; j++) {
+            if (in_bclist(j)==bcflag) {
+                out_bound_flag(j) = 1;
+                break;
+            }
+        }
+    }
+
+    /** --- CREATE BOUNDARY->POINTS STRUCTURE ---
+    want: iv = boundpts(bcflag,ivert); */
     out_boundpts.setup(n_bcs);
-    array<vector<int> > Bounds;
+    array<set<int> > Bounds;
     Bounds.setup(n_bcs);
     for (int i=0; i<n_bcs; i++) {
         nv = 0;
         bcflag = in_bclist(i);
         n_faces = in_bcfaces(i).get_dim(0);
         for (int j=0; j<n_faces; j++) {
-            // find semi-global face index
+            // find (semi-)global face index
             ic = in_bccells(i)(j);
             loc_k = in_bcfaces(i)(j);
             k = in_c2f(ic,loc_k);
             for (int m=0; m<in_f2nv(k); m++) {
                 // find vertex index
                 iv = in_f2v(k,m);
-                //ivg = in_iv2ivg(iv);
                 // add vertex to bc
-                Bounds(i).push_back(iv);
-                nv++;
+                Bounds(i).insert(iv);
             }
         }
-        sort(Bounds(i).begin(),Bounds(i).end());
-
-        out_boundpts(i).setup(nv);
-        for (int j=0; j<nv; j++) {
-            out_boundpts(i)(j) = Bounds(i)[j];
+        out_boundpts(i).setup(Bounds(i).size());
+        int j = 0;
+        for (set<int>::iterator it=Bounds(i).begin(); it!=Bounds(i).end(); it++) {
+            out_boundpts(i)(j) = (*it);
+            j++;
         }
     }
-
-    /** --- ORIGINAL VERSTION : bcflag = bcvert(ivg) --- */
-    /*
-    for (int i=0; i<n_bcs; i++) {
-        bcflag = in_bcs(i);
-        /// create something like this: list of moving bounds; check to see if it is one
-        //if (findBC(in_bcs(i),run_input.MotionBounds)) {
-
-            n_faces = in_bcfaces(i).get_dim(0);
-            for (int j=0; j<n_faces; j++) {
-
-                // find face index
-                ic = in_bccells(i)(j);
-                loc_k = in_bcfaces(i)(j);
-                k = in_c2f(ic,loc_k);
-                for (int m=0; m<in_f2nv(k); m++) {
-
-                    // find vertex index
-                    iv = in_f2v(k,m);
-                    ivg = in_iv2ivg(iv);
-                    // set bcflag for vertex
-                    out_bcverts(ivg) = bcflag;
-                }
-            }
-        //}
-    }*/
 }
 
 // Method to read boundary edges in mesh file
-void read_boundary_gambit(string& in_file_name, int &in_n_cells, array<int>& in_ic2icg, array<int>& out_bctype, array<int>& out_bcs, array<array<int> >& out_bccells, array<array<int> >& out_bcfaces)
+void read_boundary_gambit(string& in_file_name, int &in_n_cells, array<int>& in_ic2icg, array<int>& out_bctype, array<int> &out_bclist,
+                          array<array<int> >& out_bccells, array<array<int> >& out_bcfaces)
 {
 
     // input: ic2icg
@@ -1020,7 +1002,7 @@ void read_boundary_gambit(string& in_file_name, int &in_n_cells, array<int>& in_
     string bcname;
     char bcTXT[100];   
     out_bcfaces.setup(n_bcs);
-    out_bcs.setup(n_bcs);
+    out_bclist.setup(n_bcs);
 
     for (int i=0;i<n_bcs;i++)
     {
@@ -1031,10 +1013,10 @@ void read_boundary_gambit(string& in_file_name, int &in_n_cells, array<int>& in_
 
         sscanf(buf,"%s %d %d", bcTXT, &bcID, &bcNF);
 
-        bcname.assign(bcnTXT,0,14);
+        bcname.assign(bcTXT,0,14);
         bcflag = get_bc_number(bcname);
 
-        out_bcs(i) = bcflag;
+        out_bclist(i) = bcflag;
         out_bcfaces(i).setup(bcNF);
 
         int bdy_count = 0;
@@ -1117,8 +1099,8 @@ void read_boundary_gambit(string& in_file_name, int &in_n_cells, array<int>& in_
 }
 
 void read_boundary_gmsh(string& in_file_name, int &in_n_cells, array<int>& in_ic2icg, array<int>& in_c2v, array<int>& in_c2n_v,
-                        array<int>& out_bctype, array<array<int> >& out_boundpts, array<int>& in_iv2ivg, int in_n_verts,
-                        array<int>& in_ctype, array<int>& in_icvsta, array<int>& in_icvert, struct solution* FlowSol)
+                        array<int>& out_bctype, array<int> &out_bclist, array<array<int> >& out_boundpts, array<int>& in_iv2ivg,
+                        int in_n_verts, array<int>& in_ctype, array<int>& in_icvsta, array<int>& in_icvert, struct solution* FlowSol)
 {
     string str;
 
@@ -1145,8 +1127,7 @@ void read_boundary_gmsh(string& in_file_name, int &in_n_cells, array<int>& in_ic
 
     mesh_file >> n_bcs;
     mesh_file.getline(buf,BUFSIZ);	// clear rest of line
-    array<int> out_bclist;  /// NEW ****
-    out_bclist.setup(n_bcs);  /// NEW ****
+    out_bclist.setup(n_bcs);
     for(int i=0;i<n_bcs;i++)
     {
         mesh_file.getline(buf,BUFSIZ);
@@ -1192,8 +1173,9 @@ void read_boundary_gmsh(string& in_file_name, int &in_n_cells, array<int>& in_ic
     out_boundpts.setup(n_bcs);
     //out_bcverts.setup(n_nodes_global);
     array<int> bc2nv(n_bcs);
-    array<vector<int> > Bounds;
+    array<set<int> > Bounds;
     Bounds.setup(n_bcs);
+    // overwrite bc_list with bcflag (previously held gmsh bcid)
     for (int i=0; i<n_bcs; i++) {
         bcname.assign(bcTXT[out_bclist(i)],0,14);
         bcname.erase(bcname.find_last_not_of(" \n\r\t")+1);
@@ -1241,28 +1223,26 @@ void read_boundary_gmsh(string& in_file_name, int &in_n_cells, array<int>& in_ic
         else
             FatalError("Boundary elmtype not recognized");
 
-        // Shift by -1 (1 indexed -> 0 indexed) & store bcflag
-        for (int j=0;j<num_face_vert;j++)
+        mesh_file.getline(buf,BUFSIZ);	// Get rest of line
+
+        /*
+         * Check if two vertices belong to processor
+         * Shift node index by -1 (1 index -> 0 index) & find local index
+         * Add vertex to boundpts array
+         */
+        bool belong_to_proc = 1;
+        for (int j=0; j<num_face_vert; j++)
         {
             vlist_bound(j)--;
+            vlist_local(j) = index_locate_int(vlist_bound(j),in_iv2ivg.get_ptr_cpu(),in_n_verts);
+            if (vlist_local(j) == -1) belong_to_proc = 0;
+
             int k;
             for (k=0; k<n_bcs; k++) {
                 if (out_bclist(k) == bcflag) break;
             }
-            Bounds(k).push_back(ivg);
-            //out_bcverts(vlist_bound(j)) = bcflag;
-            bc2nv(k)++;
-        }
-
-        mesh_file.getline(buf,BUFSIZ);	// Get rest of line
-
-        // Check if two vertices belong to processor
-        bool belong_to_proc = 1;
-        for (int j=0;j<num_face_vert;j++)
-        {
-            vlist_local(j) = index_locate_int(vlist_bound(j),in_iv2ivg.get_ptr_cpu(),in_n_verts);
-            if (vlist_local(j) == -1)
-                belong_to_proc = 0;
+            Bounds(k).insert(vlist_local(j));
+            //bc2nv(k)++;
         }
 
         if (belong_to_proc)
@@ -1318,17 +1298,13 @@ void read_boundary_gmsh(string& in_file_name, int &in_n_cells, array<int>& in_ic
     } // Loop over entities
 
     /// ********** DOUBLE CHECK ME!!!!! *************
-    int nv;
-    vector<int>::iterator it;
+    set<int>::iterator it;
     for (int i=0; i<n_bcs; i++) {
-//        nv = bc2nv(i);
-        sort(Bounds(i).begin(),Bounds(i).end());
-        it = std::unique(Bounds(i).begin(), Bounds(i).end());
-        Bounds(i).resize( std::distance(Bounds(i).begin(),it) );
-        nv = Bounds(i).size();
-        out_boundpts(i).setup(nv);
-        for (int j=0; j<nv; j++) {
-            out_boundpts(i)(j) = Bounds(i)[j];
+        out_boundpts(i).setup(Bounds(i).size());
+        int j=0;
+        for (it=Bounds(i).begin(); it!=Bounds(i).end(); it++) {
+            out_boundpts(i)(j) = (*it);
+            j++;
         }
     }
 

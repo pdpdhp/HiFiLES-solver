@@ -33,10 +33,9 @@ inline void CSysMatrix::ScaleVals(double val_scale) {
 		matrix[index] *= val_scale; 
 }
 
-inline CSysMatrixVectorProduct::CSysMatrixVectorProduct(CSysMatrix & matrix_ref, CGeometry *geometry_ref, CConfig *config_ref) {
+inline CSysMatrixVectorProduct::CSysMatrixVectorProduct(CSysMatrix & matrix_ref, solution* FlowSol) {
   sparse_matrix = &matrix_ref;
-  geometry = geometry_ref;
-  config = config_ref;  
+  this->FlowSol = FlowSol;
 }
 
 inline void CSysMatrixVectorProduct::operator()(const CSysVector & u, CSysVector & v) const {
@@ -45,9 +44,10 @@ inline void CSysMatrixVectorProduct::operator()(const CSysVector & u, CSysVector
     cerr << "pointer to sparse matrix is NULL." << endl;
     throw(-1);
   }
-  sparse_matrix->MatrixVectorProduct(u, v, geometry, config);
+  sparse_matrix->MatrixVectorProduct(u, v);
 }
 
+/*
 inline CJacobiPreconditioner::CJacobiPreconditioner(CSysMatrix & matrix_ref, CGeometry *geometry_ref, CConfig *config_ref) {
   sparse_matrix = &matrix_ref;
   geometry = geometry_ref;
@@ -62,11 +62,10 @@ inline void CJacobiPreconditioner::operator()(const CSysVector & u, CSysVector &
   }
   sparse_matrix->ComputeJacobiPreconditioner(u, v, geometry, config);
 }
-
-inline CLU_SGSPreconditioner::CLU_SGSPreconditioner(CSysMatrix & matrix_ref, CGeometry *geometry_ref, CConfig *config_ref) {
+*/
+inline CLU_SGSPreconditioner::CLU_SGSPreconditioner(CSysMatrix & matrix_ref, solution* FlowSol) {
   sparse_matrix = &matrix_ref;
-      geometry = geometry_ref;
-  config = config_ref;  
+  this->FlowSol = FlowSol;
 }
 
 inline void CLU_SGSPreconditioner::operator()(const CSysVector & u, CSysVector & v) const {
@@ -75,9 +74,9 @@ inline void CLU_SGSPreconditioner::operator()(const CSysVector & u, CSysVector &
     cerr << "pointer to sparse matrix is NULL." << endl;
     throw(-1);
   }
-  sparse_matrix->ComputeLU_SGSPreconditioner(u, v, geometry, config);
+  sparse_matrix->ComputeLU_SGSPreconditioner(u, v);
 }
-
+/*
 inline CLineletPreconditioner::CLineletPreconditioner(CSysMatrix & matrix_ref, CGeometry *geometry_ref, CConfig *config_ref) {
   sparse_matrix = &matrix_ref;
   geometry = geometry_ref;
@@ -92,3 +91,4 @@ inline void CLineletPreconditioner::operator()(const CSysVector & u, CSysVector 
   }
   sparse_matrix->ComputeLineletPreconditioner(u, v, geometry, config);
 }
+*/

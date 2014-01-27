@@ -24,7 +24,7 @@
 
 #pragma once
 
-#ifndef NO_MPI
+#ifdef MPI
 #include <mpi.h>
 #endif
 #include <climits>
@@ -125,7 +125,7 @@ public:
    * \param[in] numVar - number of variables in each block
    * \param[in] val - default value for elements
    */
-  void Initialize(const unsigned long & numBlk, const unsigned long & numBlkDomain, const unsigned short & numVar, const double & val = 0.0);
+  void Initialize(const unsigned long & numBlk, const unsigned short &numVar, const double &val);
   
   /*!
    * \brief return the number of local elements in the CSysVector

@@ -46,7 +46,7 @@ CSysVector::CSysVector(const unsigned long & size, const double & val) {
   for (unsigned int i = 0; i < nElm; i++)
     vec_val[i] = val;
   
-#ifndef NO_MPI
+#ifdef MPI
   myrank = MPI::COMM_WORLD.Get_rank();
   unsigned long nElmLocal = (unsigned long)nElm;
   MPI::COMM_WORLD.Allreduce(&nElmLocal, &nElmGlobal, 1, MPI::UNSIGNED_LONG, MPI::SUM);
@@ -72,7 +72,7 @@ CSysVector::CSysVector(const unsigned long & numBlk, const unsigned long & numBl
   for (unsigned int i = 0; i < nElm; i++)
     vec_val[i] = val;
   
-#ifndef NO_MPI
+#ifdef MPI
   myrank = MPI::COMM_WORLD.Get_rank();
   unsigned long nElmLocal = (unsigned long)nElm;
   MPI::COMM_WORLD.Allreduce(&nElmLocal, &nElmGlobal, 1, MPI::UNSIGNED_LONG, MPI::SUM);
@@ -91,7 +91,7 @@ CSysVector::CSysVector(const CSysVector & u) {
   for (unsigned long i = 0; i < nElm; i++)
     vec_val[i] = u.vec_val[i];
   
-#ifndef NO_MPI
+#ifdef MPI
   myrank = u.myrank;
   nElmGlobal = u.nElmGlobal;
 #endif
@@ -115,7 +115,7 @@ CSysVector::CSysVector(const unsigned long & size, const double* u_array) {
   for (unsigned long i = 0; i < nElm; i++)
     vec_val[i] = u_array[i];
   
-#ifndef NO_MPI
+#ifdef MPI
   myrank = MPI::COMM_WORLD.Get_rank();
   unsigned long nElmLocal = (unsigned long)nElm;
   MPI::COMM_WORLD.Allreduce(&nElmLocal, &nElmGlobal, 1, MPI::UNSIGNED_LONG, MPI::SUM);
@@ -141,7 +141,7 @@ CSysVector::CSysVector(const unsigned long & numBlk, const unsigned long & numBl
   for (unsigned long i = 0; i < nElm; i++)
     vec_val[i] = u_array[i];
   
-#ifndef NO_MPI
+#ifdef MPI
   myrank = MPI::COMM_WORLD.Get_rank();
   unsigned long nElmLocal = (unsigned long)nElm;
   MPI::COMM_WORLD.Allreduce(&nElmLocal, &nElmGlobal, 1, MPI::UNSIGNED_LONG, MPI::SUM);
@@ -156,15 +156,17 @@ CSysVector::~CSysVector() {
   nBlk = -1;
   nBlkDomain = -1;
   nVar = -1;
-#ifndef NO_MPI
+#ifdef MPI
   myrank = -1;
 #endif
 }
 
-void CSysVector::Initialize(const unsigned long & numBlk, const unsigned long & numBlkDomain, const unsigned short & numVar, const double & val) {
+void CSysVector::Initialize(const unsigned long & numBlk, const unsigned short & numVar, const double & val) {
   
-  nElm = numBlk*numVar; nElmDomain = numBlkDomain*numVar;
-  nBlk = numBlk; nBlkDomain = numBlkDomain;
+  nElm = numBlk*numVar; //nElmDomain = numBlkDomain*numVar;
+  nElmDomain = nElm; /// until I know what this really is or does...
+  nBlk = numBlk; //nBlkDomain = numBlkDomain;
+  nBlkDomain = nElmDomain; /// same here...
   nVar = numVar;
   
   /*--- Check for invalid input, then allocate memory and initialize values ---*/
@@ -178,7 +180,7 @@ void CSysVector::Initialize(const unsigned long & numBlk, const unsigned long & 
   for (unsigned long i = 0; i < nElm; i++)
     vec_val[i] = val;
   
-#ifndef NO_MPI
+#ifdef MPI
   myrank = MPI::COMM_WORLD.Get_rank();
   unsigned long nElmLocal = (unsigned long)nElm;
   MPI::COMM_WORLD.Allreduce(&nElmLocal, &nElmGlobal, 1, MPI::UNSIGNED_LONG, MPI::SUM);
@@ -233,7 +235,7 @@ CSysVector & CSysVector::operator=(const CSysVector & u) {
   for (unsigned long i = 0; i < nElm; i++)
     vec_val[i] = u.vec_val[i];
   
-#ifndef NO_MPI
+#ifdef MPI
   myrank = u.myrank;
   nElmGlobal = u.nElmGlobal;
 #endif
@@ -406,7 +408,7 @@ double dotProd(const CSysVector & u, const CSysVector & v) {
     loc_prod += u.vec_val[i]*v.vec_val[i];
   double prod = 0.0;
   
-#ifndef NO_MPI
+#ifdef MPI
   MPI::COMM_WORLD.Allreduce(&loc_prod, &prod, 1, MPI::DOUBLE, MPI::SUM);
 #else
   prod = loc_prod;

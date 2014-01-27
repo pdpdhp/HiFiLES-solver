@@ -11,7 +11,7 @@
  * Copyright (C) 2013 Aerospace Computing Laboratory.
  */
 // Just for the purpose of code highlighting
-#define _MPI
+//#define _MPI
 #define _CPU
 // -----------------------------------------
 #include <iostream>

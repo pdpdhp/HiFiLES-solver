@@ -14,17 +14,23 @@
 #include <iostream>
 #include <sstream>
 #include <cmath>
+#include <map>
+#include <float.h>
 
-#include "array.h"
-#include "eles.h"
 #include "global.h"
 #include "input.h"
+#include "error.h"
+#include "array.h"
+#include "eles.h"
+#include "solution.h"
 #include "geometry.h"
 #include "funcs.h"
-#include "error.h"
-#include "solution.h"
 
 /*! necessary structure files from SU2 */
+//extern
+struct solution;
+class mesh;
+
 #include "matrix_structure.hpp"
 #include "vector_structure.hpp"
 #include "linear_solvers_structure.hpp"
@@ -49,10 +55,10 @@ public:
 	// #### constructors ####
 	
 	/** default constructor */
-	mesh();
+    mesh(void);
 	
 	/** default destructor */
-	~mesh();
+    ~mesh(void);
 
 	// #### methods ####
 
@@ -66,10 +72,11 @@ public:
     void update(solution *FlowSol);
 
     /** setup information for boundary motion */
-    void setup_boundaries(array<int> bctype);
+    //void setup_boundaries(array<int> bctype);
 
 	// #### members ####
 	
+    /** Basic parameters of mesh */
     int n_eles, n_verts, n_dims, n_verts_global, n_cells_global;
 
 	/** arrays which define the basic mesh geometry */
@@ -77,10 +84,20 @@ public:
     array<int> c2v,c2n_v,ctype,bctype_c,ic2icg,iv2ivg,ic2loc_c,
                f2c,f2loc_f,c2f,c2e,f2v,f2n_v,e2v,v2n_e,v2e;
 
-    /** Boundary information */
+    /** #### Boundary information #### */
+
     int n_bnds, n_faces;
-    array<int> nBndPts, boundPts;
+    array<int> nBndPts, boundPts, bc_list;
     array<int> v2bc;
+
+    /** vertex id = boundpts(bc_id)(ivert) */
+    array<array<int> > boundpts;
+
+    /** Store motion flag to corresponding boundary flag
+    i.e. bound_flags[bcflag] = <motion_flag> */
+    array<int> bound_flags;
+
+
     // nBndPts.setup(n_bnds); boundPts.setup(nBnds,nPtsPerBnd);
 
 private:
@@ -92,27 +109,33 @@ private:
     /** global stiffness psuedo-matrix for linear-elasticity mesh motion */
     array<array<double> > stiff_mat;
 
+    unsigned long LinSolIters;
+    int failedIts;
+    double min_vol;
+
     /** enumeration for cell type */
     enum CTYPE {
-        TRI = 0,
-        QUAD = 1,
-        TET = 2,
+        TRI   = 0,
+        QUAD  = 1,
+        TET   = 2,
         WEDGE = 3,
         BRICK = 4
     };
+
+    enum {MOTION_DISABLED, MOTION_ENABLED};
 
     /** create individual-element stiffness matrix - triangles */
     // will I actually need the FlowSol variable for setting up the Stiffnexx Matrix?
     bool set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id);
 
-    /** create individual-element stiffness matrix - triangles */
+    /** create individual-element stiffness matrix - quadrilaterals */
     bool set_2D_StiffMat_ele_quad(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
 
-    /** create individual-element stiffness matrix - triangles */
-    bool set_2D_StiffMat_ele_tet(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
+    /** create individual-element stiffness matrix - tetrahedrons */
+    //bool set_2D_StiffMat_ele_tet(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
 
-    /** create individual-element stiffness matrix - triangles */
-    bool set_2D_StiffMat_ele_hex(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
+    /** create individual-element stiffness matrix - hexahedrons */
+    //bool set_2D_StiffMat_ele_hex(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
 
     /**
      * transfrom single-element stiffness matrix to nodal contributions in order to
@@ -124,6 +147,12 @@ private:
     void add_StiffMat_EleQuad(array<double> StiffMatrix_Elem, int id_pt_0,
                              int id_pt_1, int id_pt_2, int id_pt_3);
 
-    /** Set given/known displacement on moving boundaries in linear system */
+    /** Set given/known displacements of vertices on moving boundaries in linear system */
     void set_boundary_displacements(solution *FlowSol);
+
+    /** meant to check for any inverted cells (I think) and return minimum volume */
+    double check_grid(solution *FlowSol);
+
+    /** transfer solution from LinSysSol to xv_new */
+    void update_grid_coords(void);
 };

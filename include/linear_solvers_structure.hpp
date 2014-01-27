@@ -24,7 +24,7 @@
 
 #pragma once
 
-#ifndef NO_MPI
+#ifdef _MPI
 #include <mpi.h>
 #endif
 #include <climits>

@@ -30,7 +30,11 @@ using namespace std;
 // default constructor
 
 input::input()
-{	
+{
+    // Set default values for non-mandatory options
+    motion = 0;
+    n_deform_iters = 1;
+    solver_tolerance = 1e-3;
 }
 
 input::~input()
@@ -302,7 +306,20 @@ void input::setup(ifstream& in_run_input_file, int rank)
         }
         else if (!param_name.compare("motion_flag"))
         {
-            in_run_input_file >> motion;
+            in_run_input_file >> n_moving_bnds;
+            if (n_moving_bnds > 0) {
+                motion = 1;
+                for (int i=0; i<n_moving_bnds; i++)
+                    in_run_input_file >> boundry_flags(i);
+            }
+        }
+        else if (!param_name.compare("n_deform_iters"))
+        {
+            in_run_input_file >> n_deform_iters;
+        }
+        else if (!param_name.compare("linear_solver_tolerance"))
+        {
+            in_run_input_file >> solver_tolerance;
         }
         else if (!param_name.compare("upts_type_tri"))
         {
@@ -691,6 +708,7 @@ void input::setup(ifstream& in_run_input_file, int rank)
     }
 }
 
+/** uhh... is this ever going to be used anywhere? -JC */
 void input::reset(int c_ind, int p_ind, int grid_ind, int vis_ind, int tau_ind, int dev_ind, int dim_ind)
 {
 	int n_freq;
