@@ -206,7 +206,6 @@ void mesh::set_grid_velocity(solution* FlowSol, double dt)
 bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele, int ele_id)
 {
     int iPoint;
-
     int n_spts = c2n_v(ele_id);
 
     array<double> pos_spts;
@@ -218,6 +217,8 @@ bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele, int ele_id)
             pos_spts(i,j) = xv(iPoint,j);
         }
     }
+
+    stiffMat_ele.setup(6,6);
 
     // ----------- Create single-element stiffness matrix ---------------
     // Copied from SU2

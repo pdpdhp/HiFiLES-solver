@@ -34,8 +34,7 @@ SOURCES += \
     src/vector_structure.cpp \
     include/vector_structure.inl \
     include/matrix_structure.inl \
-    include/linear_solvers_structure.inl \
-    src/matrix_structure_2.cpp
+    include/linear_solvers_structure.inl
 
 HEADERS += \
     include/util.h \

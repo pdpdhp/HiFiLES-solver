@@ -688,6 +688,10 @@ void CSysMatrix::ComputeLU_SGSPreconditioner(const CSysVector & vec, CSysVector 
         Gauss_Elimination(iPoint, aux_vector);                            // Solve D.x* = aux_vector
         for (iVar = 0; iVar < nVar; iVar++)
             prod[iPoint*nVar+iVar] = aux_vector[iVar];                       // Assesing x* = solution
+        if(iPoint%500==0) {
+            cout << "** pause **" << endl;
+            cin.get();
+        }
     }
 
     /*--- Inner send-receive operation the solution vector ---*/

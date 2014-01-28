@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
   /*! Read the mesh file from a file. */
   GeoPreprocess(run_input.run_type, &FlowSol, Mesh);
   
-  InitSolution(&FlowSol);
+  //InitSolution(&FlowSol);
   
   init = clock();
   
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
   }
   
   /*! Compute forces in the initial solution. */
-  if (FlowSol.rank == 0) {
+  /*if (FlowSol.rank == 0) {
     write_force.open("force000.dat", ios::app);
     write_force << "new run" << endl;
     write_force.close();
@@ -124,17 +124,17 @@ int main(int argc, char *argv[]) {
     for(j=0; j<run_input.n_diagnostics; ++j) { write_stats << run_input.diagnostics(j) << " "; }
     write_stats << endl;
     write_stats.close();
-  }
+  }*/
   
   /*! Dump initial Paraview or tecplot file. */
-  if (FlowSol.write_type == 0) write_vtu(FlowSol.ini_iter+i_steps, &FlowSol);
+  /*if (FlowSol.write_type == 0) write_vtu(FlowSol.ini_iter+i_steps, &FlowSol);
   else if (FlowSol.write_type == 1) write_tec(FlowSol.ini_iter+i_steps, &FlowSol);
-  else FatalError("ERROR: Trying to write unrecognized file format ... ");
+  else FatalError("ERROR: Trying to write unrecognized file format ... ");*/
   
   /*! Compute diagnostics at t=0. */
-  if(run_input.diagnostics_freq) {
+  /*if(run_input.diagnostics_freq) {
     CalcDiagnostics(FlowSol.ini_iter+i_steps, FlowSol.time, &FlowSol);
-  }
+  }*/
   
   if (FlowSol.rank == 0) cout << endl;
   
@@ -186,38 +186,38 @@ int main(int argc, char *argv[]) {
         for (j=0; j<nproc; j++) { if (FlowSol.error_states(j) == 1) error_state=1; }
 #endif
         if (error_state == 1) return 1;
-        compute_error(FlowSol.ini_iter+i_steps, &FlowSol);
+        //compute_error(FlowSol.ini_iter+i_steps, &FlowSol);
       }
       
     }
     
     /*! Dump forces. */
-    if(i_steps%run_input.monitor_force_freq == 0 && run_input.equation == 0) {
+    /*if(i_steps%run_input.monitor_force_freq == 0 && run_input.equation == 0) {
       compute_forces(FlowSol.ini_iter+i_steps, FlowSol.time, &FlowSol);
     }
     
     if (i_steps%run_input.monitor_res_freq == 0 || i_steps%run_input.monitor_force_freq == 0)
-      if (FlowSol.rank == 0) cout << endl;
+      if (FlowSol.rank == 0) cout << endl;*/
     
     /*! Dump diagnostics. */
-    if (i_steps%run_input.diagnostics_freq == 0) {
+    /*if (i_steps%run_input.diagnostics_freq == 0) {
       CalcDiagnostics(FlowSol.ini_iter+i_steps, FlowSol.time, &FlowSol);
     }
     
     if (i_steps%run_input.diagnostics_freq == 0)
-      if (FlowSol.rank == 0) cout << endl;
+      if (FlowSol.rank == 0) cout << endl;*/
     
     /*! Dump Paraview or Tecplot file. */
-    if(i_steps%FlowSol.plot_freq == 0) {
+    /*if(i_steps%FlowSol.plot_freq == 0) {
       if(FlowSol.write_type == 0) write_vtu(FlowSol.ini_iter+i_steps, &FlowSol);
       else if(FlowSol.write_type == 1) write_tec(FlowSol.ini_iter+i_steps, &FlowSol);
       else FatalError("ERROR: Trying to write unrecognized file format ... ");
-    }
+    }*/
     
     /*! Dump restart file. */
-    if(i_steps%FlowSol.restart_dump_freq==0) {
+    /*if(i_steps%FlowSol.restart_dump_freq==0) {
       write_restart(FlowSol.ini_iter+i_steps, &FlowSol);
-    }
+    }*/
 
 	
 	/////////////////////////////////////////////////
