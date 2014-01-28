@@ -917,21 +917,21 @@ void eles::calc_tdisinvf_upts(int in_disu_upts_from)
 				temp_u(k)=disu_upts(in_disu_upts_from)(j,i,k);
 			}
 
-            if (run_input.motion) {
+            /*if (motion) {
                 for (k=0; k<n_dims; k++) {
                     temp_w(k) = vel_upts(i,j,k); // FIX: CREATE VEL_UPTS()
                 }
-            }
+            }*/
 			
 			if(n_dims==2)
 			{
 				calc_invf_2d(temp_u,temp_f);
-                if (run_input.motion) calc_alef_2d(temp_u, temp_w, temp_f);
+                if (motion) calc_alef_2d(temp_u, temp_w, temp_f);
 			}
 			else if(n_dims==3)
 			{
 				calc_invf_3d(temp_u,temp_f);
-                if (run_input.motion) calc_alef_3d(temp_u, temp_w, temp_f);
+                if (motion) calc_alef_3d(temp_u, temp_w, temp_f);
 			}
 			else
 			{
@@ -2671,6 +2671,7 @@ void eles::set_opp_r(void)
 
 // set opp_vf (grid velocity at shape points to grid velocity at flux points)
 // u -> f
+/*
 void eles::set_opp_vf(int in_ele)
 {
     int i,j,k;
@@ -2687,14 +2688,14 @@ void eles::set_opp_vf(int in_ele)
             {
                 loc(k)=tloc_fpts(k,j);
             }
-            /* --- ** SWAP eval_nodal_basis FOR 1D INTERP ON FACE **
+*/            /* --- ** SWAP eval_nodal_basis FOR 1D INTERP ON FACE **
             need to interp from spts (just endpoints of each face for
             now) to flux points (at Gauss points)--- */
-            opp_vf(in_ele)(j,i)=eval_nodal_basis(i,loc);
+/*            opp_vf(in_ele)(j,i)=eval_nodal_basis(i,loc);
         }
     }
 
-}
+}*/
 
 array<double> eles::get_pos_ppt(int in_ele, int in_ppt)
 {
@@ -4769,7 +4770,7 @@ void eles::compute_wall_forces( array<double>& inv_force, array<double>& vis_for
 void eles::set_grid_vel_spt(int in_ele, int in_spt, array<double> in_vel)
 {
     for (int i=0; i<n_dims; i++)
-        vel_spts(in_ele)(in_spt,i) = in_vel[i];
+        vel_spts(in_ele)(in_spt,i) = in_vel(i);
 }
 
 /*! Interpolate the grid velocity from shape points to flux points */

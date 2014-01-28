@@ -113,6 +113,7 @@ vpath %.cpp src
 vpath %.cu src
 vpath %.h include
 vpath %.hpp include
+vpath %.inl include
 
 # Objects
 
@@ -164,7 +165,7 @@ $(OBJ)matrix_structure.o: matrix_structure.cpp matrix_structure.hpp matrix_struc
 $(OBJ)vector_structure.o: vector_structure.cpp vector_structure.hpp vector_structure.inl matrix_structure.hpp input.h error.h
 	$(CC) $(OPTS)  -c -o $@ $<
 
-$(OBJ)linear_solver_structure.o: linear_solvers_structure.cpp linear_solvers_structure.hpp linear_solvers_structure.inl vector_structure.hpp matrix_structure.hpp input.h error.h
+$(OBJ)linear_solvers_structure.o: linear_solvers_structure.cpp linear_solvers_structure.hpp linear_solvers_structure.inl vector_structure.hpp matrix_structure.hpp input.h error.h
 	$(CC) $(OPTS)  -c -o $@ $<
 # end mesh-def files
 

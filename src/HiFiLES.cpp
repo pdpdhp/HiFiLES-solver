@@ -146,21 +146,21 @@ int main(int argc, char *argv[]) {
     /////////////////////////////////////////////////
     
     /*! Advance the solution one time-step using a forward Euler method. */
-    if(FlowSol.adv_type == 0) {
+    /*if(FlowSol.adv_type == 0) {
       CalcResidual(&FlowSol);
       for(j=0; j<FlowSol.n_ele_types; j++) FlowSol.mesh_eles(j)->advance_rk11();
-    }
+    }*/
     
     /*! Advance the solution one time-step using a RK45 method. */
-    else if(FlowSol.adv_type==3) {
+    /*else if(FlowSol.adv_type==3) {
       for(i=0; i<5; i++) {
         CalcResidual(&FlowSol);
         for(j=0; j<FlowSol.n_ele_types; j++) FlowSol.mesh_eles(j)->advance_rk45(i);
       }
-    }
+    }*/
     
     /*! Time integration not implemented. */
-    else { cout << "ERROR: Time integration type not recognised ... " << endl; }
+    //else { cout << "ERROR: Time integration type not recognised ... " << endl; }
     
     /*! Update total time. */
     FlowSol.time += run_input.dt;
@@ -224,12 +224,8 @@ int main(int argc, char *argv[]) {
     /// Mesh Deformation
     /////////////////////////////////////////////////
     if (run_input.motion) {
-		/*! Steps:
-		1) 
-		*/
         Mesh.deform(&FlowSol);
-        //Mesh.set_grid_velocity(&FlowSol,run_input.dt);
-        Mesh.update(&FlowSol);
+        //Mesh.update(&FlowSol);
 	}
     
   }

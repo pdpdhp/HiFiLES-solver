@@ -98,9 +98,6 @@ public:
     /*! Calculate element volume */
     double calc_ele_vol(double& detjac);
 
-	/*! Create 2D stiffness matrix for linear elasiticy mesh deformation */
-	bool set_2D_StiffMat_ele(array<double> &stiffMat_ele, int ele_id);
-
 protected:
 
     // methods

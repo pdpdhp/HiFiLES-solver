@@ -169,20 +169,22 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     Mesh.v2n_e.setup(Mesh.n_verts);
 
     // Initialize arrays to -1
-    for (int i=0;i<max_inters;i++) {
-        f2c(i,0) = f2c(i,1) = -1;
-        f2loc_f(i,0) = f2loc_f(i,1) = -1;
-    }
-
-    for (int i=0;i<FlowSol->num_eles;i++)
-        for(int k=0;k<MAX_F_PER_C;k++)
-            c2f(i,k)=-1;
+    f2c.initialize_to_value(-1);
+    f2loc_f.initialize_to_value(-1);
+    c2f.initialize_to_value(-1);
 
     array<int> icvsta, icvert;
 
     // Compute connectivity
     CompConnectivity(c2v, c2n_v, ctype, c2f, c2e, f2c, f2loc_f, f2v, f2nv, Mesh.e2v, Mesh.v2n_e, Mesh.v2e, rot_tag,
                      unmatched_inters, n_unmatched_inters, icvsta, icvert, FlowSol->num_inters, FlowSol->num_edges, FlowSol);
+    /*void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_ctype, array<int>& out_c2f, array<int>& out_c2e,
+                      array<int>& out_f2c, array<int>& out_f2loc_f, array<int>& out_f2v, array<int>& out_f2nv,
+                      array<int>& out_e2v, array<int>& out_v2n_e, array<array<int> >& out_v2e,
+                      array<int>& out_rot_tag, array<int>& out_unmatched_faces, int& out_n_unmatched_faces,
+                      array<int>& out_icvsta, array<int>& out_icvert, int& out_n_faces, int& out_n_edges,
+                      struct solution* FlowSol)
+*/
 
     // Reading boundaries
     ReadBound(run_input.mesh_file,c2v,c2n_v,c2f,f2v,f2nv,ctype,bctype_c,Mesh.boundpts,Mesh.bc_list,Mesh.bound_flags,ic2icg,icvsta,icvert,iv2ivg,FlowSol->num_eles,FlowSol->num_verts,FlowSol);
@@ -2170,7 +2172,7 @@ void repartition_mesh(int &out_n_cells, array<int> &out_c2v, array<int> &out_c2n
 /*! method to create list of faces & edges from the mesh */
 void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_ctype, array<int>& out_c2f, array<int>& out_c2e,
                       array<int>& out_f2c, array<int>& out_f2loc_f, array<int>& out_f2v, array<int>& out_f2nv,
-                      vector<int>& e2v, array<int>& out_v2n_e, vector<vector<int> >& v2e,
+                      array<int>& out_e2v, array<int>& out_v2n_e, array<array<int> >& out_v2e,
                       array<int>& out_rot_tag, array<int>& out_unmatched_faces, int& out_n_unmatched_faces,
                       array<int>& out_icvsta, array<int>& out_icvert, int& out_n_faces, int& out_n_edges,
                       struct solution* FlowSol)
@@ -2261,9 +2263,12 @@ void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c
         }
     }
 
+    vector<int> e2v;
+    vector<vector<int> > v2e;
+
     out_n_edges=-1;
-    if (FlowSol->n_dims==3)
-    {
+    //if (FlowSol->n_dims==3)
+    //{
         // Create array ic2e
         out_c2e.initialize_to_value(-1);
         //vector<int> e2v;
@@ -2331,14 +2336,21 @@ void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c
         } // Loop over cells
         out_n_edges++;
 
-        // consider reversing for better CPU cache performance
-        /*out_e2v.setup(out_n_edges,2);
+        // consider reversing for better use of CPU cache
+        out_e2v.setup(out_n_edges,2);
         for (int ie=0; ie<out_n_edges; ie++) {
             out_e2v(ie,0) = e2v[2*ie];
             out_e2v(ie,1) = e2v[2*ie+1];
-        }*/
+        }
+        out_v2e.setup(n_verts);
+        for (int iv=0; iv<n_verts; iv++) {
+            out_v2e(iv).setup(out_v2n_e(iv));
+            for (int ie=0; ie<out_v2n_e(iv); ie++) {
+                out_v2e(iv)(ie) = v2e[iv][ie];
+            }
+        }
 
-    } // if n_dims=3
+    //} // if n_dims=3
 
     iface = 0;
     out_n_unmatched_faces= 0;

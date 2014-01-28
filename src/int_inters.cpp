@@ -196,16 +196,16 @@ void int_inters::calc_norm_tconinvf_fpts(void)
 			  	calc_invf_2d(temp_u_l,temp_f_l);
 			  	calc_invf_2d(temp_u_r,temp_f_r);
                 if (run_input.motion) {
-                    calc_alef_2d(temp_u_l,temp_w_l,temp_f_l);
-                    calc_alef_2d(temp_u_r,temp_w_r,temp_f_r);
+                    //calc_alef_2d(temp_u_l,temp_w_l,temp_f_l);
+                    //calc_alef_2d(temp_u_r,temp_w_r,temp_f_r);
                 }
 			  }
 			  else if(n_dims==3) {
 			  	calc_invf_3d(temp_u_l,temp_f_l);
 			  	calc_invf_3d(temp_u_r,temp_f_r);
                 if (run_input.motion) {
-                    calc_alef_3d(temp_u_l,temp_w_l,temp_f_l);
-                    calc_alef_3d(temp_u_r,temp_w_r,temp_f_r);
+                    //calc_alef_3d(temp_u_l,temp_w_l,temp_f_l);
+                    //calc_alef_3d(temp_u_r,temp_w_r,temp_f_r);
                 }
 			  }
 			  else

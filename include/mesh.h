@@ -17,20 +17,20 @@
 #include <map>
 #include <float.h>
 
+/** Needed to resolve mutual header dependancy
+    I'll find a better way later... */
+//struct solution;
+//class CSysVector;
+//class CSysSolve;
+//class CSysMatrixVectorProduct;
+
 #include "global.h"
 #include "input.h"
 #include "error.h"
 #include "array.h"
 #include "eles.h"
 #include "solution.h"
-#include "geometry.h"
 #include "funcs.h"
-
-/*! necessary structure files from SU2 */
-//extern
-struct solution;
-class mesh;
-
 #include "matrix_structure.hpp"
 #include "vector_structure.hpp"
 #include "linear_solvers_structure.hpp"
@@ -77,17 +77,20 @@ public:
 	// #### members ####
 	
     /** Basic parameters of mesh */
+    //unsigned long
     int n_eles, n_verts, n_dims, n_verts_global, n_cells_global;
 
 	/** arrays which define the basic mesh geometry */
     array<double> xv, xv_new, vel_old, vel_new;
     array<int> c2v,c2n_v,ctype,bctype_c,ic2icg,iv2ivg,ic2loc_c,
-               f2c,f2loc_f,c2f,c2e,f2v,f2n_v,e2v,v2n_e,v2e;
+               f2c,f2loc_f,c2f,c2e,f2v,f2n_v,e2v,v2n_e;
+    array<array<int> > v2e;
 
     /** #### Boundary information #### */
 
     int n_bnds, n_faces;
-    array<int> nBndPts, boundPts, bc_list;
+    array<int> nBndPts, bc_list;
+    array<array<int> > boundPts;
     array<int> v2bc;
 
     /** vertex id = boundpts(bc_id)(ivert) */
@@ -104,14 +107,15 @@ private:
 
 	/** Global stiffness matrix for linear elasticity solution */
 	CSysMatrix StiffnessMatrix;
-    CSysVector LinSysRes, LinSysSol;
+    CSysVector LinSysRes;
+    CSysVector LinSysSol;
 
     /** global stiffness psuedo-matrix for linear-elasticity mesh motion */
     array<array<double> > stiff_mat;
 
     unsigned long LinSolIters;
     int failedIts;
-    double min_vol;
+    double min_vol, min_length, solver_tolerance;
 
     /** enumeration for cell type */
     enum CTYPE {
@@ -129,7 +133,7 @@ private:
     bool set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id);
 
     /** create individual-element stiffness matrix - quadrilaterals */
-    bool set_2D_StiffMat_ele_quad(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
+    bool set_2D_StiffMat_ele_quad(array<double> &stiffMat_ele,int ele_id);
 
     /** create individual-element stiffness matrix - tetrahedrons */
     //bool set_2D_StiffMat_ele_tet(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
@@ -144,6 +148,7 @@ private:
     void add_StiffMat_EleTri(array<double> StiffMatrix_Elem, int id_pt_0,
                              int id_pt_1, int id_pt_2);
 
+
     void add_StiffMat_EleQuad(array<double> StiffMatrix_Elem, int id_pt_0,
                              int id_pt_1, int id_pt_2, int id_pt_3);
 
@@ -155,4 +160,7 @@ private:
 
     /** transfer solution from LinSysSol to xv_new */
     void update_grid_coords(void);
+
+    /** find minimum length in mesh */
+    void set_min_length(void);
 };

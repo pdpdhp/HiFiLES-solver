@@ -54,38 +54,38 @@ CSysMatrix::~CSysMatrix(void) {
   
 }
 
-void CSysMatrix::Initialize(const mesh &Mesh) {
+void CSysMatrix::Initialize(int n_verts, int n_verts_global, int n_dims, int n_eqns, array<array<int> > &v2e, array<int> &v2n_e, array<int> &e2v) {
 	unsigned long iPoint, *row_ptr, *col_ind, *vneighs, index, nnz;
     unsigned short iNeigh, nNeigh, Max_nNeigh, iEdge;
 
-    nPoint = Mesh.n_verts;
-    nVar = Mesh.n_dims;
-    nEqn = Mesh.n_dims;
+    nPoint = n_verts;
+    nVar = n_dims;
+    nEqn = n_eqns;
 
 	/*--- Don't delete *row_ptr, *col_ind because they are asigned to the Jacobian structure. ---*/
 	row_ptr = new unsigned long [nPoint+1];
 	row_ptr[0] = 0;
 	for (iPoint = 0; iPoint < nPoint; iPoint++)
-        row_ptr[iPoint+1] = row_ptr[iPoint]+(Mesh.v2n_e(iPoint)+1); // +1 -> to include diagonal element
+        row_ptr[iPoint+1] = row_ptr[iPoint]+(v2n_e(iPoint)+1); // +1 -> to include diagonal element
 	nnz = row_ptr[nPoint];
   
 	col_ind = new unsigned long [nnz];
   
     Max_nNeigh = 0;
     for (iPoint = 0; iPoint < nPoint; iPoint++) {
-        nNeigh = Mesh.v2n_e(iPoint);
+        nNeigh = v2n_e(iPoint);
         if (nNeigh > Max_nNeigh) Max_nNeigh = nNeigh;
     }
 	vneighs = new unsigned long [Max_nNeigh+1]; // +1 -> to include diagonal
   
 	for (iPoint = 0; iPoint < nPoint; iPoint++) {
-        nNeigh = Mesh.v2n_e(iPoint);
+        nNeigh = v2n_e(iPoint);
         for (iNeigh = 0; iNeigh < nNeigh; iNeigh++) {
-            iEdge = Mesh.v2e(iPoint,iNeigh);
-            if (Mesh.e2v(iEdge,0) == iPoint) {
-                vneighs[iNeigh] = Mesh.e2v(iEdge,1);
+            iEdge = v2e(iPoint)(iNeigh);
+            if (e2v(iEdge,0) == iPoint) {
+                vneighs[iNeigh] = e2v(iEdge,1);
             }else{
-                vneighs[iNeigh] = Mesh.e2v(iEdge,0);
+                vneighs[iNeigh] = e2v(iEdge,0);
             }
         }
 		vneighs[nNeigh] = iPoint;
@@ -98,7 +98,7 @@ void CSysMatrix::Initialize(const mesh &Mesh) {
 	}
   
     /*--- Set the indices in the in the sparce matrix structure ---*/
-    SetIndexes(row_ptr, col_ind, nnz, Mesh);
+    SetIndexes(n_verts, n_verts_global, n_dims, n_eqns, row_ptr, col_ind, nnz);
   
     /*--- Initialization to zero ---*/
     SetValZero();
@@ -106,12 +106,12 @@ void CSysMatrix::Initialize(const mesh &Mesh) {
 	delete[] vneighs;
 }
 
-void CSysMatrix::SetIndexes(unsigned long* val_row_ptr, unsigned long* val_col_ind, unsigned long val_nnz, const mesh &Mesh) {
+void CSysMatrix::SetIndexes(int n_verts, int n_verts_global, int n_dims, int n_eqns, unsigned long* val_row_ptr, unsigned long* val_col_ind, unsigned long val_nnz) {
   
-    nPoint = Mesh.n_verts;              // Assign number of points in the mesh (on processor)
-    nPointDomain = Mesh.n_verts_global;  // Assign number of points in the mesh (across all procs)
-    nVar = Mesh.n_dims;                  // Assign number of vars in each block system
-    nEqn = Mesh.n_dims;                   // Assign number of eqns in each block system
+    nPoint = n_verts;              // Assign number of points in the mesh (on processor)
+    nPointDomain = n_verts_global;  // Assign number of points in the mesh (across all procs)
+    nVar = n_dims;                  // Assign number of vars in each block system
+    nEqn = n_eqns;                   // Assign number of eqns in each block system
 	nnz = val_nnz;                    // Assign number of possible non zero blocks
 	row_ptr = val_row_ptr;
 	col_ind = val_col_ind;
@@ -298,7 +298,7 @@ void CSysMatrix::Gauss_Elimination(unsigned long block_i, double* rhs) {
 	GetBlock(block_i, block_i);
   
 	if (nVar == 1) {
-    if (fabs(block[0]) < EPS) cout <<"Gauss' elimination error, value:" << abs(block[0]) << "." << endl;
+    if (fabs(block[0]) < eps) cout <<"Gauss' elimination error, value:" << abs(block[0]) << "." << endl;
 		rhs[0] /= block[0];
   }
 	else {
@@ -306,7 +306,7 @@ void CSysMatrix::Gauss_Elimination(unsigned long block_i, double* rhs) {
     /*--- Transform system in Upper Matrix ---*/
     for (iVar = 1; iVar < (short)nVar; iVar++) {
       for (jVar = 0; jVar < iVar; jVar++) {
-        if (fabs(block[jVar*nVar+jVar]) < EPS) cout <<"Gauss' elimination error, value:" << fabs(block[jVar*nVar+jVar]) << "." << endl;
+        if (fabs(block[jVar*nVar+jVar]) < eps) cout <<"Gauss' elimination error, value:" << fabs(block[jVar*nVar+jVar]) << "." << endl;
         weight = block[iVar*nVar+jVar] / block[jVar*nVar+jVar];
         for (kVar = jVar; kVar < nVar; kVar++)
           block[iVar*nVar+kVar] -= weight*block[jVar*nVar+kVar];
@@ -315,13 +315,13 @@ void CSysMatrix::Gauss_Elimination(unsigned long block_i, double* rhs) {
     }
     
     /*--- Backwards substitution ---*/
-    if (fabs(block[nVar*nVar-1]) < EPS) cout <<"Gauss' elimination error, value:" << fabs(block[nVar*nVar-1]) << "." << endl;
+    if (fabs(block[nVar*nVar-1]) < eps) cout <<"Gauss' elimination error, value:" << fabs(block[nVar*nVar-1]) << "." << endl;
     rhs[nVar-1] = rhs[nVar-1] / block[nVar*nVar-1];
     for (iVar = nVar-2; iVar >= 0; iVar--) {
       aux = 0.0;
       for (jVar = iVar+1; jVar < nVar; jVar++)
         aux += block[iVar*nVar+jVar]*rhs[jVar];
-      if (fabs(block[iVar*nVar+iVar]) < EPS) cout <<"Gauss' elimination error, value:" << fabs(block[iVar*nVar+iVar]) << "." << endl;
+      if (fabs(block[iVar*nVar+iVar]) < eps) cout <<"Gauss' elimination error, value:" << fabs(block[iVar*nVar+iVar]) << "." << endl;
       rhs[iVar] = (rhs[iVar]-aux) / block[iVar*nVar+iVar];
       if (iVar == 0) break;
     }
@@ -342,14 +342,14 @@ void CSysMatrix::Gauss_Elimination(double* Block, double* rhs) {
   
   
 	if (nVar == 1) {
-    if (fabs(block[0]) < EPS) cout <<"Gauss' elimination error." << endl;
+    if (fabs(block[0]) < eps) cout <<"Gauss' elimination error." << endl;
 		rhs[0] /= block[0];
   }
 	else {
 		/*--- Transform system in Upper Matrix ---*/
 		for (iVar = 1; iVar < (short)nVar; iVar++) {
 			for (jVar = 0; jVar < iVar; jVar++) {
-        if (fabs(block[jVar*nVar+jVar]) < EPS) cout <<"Gauss' elimination error." << endl;
+        if (fabs(block[jVar*nVar+jVar]) < eps) cout <<"Gauss' elimination error." << endl;
 				weight = block[iVar*nVar+jVar] / block[jVar*nVar+jVar];
 				for (kVar = jVar; kVar < nVar; kVar++)
 					block[iVar*nVar+kVar] -= weight*block[jVar*nVar+kVar];
@@ -358,13 +358,13 @@ void CSysMatrix::Gauss_Elimination(double* Block, double* rhs) {
 		}
 		
 		/*--- Backwards substitution ---*/
-    if (fabs(block[nVar*nVar-1]) < EPS) cout <<"Gauss' elimination error." << endl;
+    if (fabs(block[nVar*nVar-1]) < eps) cout <<"Gauss' elimination error." << endl;
 		rhs[nVar-1] = rhs[nVar-1] / block[nVar*nVar-1];
 		for (iVar = nVar-2; iVar >= 0; iVar--) {
 			aux = 0.0;
 			for (jVar = iVar+1; jVar < nVar; jVar++)
 				aux += block[iVar*nVar+jVar]*rhs[jVar];
-      if (fabs(block[iVar*nVar+iVar]) < EPS) cout <<"Gauss' elimination error." << endl;
+      if (fabs(block[iVar*nVar+iVar]) < eps) cout <<"Gauss' elimination error." << endl;
 			rhs[iVar] = (rhs[iVar]-aux) / block[iVar*nVar+iVar];
 			if (iVar == 0) break;
 		}
@@ -645,7 +645,7 @@ void CSysMatrix::InverseDiagonalBlock(unsigned long block_i, double **invBlock) 
 	}
   
 }
-
+#ifdef PRECONDITIONERS
 void CSysMatrix::BuildJacobiPreconditioner(void) {
 	unsigned long iPoint, iVar, jVar;
 	double **invBlock;
@@ -671,6 +671,7 @@ void CSysMatrix::BuildJacobiPreconditioner(void) {
 		delete [] invBlock[iVar];
 	delete [] invBlock;
 }
+#endif
 
 void CSysMatrix::ComputeLU_SGSPreconditioner(const CSysVector & vec, CSysVector & prod) {
   unsigned long iPoint, iVar;

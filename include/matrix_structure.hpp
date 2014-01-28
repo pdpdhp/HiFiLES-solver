@@ -27,11 +27,11 @@
 #include <iostream>
 #include <cmath>
 #include <cstdlib>
-
-// working around mutually-dependant header files
+#include <algorithm>
 
 #include "linear_solvers_structure.hpp"
-#include "mesh.h"
+#include "array.h"
+#include "solution.h"
 
 using namespace std;
 
@@ -74,26 +74,26 @@ public:
 	~CSysMatrix(void);
   
   
-  /*!
+    /*!
 	 * \brief Initializes space matrix system.
 	 * \param[in] nVar - Number of variables.
 	 * \param[in] nEqn - Number of equations.
-   * \param[in] geometry - Geometrical definition of the problem.
+     * \param[in] geometry - Geometrical definition of the problem.
 	 * \param[in] config - Definition of the particular problem.
 	 */
-  void Initialize(mesh &Mesh);
+    void Initialize(int n_verts, int n_verts_global, int n_dims, int n_eqns, array<array<int> > &v2e, array<int> &v2n_e, array<int> &e2v);
   
-  /*!
+    /*!
 	 * \brief Assings values to the sparse-matrix structure.
 	 * \param[in] val_nPoint - Number of points in the nPoint x nPoint block structure
 	 * \param[in] val_nVar - Number of nVar x nVar variables in each subblock of the matrix-by-block structure.
-   * \param[in] val_nEq - Number of nEqn x nVar variables in each subblock of the matrix-by-block structure.
+     * \param[in] val_nEq - Number of nEqn x nVar variables in each subblock of the matrix-by-block structure.
 	 * \param[in] val_row_ptr - Pointers to the first element in each row.
 	 * \param[in] val_col_ind - Column index for each of the elements in val().
 	 * \param[in] val_nnz - Number of possible nonzero entries in the matrix.
 	 * \param[in] preconditioner - If <code>TRUE</code> then it use a preconditioner.
 	 */
-	void SetIndexes(unsigned long val_nPoint, unsigned long val_nPointDomain, unsigned short val_nVar, unsigned short val_nEq, unsigned long* val_row_ptr, unsigned long* val_col_ind, unsigned long val_nnz);
+    void SetIndexes(int n_verts, int n_verts_global, int n_dims, int n_eqns, unsigned long* val_row_ptr, unsigned long* val_col_ind, unsigned long val_nnz);
   
 	/*!
 	 * \brief Sets to zero all the entries of the sparse matrix.

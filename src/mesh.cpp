@@ -10,6 +10,7 @@
  */
 
 #include "../include/mesh.h"
+#include "../include/geometry.h"
 
 using namespace std;
 
@@ -25,6 +26,11 @@ mesh::mesh(void)
     LinSolIters = 0;
     failedIts = 0;
     min_vol = DBL_MAX;
+}
+
+mesh::~mesh(void)
+{
+    // not currently needed
 }
 
 void mesh::deform(struct solution* FlowSol) {
@@ -46,12 +52,12 @@ void mesh::deform(struct solution* FlowSol) {
     //stiff_mat.setup(n_eles);
     LinSysSol.Initialize(n_verts,n_dims,0.0); /// should it be n_verts or n_verts_global?
     LinSysRes.Initialize(n_verts,n_dims,0.0);
-    StiffnessMatrix.Initialize(*this);
+    StiffnessMatrix.Initialize(n_verts,n_verts_global,n_dims,n_dims,v2e,v2n_e,e2v);
 
     /*--- Loop over the total number of grid deformation iterations. The surface
     deformation can be divided into increments to help with stability. In
     particular, the linear elasticity equations hold only for small deformations. ---*/
-    for (iGridDef_Iter = 0; iGridDef_Iter < run_input.n_deform_iters; iGridDef_Iter++) {
+    for (int iGridDef_Iter = 0; iGridDef_Iter < run_input.n_deform_iters; iGridDef_Iter++) {
 
         /*--- Initialize vector and sparse matrix ---*/
 
@@ -93,7 +99,8 @@ void mesh::deform(struct solution* FlowSol) {
         }
 
         /*--- Compute the tolerance of the linear solver using MinLength ---*/
-        NumError = MinLength * 1E-2;
+        set_min_length();
+        solver_tolerance = min_length * 1E-2;
 
         /*--- Set the boundary displacements (as prescribed by the design variable
         perturbations controlling the surface shape) as a Dirichlet BC. ---*/
@@ -127,7 +134,7 @@ void mesh::deform(struct solution* FlowSol) {
 
         /*--- Update the grid coordinates and cell volumes using the solution
         of the linear system (usol contains the x, y, z displacements). ---*/
-        update_grid_coords(FlowSol);
+        update_grid_coords();
 
         /*--- Check for failed deformation (negative volumes). ---*/
         min_vol = check_grid(FlowSol);
@@ -152,6 +159,19 @@ void mesh::deform(struct solution* FlowSol) {
     StiffnessMatrix.~CSysMatrix();
 }
 
+void mesh::set_min_length(void)
+{
+    unsigned int n_edges = e2v.get_dim(0);
+    double length2, min_length2 = DBL_MAX;
+
+    for (int i=0; i<n_edges; i++) {
+        length2 = pow((xv(e2v(i,0),0)-xv(e2v(i,1),0)),2) + pow((xv(e2v(i,0),1)-xv(e2v(i,1),1)),2);
+        min_length2 = fmin(min_length2,length2);
+    }
+
+    min_length = sqrt(min_length2);
+}
+
 void mesh::set_grid_velocity(solution* FlowSol, double dt)
 {
     // calculate velocity using simple backward-Euler
@@ -166,9 +186,9 @@ void mesh::set_grid_velocity(solution* FlowSol, double dt)
     array<double> vel(n_dims);
 
     for (int ic=0; ic<n_eles; ic++) {
-        for (int j=0; j<c2n_v(i); j++) {
+        for (int j=0; j<c2n_v(ic); j++) {
             for (int dim=0; dim<n_dims; dim++) {
-                vel[dim] = vel_new(c2v(ic),dim);
+                vel(dim) = vel_new(c2v(ic),dim);
             }
             local_ic = ic2loc_c(ic);
             FlowSol->mesh_eles(ctype(ic))->set_grid_vel_spt(local_ic,j,vel);
@@ -234,21 +254,21 @@ bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele, int ele_id)
         "Robust Mesh Deformation using the Linear Elasticity Equations" by
         R. P. Dwight. ---*/
 
-        E = 1.0 / Area * fabs(scale); // implement scale = min_vol() function
+        E = 1.0 / Area * fabs(min_vol);
         Mu = E;
         Lambda = -E;
 
-        a[0] = 0.5 * (pos_spts(1,0)*pos_spts(2,1)-pos_spts(2,0)*pos_spts(1,1) / Area;
-        a[1] = 0.5 * (pos_spts(2,0)*pos_spts(0,1)-pos_spts(0,0)*pos_spts(2,1) / Area;
-        a[2] = 0.5 * (pos_spts(0,0)*pos_spts(1,1)-pos_spts(1,0)*pos_spts(0,1) / Area;
+        a[0] = 0.5 * (pos_spts(1,0)*pos_spts(2,1)-pos_spts(2,0)*pos_spts(1,1)) / Area;
+        a[1] = 0.5 * (pos_spts(2,0)*pos_spts(0,1)-pos_spts(0,0)*pos_spts(2,1)) / Area;
+        a[2] = 0.5 * (pos_spts(0,0)*pos_spts(1,1)-pos_spts(1,0)*pos_spts(0,1)) / Area;
 
-        b[0] = 0.5 * (pos_spts(1,1)-pos_spts(2,1) / Area;
-        b[1] = 0.5 * (pos_spts(2,1)-pos_spts(0,1) / Area;
-        b[2] = 0.5 * (pos_spts(0,1)-pos_spts(1,1) / Area;
+        b[0] = 0.5 * (pos_spts(1,1)-pos_spts(2,1)) / Area;
+        b[1] = 0.5 * (pos_spts(2,1)-pos_spts(0,1)) / Area;
+        b[2] = 0.5 * (pos_spts(0,1)-pos_spts(1,1)) / Area;
 
-        c[0] = 0.5 * (pos_spts(2,0)-pos_spts(1,0) / Area;
-        c[1] = 0.5 * (pos_spts(0,0)-pos_spts(2,0) / Area;
-        c[2] = 0.5 * (pos_spts(1,0)-pos_spts(0,0) / Area;
+        c[0] = 0.5 * (pos_spts(2,0)-pos_spts(1,0)) / Area;
+        c[1] = 0.5 * (pos_spts(0,0)-pos_spts(2,0)) / Area;
+        c[2] = 0.5 * (pos_spts(1,0)-pos_spts(0,0)) / Area;
 
         /*--- Compute the B Matrix ---*/
         B_Matrix[0][0] = b[0];  B_Matrix[0][1] = 0.0;   B_Matrix[0][2] = b[1];  B_Matrix[0][3] = 0.0;   B_Matrix[0][4] = b[2];  B_Matrix[0][5] = 0.0;
@@ -287,7 +307,7 @@ bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele, int ele_id)
 }
 
 /*! set individual-element stiffness matrix for a quadrilateral */
-bool mesh::set_2D_StiffMat_ele_quad(array<double> &stiffMat_ele,int ele_id, solution *FlowSol) {
+bool mesh::set_2D_StiffMat_ele_quad(array<double> &stiffMat_ele,int ele_id) {
     FatalError("ERROR: Sorry, mesh motion on quads not yet implemented.  :( ");
 }
 
@@ -295,7 +315,7 @@ bool mesh::set_2D_StiffMat_ele_quad(array<double> &stiffMat_ele,int ele_id, solu
  * Transform element-defined stiffness matrix into node-base stiffness matrix for inclusion
  * into global stiffness matrix 'StiffMatrix'
  */
-void mesh::Add_EleTri_StiffMat(array<double> StiffMatrix_Elem, int id_pt_0,
+void mesh::add_StiffMat_EleTri(array<double> StiffMatrix_Elem, int id_pt_0,
                                                int id_pt_1, int id_pt_2) {
     unsigned short nVar = n_dims;
 
@@ -312,39 +332,45 @@ void mesh::Add_EleTri_StiffMat(array<double> StiffMatrix_Elem, int id_pt_0,
    contributions for the individual nodes relative to each other. ---*/
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(0,0);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(0,1);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(1,0);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(1,1);
-    StiffMatrix.AddBlock(id_pt_0, id_pt_0, StiffMatrix_Node);
+    StiffnessMatrix.AddBlock(id_pt_0, id_pt_0, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(0,2);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(0,3);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(1,2);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(1,3);
-    StiffMatrix.AddBlock(id_pt_0, id_pt_1, StiffMatrix_Node);
+    StiffnessMatrix.AddBlock(id_pt_0, id_pt_1, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(0,4);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(0,5);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(1,4);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(1,5);
-    StiffMatrix.AddBlock(id_pt_0, id_pt_2, StiffMatrix_Node);
+    StiffnessMatrix.AddBlock(id_pt_0, id_pt_2, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(2,0);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(2,1);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(3,0);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(3,1);
-    StiffMatrix.AddBlock(id_pt_1, id_pt_0, StiffMatrix_Node);
+    StiffnessMatrix.AddBlock(id_pt_1, id_pt_0, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(2,2);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(2,3);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(3,2);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(3,3);
-    StiffMatrix.AddBlock(id_pt_1, id_pt_1, StiffMatrix_Node);
+    StiffnessMatrix.AddBlock(id_pt_1, id_pt_1, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(2,4);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(2,5);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(3,4);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(3,5);
-    StiffMatrix.AddBlock(id_pt_1, id_pt_2, StiffMatrix_Node);
+    StiffnessMatrix.AddBlock(id_pt_1, id_pt_2, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(4,0);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(4,1);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(5,0);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(5,1);
-    StiffMatrix.AddBlock(id_pt_2, id_pt_0, StiffMatrix_Node);
+    StiffnessMatrix.AddBlock(id_pt_2, id_pt_0, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(4,2);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(4,3);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(5,2);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(5,3);
-    StiffMatrix.AddBlock(id_pt_2, id_pt_1, StiffMatrix_Node);
+    StiffnessMatrix.AddBlock(id_pt_2, id_pt_1, StiffMatrix_Node);
 
     StiffMatrix_Node(0,0) = StiffMatrix_Elem(4,4);	StiffMatrix_Node(0,1) = StiffMatrix_Elem(4,5);
     StiffMatrix_Node(1,0) = StiffMatrix_Elem(5,4);	StiffMatrix_Node(1,1) = StiffMatrix_Elem(5,5);
     StiffnessMatrix.AddBlock(id_pt_2, id_pt_2, StiffMatrix_Node);
+}
+
+void mesh::add_StiffMat_EleQuad(array<double> StiffMatrix_Elem, int id_pt_0,
+                                               int id_pt_1, int id_pt_2, int id_pt_3)
+{
+    FatalError("ERROR: Mesh motion not setup on quads yet  :( ");
 }
 
 void mesh::update(solution* FlowSol)
@@ -372,7 +398,7 @@ void mesh::update(solution* FlowSol)
     if (FlowSol->rank==0) cout << "Deform: updating element transforms ... " << endl;
     for(int i=0;i<FlowSol->n_ele_types;i++) {
         if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
-            FlowSol->mesh_eles(i)->set_transforms(in_run_type);
+            FlowSol->mesh_eles(i)->set_transforms(run_input.run_type);
         }
     }
 
@@ -402,7 +428,7 @@ void mesh::update_grid_coords(void)
     /*--- Update the grid coordinates using the solution of the linear system
    after grid deformation (LinSysSol contains the x, y, z displacements). ---*/
 
-    for (iPoint = 0; iPoint < nPoint; iPoint++)
+    for (iPoint = 0; iPoint < n_verts; iPoint++)
         for (iDim = 0; iDim < n_dims; iDim++) {
             total_index = iPoint*n_dims + iDim;
             new_coord = xv(iPoint,iDim) + LinSysSol[total_index];
@@ -423,7 +449,7 @@ double mesh::check_grid(solution* FlowSol) {
     for (iElem = 0; iElem < n_eles; iElem++) {
 
         /*--- Triangles ---*/
-        if (nDim == 2) {
+        if (n_dims == 2) {
             double a[3], b[3];
 
             for (iDim = 0; iDim < n_dims; iDim++) {
@@ -441,7 +467,7 @@ double mesh::check_grid(solution* FlowSol) {
 
         /*--- Tetrahedra ---*/
 
-        if (nDim == 3) {
+        if (n_dims == 3) {
             double r1[3], r2[3], r3[3], CrossProduct[3];
 
             for (iDim = 0; iDim < n_dims; iDim++) {
@@ -494,7 +520,7 @@ void mesh::set_boundary_displacements(solution *FlowSol)
 {
     unsigned short iDim, nDim = FlowSol->n_dims, iBound, axis = 0;
     unsigned long iPoint, total_index, iVertex;
-    double *VarCoord, MeanCoord[3], VarIncrement = 1.0;
+    double MeanCoord[3], VarIncrement = 1.0;
 
     /*--- If requested (no by default) impose the surface deflections in
     increments and solve the grid deformation equations iteratively with
@@ -514,7 +540,7 @@ void mesh::set_boundary_displacements(solution *FlowSol)
                     total_index = iPoint*n_dims + iDim;
                     LinSysRes[total_index] = 0.0;
                     LinSysSol[total_index] = 0.0;
-                    StiffMatrix.DeleteValsRowi(total_index);
+                    StiffnessMatrix.DeleteValsRowi(total_index);
                 }
             }
 //        }
@@ -542,7 +568,7 @@ void mesh::set_boundary_displacements(solution *FlowSol)
                 total_index = iPoint*nDim + axis;
                 LinSysRes[total_index] = 0.0;
                 LinSysSol[total_index] = 0.0;
-                StiffMatrix.DeleteValsRowi(total_index);
+                StiffnessMatrix.DeleteValsRowi(total_index);
             }
         }
     }*/
@@ -558,7 +584,7 @@ void mesh::set_boundary_displacements(solution *FlowSol)
                 ((config->GetMarker_All_DV(iBound) == YES) && (Kind_SU2 == SU2_MDC))) */
         if (bound_flags(iBound) == MOTION_ENABLED) {
             for (iVertex = 0; iVertex < nBndPts(iBound); iVertex++) {
-                iPoint = boundPts(iBound)(iVertex)->GetNode();
+                iPoint = boundPts(iBound)(iVertex);
                 // get amount which each point is supposed to move at this time step
                 // for now, set to a constant (setup data structure(s) later)
                 //VarCoord = geometry->vertex[iBound][iVertex]->GetVarCoord();
@@ -566,7 +592,7 @@ void mesh::set_boundary_displacements(solution *FlowSol)
                     total_index = iPoint*nDim + iDim;
                     LinSysRes[total_index] = VarCoord(iDim) * VarIncrement;
                     LinSysSol[total_index] = VarCoord(iDim) * VarIncrement;
-                    StiffMatrix.DeleteValsRowi(total_index);
+                    StiffnessMatrix.DeleteValsRowi(total_index);
                 }
             }
         }

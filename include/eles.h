@@ -263,7 +263,7 @@ public:
     void set_opp_r(void);
 
     /*! set opp_vf */
-    void set_opp_vf(int in_ele);
+    //void set_opp_vf(int in_ele);
 
     /*! calculate position of the plot points */
     void calc_pos_ppts(int in_ele, array<double>& out_pos_ppts);
@@ -373,8 +373,6 @@ public:
 
     /*! Calculate element volume */
     virtual double calc_ele_vol(double& detjac)=0;
-
-    virtual bool set_2D_StiffMat_ele(array<double> &stiffMat_ele, int ele_id) = 0;
 
     double compute_res_upts(int in_norm_type, int in_field);
 
