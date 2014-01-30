@@ -34,7 +34,6 @@ input::input()
     // Set default values for non-mandatory options
     motion = 0;
     n_deform_iters = 1;
-    solver_tolerance = 1e-3;
 }
 
 input::~input()
@@ -316,10 +315,6 @@ void input::setup(ifstream& in_run_input_file, int rank)
         else if (!param_name.compare("n_deform_iters"))
         {
             in_run_input_file >> n_deform_iters;
-        }
-        else if (!param_name.compare("linear_solver_tolerance"))
-        {
-            in_run_input_file >> solver_tolerance;
         }
         else if (!param_name.compare("upts_type_tri"))
         {

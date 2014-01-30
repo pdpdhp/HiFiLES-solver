@@ -90,11 +90,10 @@ public:
 
     int n_bnds, n_faces;
     array<int> nBndPts, bc_list;
-    array<array<int> > boundPts;
     array<int> v2bc;
 
     /** vertex id = boundpts(bc_id)(ivert) */
-    array<array<int> > boundpts;
+    array<array<int> > boundPts;
 
     /** Store motion flag to corresponding boundary flag
     i.e. bound_flags[bcflag] = <motion_flag> */

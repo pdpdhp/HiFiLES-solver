@@ -54,13 +54,11 @@ CSysMatrix::~CSysMatrix(void) {
   
 }
 
-void CSysMatrix::Initialize(int n_verts, int n_verts_global, int n_dims, int n_eqns, array<array<int> > &v2e, array<int> &v2n_e, array<int> &e2v) {
+void CSysMatrix::Initialize(int n_verts, int n_verts_global, int n_var, int n_eqns, array<array<int> > &v2e, array<int> &v2n_e, array<int> &e2v) {
 	unsigned long iPoint, *row_ptr, *col_ind, *vneighs, index, nnz;
     unsigned short iNeigh, nNeigh, Max_nNeigh, iEdge;
 
-    nPoint = n_verts;
-    nVar = n_dims;
-    nEqn = n_eqns;
+    nPoint = n_verts;              // Assign number of points in the mesh (on processor)
 
 	/*--- Don't delete *row_ptr, *col_ind because they are asigned to the Jacobian structure. ---*/
 	row_ptr = new unsigned long [nPoint+1];
@@ -98,7 +96,7 @@ void CSysMatrix::Initialize(int n_verts, int n_verts_global, int n_dims, int n_e
 	}
   
     /*--- Set the indices in the in the sparce matrix structure ---*/
-    SetIndexes(n_verts, n_verts_global, n_dims, n_eqns, row_ptr, col_ind, nnz);
+    SetIndexes(n_verts, n_verts_global, n_var, n_eqns, row_ptr, col_ind, nnz);
   
     /*--- Initialization to zero ---*/
     SetValZero();
@@ -106,11 +104,11 @@ void CSysMatrix::Initialize(int n_verts, int n_verts_global, int n_dims, int n_e
 	delete[] vneighs;
 }
 
-void CSysMatrix::SetIndexes(int n_verts, int n_verts_global, int n_dims, int n_eqns, unsigned long* val_row_ptr, unsigned long* val_col_ind, unsigned long val_nnz) {
+void CSysMatrix::SetIndexes(int n_verts, int n_verts_global, int n_var, int n_eqns, unsigned long* val_row_ptr, unsigned long* val_col_ind, unsigned long val_nnz) {
   
     nPoint = n_verts;              // Assign number of points in the mesh (on processor)
     nPointDomain = n_verts_global;  // Assign number of points in the mesh (across all procs)
-    nVar = n_dims;                  // Assign number of vars in each block system
+    nVar = n_var;                  // Assign number of vars in each block system
     nEqn = n_eqns;                   // Assign number of eqns in each block system
 	nnz = val_nnz;                    // Assign number of possible non zero blocks
 	row_ptr = val_row_ptr;
@@ -138,10 +136,11 @@ void CSysMatrix::GetBlock(unsigned long block_i, unsigned long block_j) {
 	unsigned long step = 0, index, iVar;
 	
 	for (index = row_ptr[block_i]; index < row_ptr[block_i+1]; index++) {
-		step++;
+        //step++;
 		if (col_ind[index] == block_j) {
 			for (iVar = 0; iVar < nVar*nEqn; iVar++)
-				block[iVar] = matrix[(row_ptr[block_i]+step-1)*nVar*nEqn+iVar];
+                //block[iVar] = matrix[(row_ptr[block_i]+step-1)*nVar*nEqn+iVar];
+                block[iVar] = matrix[(index)*nVar*nEqn+iVar];
 			break;
 		}
 	}
@@ -300,9 +299,12 @@ void CSysMatrix::Gauss_Elimination(unsigned long block_i, double* rhs) {
 	if (nVar == 1) {
     if (fabs(block[0]) < eps) cout <<"Gauss' elimination error, value:" << abs(block[0]) << "." << endl;
 		rhs[0] /= block[0];
-  }
+    }
 	else {
-    
+
+    //cout << "Performing Gauss Elimination to get UT matrix" << endl;
+    cout << "Block (" << block_i << "," << block_i << "):" << endl;
+    DisplayBlock();
     /*--- Transform system in Upper Matrix ---*/
     for (iVar = 1; iVar < (short)nVar; iVar++) {
       for (jVar = 0; jVar < iVar; jVar++) {
@@ -681,6 +683,8 @@ void CSysMatrix::ComputeLU_SGSPreconditioner(const CSysVector & vec, CSysVector 
    2. Split the computational domain into several nonoverlapping regions according to the number of processors, and apply the SGS method inside of each region with (or without) some special interprocessor boundary treatment. This approach may suffer from convergence degradation but takes advantage of minimal parallelization overhead and good load balance. ---*/
 
     /*--- First part of the symmetric iteration: (D+L).x* = b ---*/
+    cout <<"--ComputLU_SGSPreconditioner--" << endl;
+    cout << "n_dims: " << nVar << ", nPointDomain: " << nPointDomain << endl;
     for (iPoint = 0; iPoint < nPointDomain; iPoint++) {
         LowerProduct(prod, iPoint);                                        // Compute L.x*
         for (iVar = 0; iVar < nVar; iVar++)

@@ -81,7 +81,7 @@ public:
      * \param[in] geometry - Geometrical definition of the problem.
 	 * \param[in] config - Definition of the particular problem.
 	 */
-    void Initialize(int n_verts, int n_verts_global, int n_dims, int n_eqns, array<array<int> > &v2e, array<int> &v2n_e, array<int> &e2v);
+    void Initialize(int n_verts, int n_verts_global, int n_var, int n_eqns, array<array<int> > &v2e, array<int> &v2n_e, array<int> &e2v);
   
     /*!
 	 * \brief Assings values to the sparse-matrix structure.
@@ -93,7 +93,7 @@ public:
 	 * \param[in] val_nnz - Number of possible nonzero entries in the matrix.
 	 * \param[in] preconditioner - If <code>TRUE</code> then it use a preconditioner.
 	 */
-    void SetIndexes(int n_verts, int n_verts_global, int n_dims, int n_eqns, unsigned long* val_row_ptr, unsigned long* val_col_ind, unsigned long val_nnz);
+    void SetIndexes(int n_verts, int n_verts_global, int n_var, int n_eqns, unsigned long* val_row_ptr, unsigned long* val_col_ind, unsigned long val_nnz);
   
 	/*!
 	 * \brief Sets to zero all the entries of the sparse matrix.

@@ -14,6 +14,17 @@
 
 using namespace std;
 
+template <typename T>
+void displayMatrix(array<T> matrix) {
+    int i,j;
+    for (i=0; i<matrix.get_dim(0); i++) {
+        for (j=0; j<matrix.get_dim(1); j++) {
+            cout << matrix(i,j) << " ";
+        }
+        cout << endl;
+    }
+}
+
 mesh::mesh(void)
 {
     n_eles = 0;
@@ -46,6 +57,13 @@ void mesh::deform(struct solution* FlowSol) {
 
     int pt_0,pt_1,pt_2,pt_3;
     bool check;
+
+    min_vol = check_grid(FlowSol);
+    set_min_length();
+
+    cout << "n_dims: " << n_dims << endl;
+    cout << "min_vol = " << min_vol << endl;
+    //cin.get();
 
     // Setup stiffness matrices for each individual element,
     // combine all element-level matrices into global matrix
@@ -99,7 +117,6 @@ void mesh::deform(struct solution* FlowSol) {
         }
 
         /*--- Compute the tolerance of the linear solver using MinLength ---*/
-        set_min_length();
         solver_tolerance = min_length * 1E-2;
 
         /*--- Set the boundary displacements (as prescribed by the design variable
@@ -119,13 +136,17 @@ void mesh::deform(struct solution* FlowSol) {
         //StiffMatrix.SendReceive_Solution(LinSysSol, FlowSol);
         //StiffMatrix.SendReceive_Solution(LinSysRes, FlowSol);
 
+        cout << "setting up solution vectors & solver" << endl;
+        //cin.get();
+
         /*--- Definition of the preconditioner matrix vector multiplication, and linear solver ---*/
         CMatrixVectorProduct* mat_vec = new CSysMatrixVectorProduct(StiffnessMatrix, FlowSol);
         CPreconditioner* precond      = new CLU_SGSPreconditioner(StiffnessMatrix, FlowSol);
         CSysSolve *system             = new CSysSolve();
 
+        cout << "Sovling via FGMRES" << endl;
         /*--- Solve the linear system ---*/
-        LinSolIters = system->FGMRES(LinSysRes, LinSysSol, *mat_vec, *precond, run_input.solver_tolerance, 100, false);
+        LinSolIters = system->FGMRES(LinSysRes, LinSysSol, *mat_vec, *precond, solver_tolerance, 100, false);
 
         /*--- Deallocate memory needed by the Krylov linear solver ---*/
         delete system;
@@ -138,6 +159,7 @@ void mesh::deform(struct solution* FlowSol) {
 
         /*--- Check for failed deformation (negative volumes). ---*/
         min_vol = check_grid(FlowSol);
+        set_min_length();
 
         /*
         if (FlowSol->rank == 0) {
@@ -210,26 +232,24 @@ bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele, int ele_id)
 
     array<double> pos_spts;
     pos_spts.setup(n_spts,n_dims);
+    /*cout << "spts for cell " << ele_id << ":" << endl;
+    displayMatrix(pos_spts);*/
 
     for (int i=0; i<n_spts; i++) {
-        iPoint = c2v(ele_id);
+        iPoint = c2v(ele_id,i);
         for (int j=0; j<n_dims; j++) {
             pos_spts(i,j) = xv(iPoint,j);
         }
     }
 
     stiffMat_ele.setup(6,6);
+    stiffMat_ele.initialize_to_zero();
 
     // ----------- Create single-element stiffness matrix ---------------
     // Copied from SU2
     unsigned short iDim, iVar, jVar, kVar;
     double B_Matrix[6][12], BT_Matrix[12][6], D_Matrix[6][6], Aux_Matrix[12][6];
     double a[3], b[3], c[3], Area, E, Mu, Lambda;
-
-    /*--- Initialize the element stuffness matrix to zero ---*/
-    for (iVar = 0; iVar < 6; iVar++)
-        for (jVar = 0; jVar < 6; jVar++)
-            stiffMat_ele(iVar,jVar) = 0.0;
 
     for (iDim = 0; iDim < n_dims; iDim++) {
         a[iDim] = pos_spts(0,iDim)-pos_spts(2,iDim);
@@ -241,11 +261,6 @@ bool mesh::set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele, int ele_id)
     if (Area < 0.0) {
 
         /*--- The initial grid has degenerate elements ---*/
-        for (iVar = 0; iVar < 6; iVar++) {
-            for (jVar = 0; jVar < 6; jVar++) {
-                stiffMat_ele(iVar,jVar) = 0.0;
-            }
-        }
         return false;
     }else{
 
@@ -521,7 +536,8 @@ void mesh::set_boundary_displacements(solution *FlowSol)
 {
     unsigned short iDim, nDim = FlowSol->n_dims, iBound, axis = 0;
     unsigned long iPoint, total_index, iVertex;
-    double MeanCoord[3], VarIncrement = 1.0;
+    //double MeanCoord[3];
+    double VarIncrement = 1.0;
 
     /*--- If requested (no by default) impose the surface deflections in
     increments and solve the grid deformation equations iteratively with
@@ -535,7 +551,7 @@ void mesh::set_boundary_displacements(solution *FlowSol)
     for (iBound = 0; iBound < n_bnds; iBound++) {
 //        my version: if ((bound_flag(ibound) != SYMMETRY_PLANE) && bound_flag(iBound) != MPI_BOUND)) {
             for (iVertex = 0; iVertex < nBndPts(iBound); iVertex++) {
-                /// is ivg needed for this?
+                /// is iv2ivg needed for this?
                 iPoint = iv2ivg(boundPts(iBound)(iVertex));
                 for (iDim = 0; iDim < n_dims; iDim++) {
                     total_index = iPoint*n_dims + iDim;
@@ -577,17 +593,21 @@ void mesh::set_boundary_displacements(solution *FlowSol)
     array<double> VarCoord(n_dims);
     VarCoord(0) = 0.5;
     VarCoord(1) = 0.5;
-
+    cout << "Applying Boundary Conditions... number of boundaries: " << n_bnds << endl;
     /*--- Set the known displacements, note that some points of the moving surfaces
     could be on on the symmetry plane, we should specify DeleteValsRowi again (just in case) ---*/
     for (iBound = 0; iBound < n_bnds; iBound++) {
         /*if (((config->GetMarker_All_Moving(iBound) == YES) && (Kind_SU2 == SU2_CFD)) ||
                 ((config->GetMarker_All_DV(iBound) == YES) && (Kind_SU2 == SU2_MDC))) */
+        cout << "checking boundary #" << iBound << ", type " << bc_list(iBound) << ", flag " << bound_flags(iBound) << endl;
         if (bound_flags(iBound) == MOTION_ENABLED) {
+            cout << "Setting boundary displacement for boundary type " << bc_list(iBound) << endl;
+            cout << "Applying to " << nBndPts(iBound) << " points:" << endl;
             for (iVertex = 0; iVertex < nBndPts(iBound); iVertex++) {
                 iPoint = boundPts(iBound)(iVertex);
+                cout << iPoint << endl;
                 // get amount which each point is supposed to move at this time step
-                // for now, set to a constant (setup data structure(s) later)
+                // **for now, set to a constant (setup data structure(s) later)**
                 //VarCoord = geometry->vertex[iBound][iVertex]->GetVarCoord();
                 for (iDim = 0; iDim < nDim; iDim++) {
                     total_index = iPoint*nDim + iDim;
@@ -598,4 +618,5 @@ void mesh::set_boundary_displacements(solution *FlowSol)
             }
         }
     }
+    cout << "Finished Applying Boundary Conditions!" << endl;
 }

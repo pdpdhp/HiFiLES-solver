@@ -187,7 +187,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
 */
 
     // Reading boundaries
-    ReadBound(run_input.mesh_file,c2v,c2n_v,c2f,f2v,f2nv,ctype,bctype_c,Mesh.boundpts,Mesh.bc_list,Mesh.bound_flags,ic2icg,icvsta,icvert,iv2ivg,FlowSol->num_eles,FlowSol->num_verts,FlowSol);
+    ReadBound(run_input.mesh_file,c2v,c2n_v,c2f,f2v,f2nv,ctype,bctype_c,Mesh.boundPts,Mesh.bc_list,Mesh.bound_flags,ic2icg,icvsta,icvert,iv2ivg,FlowSol->num_eles,FlowSol->num_verts,FlowSol);
     if (in_run_type==1)
     {
         // Store ele2face
@@ -202,6 +202,10 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     Mesh.f2c = f2c;
     Mesh.f2n_v = f2nv;
     Mesh.n_faces = FlowSol->num_inters;
+    Mesh.n_bnds = Mesh.bc_list.get_dim(0);
+    for (int i=0; i<Mesh.n_bnds; i++) {
+        Mesh.nBndPts(i) = Mesh.boundPts(i).get_dim(0);
+    }
 
     /////////////////////////////////////////////////
     /// Initializing Elements

@@ -275,24 +275,32 @@ void array<T>::setup(int in_dim_0, int in_dim_1, int in_dim_2, int in_dim_3)
 template <typename T>
 T& array<T>::operator()(int in_pos_0)
 {
+    //if (dim_1 != 0) cout << "WARNING: Accessing 2D array with one index." << endl;
     return cpu_data[in_pos_0]; // column major with matrix indexing
 }
 
 template <typename T>
 T& array<T>::operator()(int in_pos_0, int in_pos_1)
 {
+    //if (dim_1==0 || dim_2!=0) cout << "WARNING: Accessing array with inconsistent number of indices." << endl;
+    //if (dim_1==0) cout << "WARNING: Accessing 1D array with 2 indices." << endl;
+    //if (dim_2!=0) cout << "WARNING: Accessing 3D array with 2 indices." << endl;
     return cpu_data[in_pos_0+(dim_0*in_pos_1)]; // column major with matrix indexing
 }
 
 template <typename T>
 T& array<T>::operator()(int in_pos_0, int in_pos_1, int in_pos_2)
 {
+    //if (dim_2==0 || dim_3!=0) cout << "WARNING: Accessing array with inconsistent number of indices." << endl;
+    //if (dim_2==0) cout << "WARNING: Accessing 2D array with 3 indices." << endl;
+    //if (dim_3!=0) cout << "WARNING: Accessing 4D array with 3 indices." << endl;
     return cpu_data[in_pos_0+(dim_0*in_pos_1)+(dim_0*dim_1*in_pos_2)]; // column major with matrix indexing
 }
 
 template <typename T>
 T& array<T>::operator()(int in_pos_0, int in_pos_1, int in_pos_2, int in_pos_3)
 {
+    //if (dim_3==0) cout << "WARNING: Accessing 3D array with 4 indices." << endl;
     return cpu_data[in_pos_0+(dim_0*in_pos_1)+(dim_0*dim_1*in_pos_2)+(dim_0*dim_1*dim_2*in_pos_3)]; // column major with matrix indexing
 }
 

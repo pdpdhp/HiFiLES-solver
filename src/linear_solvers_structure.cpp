@@ -288,7 +288,7 @@ unsigned long CSysSolve::FGMRES(const CSysVector & b, CSysVector & x, CMatrixVec
 
     /*---  Calculate the norm of the rhs vector ---*/
     double norm0 = b.norm();
-
+    cout << "b.norm() = " << norm0 << endl;
     /*---  Calculate the initial residual (actually the negative residual)
      and compute its norm ---*/
     mat_vec(x,w[0]);
@@ -326,8 +326,9 @@ unsigned long CSysSolve::FGMRES(const CSysVector & b, CSysVector & x, CMatrixVec
         if (beta < tol*norm0) break;
 
         /*---  Precondition the CSysVector w[i] and store result in z[i] ---*/
+        cout << "Preconditioning" << endl;
         precond(w[i], z[i]);
-
+        cout << "Adding to Krylov subspace" << endl;
         /*---  Add to Krylov subspace ---*/
         mat_vec(z[i], w[i+1]);
 

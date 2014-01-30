@@ -173,23 +173,23 @@ int main(int argc, char *argv[]) {
     /////////////////////////////////////////////////
     
     /*! Dump residual and error. */
-    if(i_steps%run_input.monitor_res_freq==0 ) {
+    /*if(i_steps%run_input.monitor_res_freq==0 ) {
       
       error_state = monitor_residual(FlowSol.ini_iter+i_steps, &FlowSol);
       
       if (error_state) cout << "error_state=" << error_state << "rank=" << FlowSol.rank << endl;
       
-      if (run_input.test_case != 0) {
+      if (run_input.test_case != 0) {*/
 #ifdef _MPI
         /*! Check state of other processors. */
         MPI_Alltoall(&error_state, 1, MPI_INT, FlowSol.error_states.get_ptr_cpu(), 1, MPI_INT,MPI_COMM_WORLD);
         for (j=0; j<nproc; j++) { if (FlowSol.error_states(j) == 1) error_state=1; }
 #endif
-        if (error_state == 1) return 1;
-        //compute_error(FlowSol.ini_iter+i_steps, &FlowSol);
+        /*if (error_state == 1) return 1;
+        compute_error(FlowSol.ini_iter+i_steps, &FlowSol);
       }
       
-    }
+    }*/
     
     /*! Dump forces. */
     /*if(i_steps%run_input.monitor_force_freq == 0 && run_input.equation == 0) {
