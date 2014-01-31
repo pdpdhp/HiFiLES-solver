@@ -150,14 +150,17 @@ CSysVector::CSysVector(const unsigned long & numBlk, const unsigned long & numBl
 }
 
 CSysVector::~CSysVector() {
-  delete [] vec_val;
-  nElm = -1;
-	nElmDomain = -1;
-  nBlk = -1;
-  nBlkDomain = -1;
-  nVar = -1;
+    delete [] vec_val;
+    /*--- set to NULL to avoid double-delete ---*/
+    vec_val = NULL;
+
+    nElm = -1;
+    nElmDomain = -1;
+    nBlk = -1;
+    nBlkDomain = -1;
+    nVar = -1;
 #ifdef MPI
-  myrank = -1;
+    myrank = -1;
 #endif
 }
 

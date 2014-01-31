@@ -308,8 +308,11 @@ void input::setup(ifstream& in_run_input_file, int rank)
             in_run_input_file >> n_moving_bnds;
             if (n_moving_bnds > 0) {
                 motion = 1;
-                for (int i=0; i<n_moving_bnds; i++)
-                    in_run_input_file >> boundry_flags(i);
+                cout << "Motion enabled on the following boundaries:" << endl;
+                for (int i=0; i<n_moving_bnds; i++) {
+                    in_run_input_file >> boundary_flags(i);
+                    cout << i+1 << ": " << boundary_flags(i) << endl;
+                }
             }
         }
         else if (!param_name.compare("n_deform_iters"))

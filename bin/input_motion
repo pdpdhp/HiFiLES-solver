@@ -40,7 +40,7 @@ n_restart_files
 Mesh options
 -----------------------
 mesh_file
-cylinder_2ndorder_tri_vis.neu
+ACL_Gmsh.msh
 dx_cyclic
 200000000.0
 dy_cyclic
@@ -51,7 +51,7 @@ dz_cyclic
 Mesh Deformation Options
 ----------------------------------
 motion_flag                       // 0: Static Mesh, 1: Moving/Deforming Mesh
-1 Isotherm_Fix	                  // n_moving_bnds, <boundary name(s)>
+1 Slip_Wall 	                  // n_moving_bnds, <boundary name(s)>
 n_deform_iters                    // number of steps to perform during each deform process
 1
 -----------------------------------

@@ -51,7 +51,18 @@ CSysMatrix::~CSysMatrix(void) {
     if (invM != NULL)               delete [] invM;
     if (LineletBool != NULL)        delete [] LineletBool;
     if (LineletPoint != NULL)       delete [] LineletPoint;
-  
+
+    /*--- Need to set to NULL to avoid double-delete[] ---*/
+    matrix            = NULL;
+    row_ptr           = NULL;
+    col_ind           = NULL;
+    block             = NULL;
+    prod_block_vector = NULL;
+    prod_row_vector   = NULL;
+    aux_vector        = NULL;
+    invM              = NULL;
+    LineletBool       = NULL;
+    LineletPoint      = NULL;
 }
 
 void CSysMatrix::Initialize(int n_verts, int n_verts_global, int n_var, int n_eqns, array<array<int> > &v2e, array<int> &v2n_e, array<int> &e2v) {
@@ -303,8 +314,8 @@ void CSysMatrix::Gauss_Elimination(unsigned long block_i, double* rhs) {
 	else {
 
     //cout << "Performing Gauss Elimination to get UT matrix" << endl;
-    cout << "Block (" << block_i << "," << block_i << "):" << endl;
-    DisplayBlock();
+    /*cout << "Block (" << block_i << "," << block_i << "):" << endl;
+    DisplayBlock();*/
     /*--- Transform system in Upper Matrix ---*/
     for (iVar = 1; iVar < (short)nVar; iVar++) {
       for (jVar = 0; jVar < iVar; jVar++) {
@@ -683,8 +694,9 @@ void CSysMatrix::ComputeLU_SGSPreconditioner(const CSysVector & vec, CSysVector 
    2. Split the computational domain into several nonoverlapping regions according to the number of processors, and apply the SGS method inside of each region with (or without) some special interprocessor boundary treatment. This approach may suffer from convergence degradation but takes advantage of minimal parallelization overhead and good load balance. ---*/
 
     /*--- First part of the symmetric iteration: (D+L).x* = b ---*/
-    cout <<"--ComputLU_SGSPreconditioner--" << endl;
+    /*cout <<"--ComputLU_SGSPreconditioner--" << endl;
     cout << "n_dims: " << nVar << ", nPointDomain: " << nPointDomain << endl;
+    cout << "--paused--" << endl; cin.get();*/
     for (iPoint = 0; iPoint < nPointDomain; iPoint++) {
         LowerProduct(prod, iPoint);                                        // Compute L.x*
         for (iVar = 0; iVar < nVar; iVar++)
@@ -692,10 +704,10 @@ void CSysMatrix::ComputeLU_SGSPreconditioner(const CSysVector & vec, CSysVector 
         Gauss_Elimination(iPoint, aux_vector);                            // Solve D.x* = aux_vector
         for (iVar = 0; iVar < nVar; iVar++)
             prod[iPoint*nVar+iVar] = aux_vector[iVar];                       // Assesing x* = solution
-        if(iPoint%500==0) {
+        /*if(iPoint%500==0) {
             cout << "** pause **" << endl;
             cin.get();
-        }
+        }*/
     }
 
     /*--- Inner send-receive operation the solution vector ---*/

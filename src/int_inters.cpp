@@ -12,7 +12,7 @@
  */
 // Just for the purpose of code highlighting
 //#define _MPI
-#define _CPU
+//#define _CPU
 // -----------------------------------------
 #include <iostream>
 #include <cmath>

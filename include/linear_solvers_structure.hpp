@@ -37,6 +37,7 @@
 #include <string>
 
 #include "vector_structure.hpp"
+#include "solution.h"
 
 using namespace std;
 
@@ -170,7 +171,7 @@ public:
    */
   unsigned long FGMRES(const CSysVector & b, CSysVector & x, CMatrixVectorProduct & mat_vec,
                       CPreconditioner & precond, double tol,
-                      unsigned long m, bool monitoring);
+                      unsigned long m, bool monitoring, solution *FlowSol);
 	
 	/*!
    * \brief Biconjugate Gradient Stabilized Method (BCGSTAB)

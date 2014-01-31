@@ -137,13 +137,20 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
         FlowSol->ele_type = ctype;
     }
     // ** TODO: clean up duplicate/redundant data **
+    Mesh.n_dims = FlowSol->n_dims;
     Mesh.c2v = c2v;
     Mesh.c2n_v = c2n_v;
     Mesh.xv = xv;
+    Mesh.xv_new = xv;
     Mesh.iv2ivg = iv2ivg;
     Mesh.ctype = ctype;
     Mesh.n_eles = FlowSol->num_eles;
+    Mesh.n_cells_global = FlowSol->num_cells_global;
     Mesh.n_verts = FlowSol->num_verts;
+    Mesh.vel_old.setup(xv.get_dim(0),Mesh.n_dims);
+    Mesh.vel_new.setup(xv.get_dim(0),Mesh.n_dims);
+    Mesh.vel_old.initialize_to_zero();
+    Mesh.vel_new.initialize_to_zero();
 
     /////////////////////////////////////////////////
     /// Set connectivity
@@ -167,6 +174,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     unmatched_inters.setup(max_inters);
 
     Mesh.v2n_e.setup(Mesh.n_verts);
+    Mesh.v2n_e.initialize_to_zero();
 
     // Initialize arrays to -1
     f2c.initialize_to_value(-1);
@@ -203,6 +211,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     Mesh.f2n_v = f2nv;
     Mesh.n_faces = FlowSol->num_inters;
     Mesh.n_bnds = Mesh.bc_list.get_dim(0);
+    Mesh.nBndPts.setup(Mesh.n_bnds);
     for (int i=0; i<Mesh.n_bnds; i++) {
         Mesh.nBndPts(i) = Mesh.boundPts(i).get_dim(0);
     }
@@ -257,7 +266,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     }
 
     // Initialize the mesh_eles
-    FlowSol->n_ele_types=5;
+    FlowSol->n_ele_types = 5;
     FlowSol->mesh_eles.setup(FlowSol->n_ele_types);
 
     FlowSol->mesh_eles(0) = &FlowSol->mesh_eles_tris;
@@ -864,7 +873,7 @@ void ReadBound(string& in_file_name, array<int>& in_c2v, array<int>& in_c2n_v, a
     }
     else if (run_input.mesh_format==1) {
         cout << "  Reading GMSH File" << endl;
-        read_boundary_gmsh(in_file_name, in_n_cells, in_ic2icg, in_c2v, in_c2n_v, out_bctype, out_bound_flag, out_bc_list, out_boundpts, in_iv2ivg, in_n_verts, in_ctype, in_icvsta, in_icvert, FlowSol);
+        read_boundary_gmsh(in_file_name, in_n_cells, in_ic2icg, in_c2v, in_c2n_v, out_bctype, out_bc_list, out_bound_flag, out_boundpts, in_iv2ivg, in_n_verts, in_ctype, in_icvsta, in_icvert, FlowSol);
         cout << "  Done Reading GMSH File" << endl;
     }
     else {
@@ -887,7 +896,7 @@ void create_boundpts(array<array<int> >& out_boundpts, array<int>& in_bclist, ar
 
     /** Find boundaries which are moving */
     for (int i=0; i<run_input.n_moving_bnds; i++) {
-        bcflag = get_bc_number(run_input.boundry_flags(i));
+        bcflag = get_bc_number(run_input.boundary_flags(i));
         for (int j=0; j<n_bcs; j++) {
             if (in_bclist(j)==bcflag) {
                 out_bound_flag(j) = 1;
@@ -899,8 +908,7 @@ void create_boundpts(array<array<int> >& out_boundpts, array<int>& in_bclist, ar
     /** --- CREATE BOUNDARY->POINTS STRUCTURE ---
     want: iv = boundpts(bcflag,ivert); */
     out_boundpts.setup(n_bcs);
-    array<set<int> > Bounds;
-    Bounds.setup(n_bcs);
+    array<set<int> > Bounds(n_bcs);
     for (int i=0; i<n_bcs; i++) {
         nv = 0;
         bcflag = in_bclist(i);
@@ -1096,7 +1104,7 @@ void read_boundary_gambit(string& in_file_name, int &in_n_cells, array<int>& in_
             // Check if cell icg belongs to processor & return local index
             index = index_locate_int(icg,cell_list.get_ptr_cpu(),in_n_cells);
 
-            // If it does, find local cell ic corresponding to icg
+            // If it does, increase count & add cell/face to boundaries info
             if (index!=-1)
             {
                 bdy_count++;
@@ -1150,7 +1158,6 @@ void read_boundary_gmsh(string& in_file_name, int &in_n_cells, array<int>& in_ic
         sscanf(buf,"%d %d \"%s", &bcdim, &bcid, bc_txt_temp);
         strcpy(bcTXT[bcid],bc_txt_temp);
         out_bclist(i) = bcid;
-        cout << "out_bclist(" << i << ") = " << bcid << ", " << bcTXT[bcid] << endl;
     }
 
     // Move cursor to $Nodes
@@ -1189,7 +1196,7 @@ void read_boundary_gmsh(string& in_file_name, int &in_n_cells, array<int>& in_ic
     // setup vertex->bcflag array -----------
     out_boundpts.setup(n_bcs);
     //out_bcverts.setup(n_nodes_global);
-    array<int> bc2nv(n_bcs);
+    /// array<int> bc2nv(n_bcs);
     array<set<int> > Bounds;
     Bounds.setup(n_bcs);
 
@@ -1205,13 +1212,14 @@ void read_boundary_gmsh(string& in_file_name, int &in_n_cells, array<int>& in_ic
             bcflag = get_bc_number(bcname);
             out_bclist(i) = bcflag;
         }
+        cout << "\tout_bclist(" << i << ") = " << bcflag << ", " << bcname << endl;
     }
 
     //--- Find boundaries which are moving ---//
     out_bound_flag.setup(n_bcs);
     out_bound_flag.initialize_to_zero();
     for (int i=0; i<run_input.n_moving_bnds; i++) {
-        bcflag = get_bc_number(run_input.boundry_flags(i));
+        bcflag = get_bc_number(run_input.boundary_flags(i));
         for (int j=0; j<n_bcs; j++) {
             if (out_bclist(j)==bcflag) {
                 out_bound_flag(j) = 1;
@@ -1263,20 +1271,21 @@ void read_boundary_gmsh(string& in_file_name, int &in_n_cells, array<int>& in_ic
         /*
          * Check if two vertices belong to processor
          * Shift node index by -1 (1 index -> 0 index) & find local index
-         * Add vertex to boundpts array
+         * Add vertex to correct boundary in boundpts array
          */
         bool belong_to_proc = 1;
+        bcid = 0;
+        for (bcid=0; bcid<n_bcs; bcid++) {
+            if (out_bclist(bcid) == bcflag) break;
+        }
+
         for (int j=0; j<num_face_vert; j++)
         {
             vlist_bound(j)--;
             vlist_local(j) = index_locate_int(vlist_bound(j),in_iv2ivg.get_ptr_cpu(),in_n_verts);
             if (vlist_local(j) == -1) belong_to_proc = 0;
 
-            int k;
-            for (k=0; k<n_bcs; k++) {
-                if (out_bclist(k) == bcflag) break;
-            }
-            Bounds(k).insert(vlist_local(j));
+            Bounds(bcid).insert(vlist_local(j));
             //bc2nv(k)++;
         }
 
@@ -1332,7 +1341,6 @@ void read_boundary_gmsh(string& in_file_name, int &in_n_cells, array<int>& in_ic
 
     } // Loop over entities
 
-    /// ********** DOUBLE CHECK ME!!!!! *************
     set<int>::iterator it;
     for (int i=0; i<n_bcs; i++) {
         out_boundpts(i).setup(Bounds(i).size());
@@ -1354,7 +1362,7 @@ void read_vertices_gambit(string& in_file_name, int in_n_verts, int& out_n_verts
   
 	// Now open gambit file and read the vertices
   ifstream mesh_file;
-	char buf[BUFSIZ]={""};
+  char buf[BUFSIZ]={""};
   
   mesh_file.open(&in_file_name[0]);
   
@@ -1372,31 +1380,31 @@ void read_vertices_gambit(string& in_file_name, int in_n_verts, int& out_n_verts
   >> dummy 	// num boundary groups
   >> FlowSol->n_dims;        // num space dimensions
   
+  FlowSol->num_verts_global = out_n_verts_global;
+
   mesh_file.getline(buf,BUFSIZ);  // clear rest of line
   mesh_file.getline(buf,BUFSIZ);  // Skip 2 lines
   mesh_file.getline(buf,BUFSIZ);
   
   // Read the location of vertices
-	int icount = 0;
+  int icount = 0;
   int id,index;
   double pos;
-    for (int i=0;i<out_n_verts_global;i++)
-	{
-    mesh_file >> id;
-		index = index_locate_int(id-1,in_iv2ivg.get_ptr_cpu(),in_n_verts);
+  for (int i=0;i<out_n_verts_global;i++)
+  {
+      mesh_file >> id;
+      index = index_locate_int(id-1,in_iv2ivg.get_ptr_cpu(),in_n_verts);
     
-		if (index!=-1) // Vertex belongs to this processor
-		{
-      for (int m=0;m<FlowSol->n_dims;m++) {
-        mesh_file >> pos;
-        out_xv(index,m) = pos;
+      if (index!=-1) // Vertex belongs to this processor
+      {
+          for (int m=0;m<FlowSol->n_dims;m++) {
+              mesh_file >> pos;
+              out_xv(index,m) = pos;
+          }
       }
-		}
-	 	mesh_file.getline(buf,BUFSIZ);
+      mesh_file.getline(buf,BUFSIZ);
 	}
-  
 	mesh_file.close();
-  
 }
 
 void read_vertices_gmsh(string& in_file_name, int in_n_verts, int& out_n_verts_global, array<int> &in_iv2ivg, array<double> &out_xv, struct solution* FlowSol)
@@ -1423,6 +1431,8 @@ void read_vertices_gmsh(string& in_file_name, int in_n_verts, int& out_n_verts_g
   
   mesh_file       >> out_n_verts_global ;// num vertices in mesh
   mesh_file.getline(buf,BUFSIZ);
+
+  FlowSol->num_verts_global = out_n_verts_global;
   
   int id;
   int index;
@@ -1537,7 +1547,9 @@ void read_connectivity_gambit(string& in_file_name, int &out_n_cells, array<int>
 	mesh_file.getline(buf,BUFSIZ);	// clear rest of line
 	mesh_file.getline(buf,BUFSIZ);	// Skip 2 lines
 	mesh_file.getline(buf,BUFSIZ);
-  
+
+    FlowSol->num_cells_global = n_cells_global;
+
 	// Skip the x,y,z location of vertices
   for (int i=0;i<n_verts_global;i++)
 		mesh_file.getline(buf,BUFSIZ);
@@ -1695,19 +1707,19 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
 	char bc_txt_temp[100];
 	ifstream mesh_file;
   
-  string str;
+    string str;
   
 	mesh_file.open(&in_file_name[0]);
 	if (!mesh_file)
     FatalError("Unable to open mesh file");
   
-  int id,elmtype,ntags,bcid,bcdim;
+    int id,elmtype,ntags,bcid,bcdim;
   
-  // Move cursor to $PhysicalNames
-  while(1) {
-    getline(mesh_file,str);
-    if (str=="$PhysicalNames") break;
-  }
+    // Move cursor to $PhysicalNames
+    while(1) {
+        getline(mesh_file,str);
+        if (str=="$PhysicalNames") break;
+    }
   
 	// Read number of boundaries and fields defined
 	mesh_file >> dummy;
@@ -1715,20 +1727,20 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
 	mesh_file.getline(buf,BUFSIZ);	// clear rest of line
 	for(int i=0;i<dummy;i++)
 	{
-        cout << "i "<< i << endl;
+        cout << i+1 << ": ";
 		mesh_file.getline(buf,BUFSIZ);
 		sscanf(buf,"%d %d %s", &bcdim, &bcid, bc_txt_temp);
 		strcpy(bcTXT[bcid],bc_txt_temp);
-		cout << "bc_txt_temp " <<bc_txt_temp<< endl;
+        cout << bc_txt_temp << endl;
     if (strcmp(bc_txt_temp,"FLUID"))
       FlowSol->n_dims=bcdim;
 	}
   
-  // Move cursor to $Elements
-  while(1) {
-    getline(mesh_file,str);
-    if (str=="$Elements") break;
-  }
+    // Move cursor to $Elements
+    while(1) {
+        getline(mesh_file,str);
+        if (str=="$Elements") break;
+    }
   
 	// -------------------------------
 	//  Read element connectivity
@@ -1760,7 +1772,8 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
     
   }
   n_cells_global=icount;
-  
+  FlowSol->num_cells_global = n_cells_global;
+
   cout << "n_cell_global=" << n_cells_global << endl;
   
   // Now assign kstart to each processor
@@ -2296,17 +2309,14 @@ void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c
         }
     }
 
-    vector<int> e2v;
-    vector<vector<int> > v2e;
-
     out_n_edges=-1;
-    //if (FlowSol->n_dims==3)
-    //{
+    if (FlowSol->n_dims==3 || run_input.motion==1)
+    {
+        vector<int> e2v;
+        vector<vector<int> > v2e(n_verts);
+
         // Create array ic2e
         out_c2e.initialize_to_value(-1);
-        //vector<int> e2v;
-        //vector<vector<int> > v2e;
-        v2e.reserve(n_verts);
         array<int> num_e_per_c(5);
         num_e_per_c(0) = 3;  // tri
         num_e_per_c(1) = 4;  // quad
@@ -2389,7 +2399,7 @@ void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c
             }
         }
 
-    //} // if n_dims=3
+    } // if n_dims==3 || run_input.motion==1
 
     iface = 0;
     out_n_unmatched_faces= 0;

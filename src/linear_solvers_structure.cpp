@@ -246,9 +246,9 @@ unsigned long CSysSolve::ConjugateGradient(const CSysVector & b, CSysVector & x,
 }
 
 unsigned long CSysSolve::FGMRES(const CSysVector & b, CSysVector & x, CMatrixVectorProduct & mat_vec,
-                                CPreconditioner & precond, double tol, unsigned long m, bool monitoring) {
+                                CPreconditioner & precond, double tol, unsigned long m, bool monitoring, solution* FlowSol) {
 
-    int rank = 0;
+    int rank = FlowSol->rank;
 #ifdef _MPI
     rank = MPI::COMM_WORLD.Get_rank();
 #endif
@@ -288,7 +288,7 @@ unsigned long CSysSolve::FGMRES(const CSysVector & b, CSysVector & x, CMatrixVec
 
     /*---  Calculate the norm of the rhs vector ---*/
     double norm0 = b.norm();
-    cout << "b.norm() = " << norm0 << endl;
+
     /*---  Calculate the initial residual (actually the negative residual)
      and compute its norm ---*/
     mat_vec(x,w[0]);
@@ -326,9 +326,9 @@ unsigned long CSysSolve::FGMRES(const CSysVector & b, CSysVector & x, CMatrixVec
         if (beta < tol*norm0) break;
 
         /*---  Precondition the CSysVector w[i] and store result in z[i] ---*/
-        cout << "Preconditioning" << endl;
+        //cout << "Preconditioning" << endl;
         precond(w[i], z[i]);
-        cout << "Adding to Krylov subspace" << endl;
+        //cout << "Adding to Krylov subspace" << endl;
         /*---  Add to Krylov subspace ---*/
         mat_vec(z[i], w[i+1]);
 
@@ -347,7 +347,8 @@ unsigned long CSysSolve::FGMRES(const CSysVector & b, CSysVector & x, CMatrixVec
         beta = fabs(g[i+1]);
 
         /*---  Output the relative residual if necessary ---*/
-        if ((((monitoring) && (rank == 0)) && ((i+1) % 5 == 0)) && (rank == 0)) writeHistory(i+1, beta, norm0);
+        // default output frequency = 5 (now 1)
+        if ((((monitoring) && (rank == 0)) && ((i+1) % 1 == 0)) && (rank == 0)) writeHistory(i+1, beta, norm0);
     }
     
     /*---  Solve the least-squares system and update solution ---*/

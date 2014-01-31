@@ -110,7 +110,7 @@ public:
     // Mesh deformation options
     int n_moving_bnds, motion;
     int n_deform_iters;
-    array<string> boundry_flags;
+    array<string> boundary_flags;
 
     double dx_cyclic;
     double dy_cyclic;

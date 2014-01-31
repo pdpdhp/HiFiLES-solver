@@ -13,9 +13,13 @@
 
 #include <iostream>
 #include <sstream>
+#include <fstream>
+#include <string>
 #include <cmath>
 #include <map>
 #include <float.h>
+#include <map>
+#include <set>
 
 /** Needed to resolve mutual header dependancy
     I'll find a better way later... */
@@ -74,6 +78,12 @@ public:
     /** setup information for boundary motion */
     //void setup_boundaries(array<int> bctype);
 
+    /** write out mesh in Gambit .neu format */
+    void write_mesh_gambit(double sim_time);
+
+    /** write out mesh in Gmsh .msh format */
+    void write_mesh_gmsh(double sim_time);
+
 	// #### members ####
 	
     /** Basic parameters of mesh */
@@ -89,16 +99,24 @@ public:
     /** #### Boundary information #### */
 
     int n_bnds, n_faces;
-    array<int> nBndPts, bc_list;
+    array<int> nBndPts;
     array<int> v2bc;
 
     /** vertex id = boundpts(bc_id)(ivert) */
     array<array<int> > boundPts;
 
-    /** Store motion flag to corresponding boundary flag
-    i.e. bound_flags[bcflag] = <motion_flag> */
+    /** Store motion flag for each boundary
+     (currently 0=fixed, 1=moving, -1=volume) */
     array<int> bound_flags;
 
+    /** HiFiLES 'bcflag' for each boundary */
+    array<int> bc_list;
+
+    /** replacing get_bc_name() from geometry.cpp */
+    map<string,int> bc_name;
+
+    /** inverse of bc_name */
+    map<int,string> bc_flag;
 
     // nBndPts.setup(n_bnds); boundPts.setup(nBnds,nPtsPerBnd);
 

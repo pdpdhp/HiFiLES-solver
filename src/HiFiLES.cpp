@@ -12,7 +12,7 @@
  */
 // Just for the purpose of code highlighting
 //#define _MPI
-#define _CPU
+//#define _CPU
 // -----------------------------------------
 #include <iostream>
 #include <fstream>
@@ -82,6 +82,7 @@ int main(int argc, char *argv[]) {
   GeoPreprocess(run_input.run_type, &FlowSol, Mesh);
   
   //InitSolution(&FlowSol);
+  FlowSol.time = 0; // HACK FOR MESH DEBUGGING
   
   init = clock();
   
@@ -226,7 +227,10 @@ int main(int argc, char *argv[]) {
     if (run_input.motion) {
         Mesh.deform(&FlowSol);
         //Mesh.update(&FlowSol);
+        Mesh.write_mesh_gmsh(FlowSol.time);
 	}
+
+    //cout << "double-free not happening here! " << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;
     
   }
   

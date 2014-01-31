@@ -11,7 +11,7 @@
 
 #include "../include/mesh.h"
 #include "../include/geometry.h"
-
+#include <string>
 using namespace std;
 
 template <typename T>
@@ -37,6 +37,40 @@ mesh::mesh(void)
     LinSolIters = 0;
     failedIts = 0;
     min_vol = DBL_MAX;
+    min_length = DBL_MAX;
+    solver_tolerance = 1E-4;
+
+    bc_name["Sub_In_Simp"] = 1;
+    bc_name["Sub_Out_Simp"] = 2;
+    bc_name["Sub_In_Char"] = 3;
+    bc_name["Sub_Out_Char"] = 4;
+    bc_name["Sup_In"] = 5;
+    bc_name["Sup_Out"] = 6;
+    bc_name["Slip_Wall"] = 7;
+    bc_name["Cyclic"] = 9;
+    bc_name["Isotherm_Fix"] = 11;
+    bc_name["Adiabat_Fix"] = 12;
+    bc_name["Isotherm_Move"] = 13;
+    bc_name["Adiabat_Move"] = 14;
+    bc_name["Char"] = 15;
+    bc_name["Slip_Wall_Dual"] = 16;
+    bc_name["AD_Wall"] = 50;
+
+    bc_flag[1] = "Sub_In_Simp";
+    bc_flag[2] = "Sub_Out_Simp";
+    bc_flag[3] = "Sub_In_Char";
+    bc_flag[4] = "Sub_Out_Char";
+    bc_flag[5] = "Sup_In";
+    bc_flag[6]= "Sup_Out";
+    bc_flag[7]= "Slip_Wall";
+    bc_flag[9]= "Cyclic";
+    bc_flag[11]= "Isotherm_Fix";
+    bc_flag[12]= "Adiabat_Fix";
+    bc_flag[13]= "Isotherm_Move";
+    bc_flag[14]= "Adiabat_Move";
+    bc_flag[15]= "Char";
+    bc_flag[16]= "Slip_Wall_Dual";
+    bc_flag[50]= "AD_Wall";
 }
 
 mesh::~mesh(void)
@@ -54,16 +88,15 @@ void mesh::deform(struct solution* FlowSol) {
         FatalError("3D Mesh motion not implemented yet!");
     }
     */
-
+    cout << endl << ">>>>>>>>> Beginning Mesh Deformation >>>>>>>>>" << endl;
     int pt_0,pt_1,pt_2,pt_3;
     bool check;
 
     min_vol = check_grid(FlowSol);
     set_min_length();
-
-    cout << "n_dims: " << n_dims << endl;
+    cout << "n_verts: " << n_verts << ", ";
+    cout << "n_dims: " << n_dims << ", ";
     cout << "min_vol = " << min_vol << endl;
-    //cin.get();
 
     // Setup stiffness matrices for each individual element,
     // combine all element-level matrices into global matrix
@@ -76,7 +109,7 @@ void mesh::deform(struct solution* FlowSol) {
     deformation can be divided into increments to help with stability. In
     particular, the linear elasticity equations hold only for small deformations. ---*/
     for (int iGridDef_Iter = 0; iGridDef_Iter < run_input.n_deform_iters; iGridDef_Iter++) {
-
+        cout << ">>Iteration " << iGridDef_Iter+1 << " of " << run_input.n_deform_iters << endl;
         /*--- Initialize vector and sparse matrix ---*/
 
         LinSysSol.SetValZero();
@@ -136,23 +169,19 @@ void mesh::deform(struct solution* FlowSol) {
         //StiffMatrix.SendReceive_Solution(LinSysSol, FlowSol);
         //StiffMatrix.SendReceive_Solution(LinSysRes, FlowSol);
 
-        cout << "setting up solution vectors & solver" << endl;
-        //cin.get();
-
         /*--- Definition of the preconditioner matrix vector multiplication, and linear solver ---*/
         CMatrixVectorProduct* mat_vec = new CSysMatrixVectorProduct(StiffnessMatrix, FlowSol);
         CPreconditioner* precond      = new CLU_SGSPreconditioner(StiffnessMatrix, FlowSol);
         CSysSolve *system             = new CSysSolve();
 
-        cout << "Sovling via FGMRES" << endl;
         /*--- Solve the linear system ---*/
-        LinSolIters = system->FGMRES(LinSysRes, LinSysSol, *mat_vec, *precond, solver_tolerance, 100, false);
-
+        LinSolIters = system->FGMRES(LinSysRes, LinSysSol, *mat_vec, *precond, solver_tolerance, 100, true, FlowSol);
         /*--- Deallocate memory needed by the Krylov linear solver ---*/
+        /// how to do safely...?
         delete system;
         delete mat_vec;
         delete precond;
-
+        //cout << "double-free not happening on delete [system, mat_vec, precond] " << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;
         /*--- Update the grid coordinates and cell volumes using the solution
         of the linear system (usol contains the x, y, z displacements). ---*/
         update_grid_coords();
@@ -169,22 +198,24 @@ void mesh::deform(struct solution* FlowSol) {
         }
         */
     }
-
     set_grid_velocity(FlowSol,run_input.dt);
     /*--- Now that deformation is complete & velocity is set, update the
       'official' vertex coordinates ---*/
+
     xv = xv_new;
 
     /*--- Deallocate vectors for the linear system. ---*/
     LinSysSol.~CSysVector();
     LinSysRes.~CSysVector();
     StiffnessMatrix.~CSysMatrix();
+    //cout << "double-free not happening here! " << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;
 }
 
 void mesh::set_min_length(void)
 {
     unsigned int n_edges = e2v.get_dim(0);
-    double length2, min_length2 = DBL_MAX;
+    double length2;
+    double min_length2 = DBL_MAX;
 
     for (int i=0; i<n_edges; i++) {
         length2 = pow((xv(e2v(i,0),0)-xv(e2v(i,1),0)),2) + pow((xv(e2v(i,0),1)-xv(e2v(i,1),1)),2);
@@ -435,6 +466,134 @@ void mesh::update(solution* FlowSol)
     }
 }
 
+void mesh::write_mesh_gambit(double sim_time)
+{
+    cout << "Gambit mesh writer not yet implemented!" << endl;
+}
+
+void mesh::write_mesh_gmsh(double sim_time)
+{
+    string filename (run_input.mesh_file);
+    cout << "sim_time " << sim_time << endl;
+    ostringstream sstream;
+    sstream << sim_time;
+    cout << "sim_time " << sstream.str() << endl;
+    string suffix = "_" + sstream.str();
+    cout << "suffix " << suffix << endl;
+    filename.insert(filename.size()-4,suffix);
+    cout << "filename " << filename<< endl;
+
+    fstream file;
+    file.open(filename.c_str(),ios::out);
+
+    // write header
+    file << "$MeshFormat" << endl << "2.2 0 8" << endl;
+    file << "$EndMeshFormat" << endl;
+
+    // write boundary info
+    file << "$PhysicalNames" << endl << n_bnds << endl;
+    for (int i=0; i<n_bnds; i++) {
+        if (bc_list(i) == -1) {
+            file << n_dims << " "; // volume cell
+            file << i+1  << " " << "\"FLUID\"" << endl;
+        }else{
+            file << 1 << " ";  // edge
+            file << i+1  << " " << "\"" << bc_flag[bc_list(i)] << "\"" << endl;
+        }
+
+    }
+    file << "$EndPhysicalNames" << endl;
+
+    // write nodes
+    file << "$Nodes" << endl << n_verts_global << endl;
+    for (int i=0; i<n_verts; i++) {
+        file << i+1 << " " << xv(i,0) << " " << xv(i,1) << " ";
+        if (n_dims==2) {
+            file << 0;
+        }else{
+            file << xv(i,2);
+        }
+        file << endl;
+    }
+    file << "$EndNodes" << endl;
+
+    // write elements
+    file << "$Elements" << endl << n_cells_global << endl;
+    int gmsh_type, bcid;
+    int ele_start = 0; // more setup needed for writing from parallel
+    for (int i=ele_start; i<ele_start+n_eles; i++) {
+        for (bcid=0; bcid<n_bnds; bcid++) {
+            if (bc_list(bcid)==bctype_c(i)) break;
+        }
+        if (ctype(i)==0) {
+            // triangle
+            if (c2n_v(i)==3) {
+                gmsh_type = 2;
+                file << i+1  << " " << gmsh_type << " 2 " << bcid+1 << " " << bcid+1;
+                file << " " << iv2ivg(c2v(i,0)) << " " << iv2ivg(c2v(i,1)) << " " << iv2ivg(c2v(i,2)) << endl;
+            }else if (c2n_v(i)==6) {
+                gmsh_type = 9;
+                file << i+1  << " " << gmsh_type << " 2 " << bcid+1 << " " << bcid+1;
+                file << " " << iv2ivg(c2v(i,0)) << " " << iv2ivg(c2v(i,1)) << " " << iv2ivg(c2v(i,2));
+                file << " " << iv2ivg(c2v(i,3)) << " " << iv2ivg(c2v(i,4)) << " " << iv2ivg(c2v(i,5)) << endl;
+            }else if (c2n_v(i)==9) {
+                gmsh_type = 21;
+                FatalError("Cubic triangle not implemented");
+            }
+        }else if (ctype(i)==1) {
+            // quad
+            if (c2n_v(i)==4) {
+                gmsh_type = 3;
+                file << i+1 << " " << gmsh_type << " 2 " << bcid+1 << " " << bcid+1;
+                file << " " << iv2ivg(c2v(i,0)) << " " << iv2ivg(c2v(i,1)) << " " << iv2ivg(c2v(i,3)) << " " << iv2ivg(c2v(i,2)) << endl;
+            }else if (c2n_v(i)==8) {
+                gmsh_type = 16;
+                file << i+1 << " " << gmsh_type << " 2 " << bcid+1 << " " << bcid+1;
+                file << " " << iv2ivg(c2v(i,0)) << " " << iv2ivg(c2v(i,1)) << " " << iv2ivg(c2v(i,2)) << " " << iv2ivg(c2v(i,3));
+                file << " " << iv2ivg(c2v(i,4)) << " " << iv2ivg(c2v(i,5)) << " " << iv2ivg(c2v(i,6)) << " " << iv2ivg(c2v(i,7)) << endl;
+            }else if (c2n_v(i)==9) {
+                gmsh_type = 10;
+                file << i+1 << " " << gmsh_type << " 2 " << bcid+1 << " " << bcid+1;
+                file << " " << iv2ivg(c2v(i,0)) << " " << iv2ivg(c2v(i,2)) << " " << iv2ivg(c2v(i,8)) << " " << iv2ivg(c2v(i,6)) << " " << iv2ivg(c2v(i,1));
+                file << " " << iv2ivg(c2v(i,5)) << " " << iv2ivg(c2v(i,7)) << " " << iv2ivg(c2v(i,3)) << " " << iv2ivg(c2v(i,4)) << endl;
+            }
+        }else if (ctype(i)==4) {
+            //hex
+            if (c2n_v(i)==8) {
+                gmsh_type = 5;
+                file << i+1  << " " << gmsh_type << " 2 " << bcid+1 << " " << bcid+1;
+                file << " " << iv2ivg(c2v(i,1)) << " " << iv2ivg(c2v(i,1)) << " " << iv2ivg(c2v(i,3)) << " " << iv2ivg(c2v(i,2));
+                file << " " << iv2ivg(c2v(i,4)) << " " << iv2ivg(c2v(i,5)) << " " << iv2ivg(c2v(i,7)) << " " << iv2ivg(c2v(i,6)) << endl;
+            }
+        }
+    }
+
+    /* write non-interior 'elements' (boundary faces) */
+    /** ONLY FOR 2D CURRENTLY -- To fix, add array<array<int>> boundFaces to mesh class
+      * (same as boundPts, but for faces) - since since faces, not edges, needed for 3D */
+    // also, only for linear edges currently [Gmsh: 1==linear edge, 8==quadtratic edge]
+    int faceid = n_cells_global + 1;
+    int nv = 0;
+    for (int i=0; i<n_bnds; i++) {
+        nv = boundPts(i).get_dim(0);
+        set<int> edges;
+        int iv;
+        for (int j=0; j<nv; j++) {
+            iv = boundPts(i)(j);
+            for (int k=0; k<v2n_e(iv); k++) {
+                edges.insert(v2e(j)(k));
+            }
+        }
+        set<int>::iterator it;
+        for (it=edges.begin(); it!=edges.end(); it++) {
+            file << faceid << " 1 2 " << i << " " << i << " " << e2v(*it,0) << " " << e2v(*it,1) << endl;
+            faceid++;
+        }
+    }
+    file << "$EndElements" << endl;
+    file.close();
+}
+
 void mesh::update_grid_coords(void)
 {
     unsigned short iDim;
@@ -456,18 +615,17 @@ void mesh::update_grid_coords(void)
 double mesh::check_grid(solution* FlowSol) {
     unsigned short iDim;
     unsigned long iElem, ElemCounter = 0;
-    double Area, Volume, MinArea = 1E22, MinVolume = 1E22;
+    double Area, Volume, MinArea = DBL_MAX, MinVolume = DBL_MAX;
     //double MaxArea = -1E22, MaxVolume = -1E22  // never used
     bool NegVol;
 
     /*--- Load up each triangle and tetrahedron to check for negative volumes. ---*/
 
     for (iElem = 0; iElem < n_eles; iElem++) {
-
         /*--- Triangles ---*/
         if (n_dims == 2) {
-            double a[3], b[3];
 
+            double a[2], b[2];
             for (iDim = 0; iDim < n_dims; iDim++) {
                 a[iDim] = xv(c2v(iElem,0),iDim)-xv(c2v(iElem,1),iDim);
                 b[iDim] = xv(c2v(iElem,1),iDim)-xv(c2v(iElem,2),iDim);
@@ -482,7 +640,6 @@ double mesh::check_grid(solution* FlowSol) {
         }
 
         /*--- Tetrahedra ---*/
-
         if (n_dims == 3) {
             double r1[3], r2[3], r3[3], CrossProduct[3];
 
@@ -591,21 +748,21 @@ void mesh::set_boundary_displacements(solution *FlowSol)
     }*/
 
     array<double> VarCoord(n_dims);
-    VarCoord(0) = 0.5;
-    VarCoord(1) = 0.5;
-    cout << "Applying Boundary Conditions... number of boundaries: " << n_bnds << endl;
+    VarCoord(0) = 0.01;
+    VarCoord(1) = 0.01;
+    cout << "Applying Boundary Conditions..." << endl;
+    /// cout << "number of boundaries: " << n_bnds << endl;
     /*--- Set the known displacements, note that some points of the moving surfaces
     could be on on the symmetry plane, we should specify DeleteValsRowi again (just in case) ---*/
     for (iBound = 0; iBound < n_bnds; iBound++) {
         /*if (((config->GetMarker_All_Moving(iBound) == YES) && (Kind_SU2 == SU2_CFD)) ||
                 ((config->GetMarker_All_DV(iBound) == YES) && (Kind_SU2 == SU2_MDC))) */
-        cout << "checking boundary #" << iBound << ", type " << bc_list(iBound) << ", flag " << bound_flags(iBound) << endl;
+        cout << "  checking boundary #" << iBound << ", type " << bc_list(iBound) << ", flag " << bound_flags(iBound) << endl;
         if (bound_flags(iBound) == MOTION_ENABLED) {
-            cout << "Setting boundary displacement for boundary type " << bc_list(iBound) << endl;
-            cout << "Applying to " << nBndPts(iBound) << " points:" << endl;
+            cout << "  --Setting boundary displacement for boundary type " << bc_list(iBound) << endl;
+            cout << "  --Applying to " << nBndPts(iBound) << " points" << endl;
             for (iVertex = 0; iVertex < nBndPts(iBound); iVertex++) {
                 iPoint = boundPts(iBound)(iVertex);
-                cout << iPoint << endl;
                 // get amount which each point is supposed to move at this time step
                 // **for now, set to a constant (setup data structure(s) later)**
                 //VarCoord = geometry->vertex[iBound][iVertex]->GetVarCoord();
