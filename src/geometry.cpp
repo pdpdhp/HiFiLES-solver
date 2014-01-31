@@ -173,6 +173,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     rot_tag.setup(max_inters);
     unmatched_inters.setup(max_inters);
 
+    Mesh.v2e.setup(Mesh.n_verts);
     Mesh.v2n_e.setup(Mesh.n_verts);
     Mesh.v2n_e.initialize_to_zero();
 
@@ -2313,7 +2314,8 @@ void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c
     if (FlowSol->n_dims==3 || run_input.motion==1)
     {
         vector<int> e2v;
-        vector<vector<int> > v2e(n_verts);
+        //vector<vector<int> > v2e(n_verts);
+        vector<set<int> > v2e(n_verts);
 
         // Create array ic2e
         out_c2e.initialize_to_value(-1);
@@ -2344,11 +2346,11 @@ void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c
                 {
                     vlist_glob(i) = in_c2v(ic,vlist_loc(i));
 
-                    // ** NEW ** edge_2_vertices, vertex_2_edges
                     int iv = vlist_glob(i);
                     e2v.push_back(iv);
-                    v2e[iv].push_back(out_n_edges);
-                    out_v2n_e(iv)++;
+                    //v2e[iv].push_back(out_n_edges);
+                    v2e[iv].insert(out_n_edges);
+                    //out_v2n_e(iv)++;
                 }
 
                 // loop over the cells touching vertex vlist_glob(0)
@@ -2385,17 +2387,24 @@ void CompConnectivity(array<int>& in_c2v, array<int>& in_c2n_v, array<int>& in_c
         } // Loop over cells
         out_n_edges++;
 
+        set<int>::iterator it;
         // consider reversing for better use of CPU cache
         out_e2v.setup(out_n_edges,2);
         for (int ie=0; ie<out_n_edges; ie++) {
             out_e2v(ie,0) = e2v[2*ie];
             out_e2v(ie,1) = e2v[2*ie+1];
         }
-        out_v2e.setup(n_verts);
+        //out_v2e.setup(n_verts); //already setup
+        if (n_verts != out_v2e.get_dim(0)) FatalError("n_verts & out_v2e not same size!!");
         for (int iv=0; iv<n_verts; iv++) {
+            out_v2n_e(iv) = v2e[iv].size();
             out_v2e(iv).setup(out_v2n_e(iv));
-            for (int ie=0; ie<out_v2n_e(iv); ie++) {
-                out_v2e(iv)(ie) = v2e[iv][ie];
+            out_v2e(iv).initialize_to_zero();
+
+            int ie = 0;
+            for (it=v2e[iv].begin(); it!=v2e[iv].end(); ++it) {
+                out_v2e(iv)(ie) = (*it);
+                ie++;
             }
         }
 

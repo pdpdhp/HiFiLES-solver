@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
     if (run_input.motion) {
         Mesh.deform(&FlowSol);
         //Mesh.update(&FlowSol);
-        Mesh.write_mesh_gmsh(FlowSol.time);
+         if (i_steps%10==0) Mesh.write_mesh_gmsh(FlowSol.time);
 	}
 
     //cout << "double-free not happening here! " << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;

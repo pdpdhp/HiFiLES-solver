@@ -473,13 +473,13 @@ void mesh::write_mesh_gambit(double sim_time)
 
 void mesh::write_mesh_gmsh(double sim_time)
 {
-    string filename (run_input.mesh_file);
     cout << "sim_time " << sim_time << endl;
+
+    string filename (run_input.mesh_file);
     ostringstream sstream;
     sstream << sim_time;
-    cout << "sim_time " << sstream.str() << endl;
     string suffix = "_" + sstream.str();
-    cout << "suffix " << suffix << endl;
+    suffix.replace(suffix.find_first_of("."),1,"_");
     filename.insert(filename.size()-4,suffix);
     cout << "filename " << filename<< endl;
 
@@ -491,51 +491,66 @@ void mesh::write_mesh_gmsh(double sim_time)
     file << "$EndMeshFormat" << endl;
 
     // write boundary info
+    //cout << "$PhysicalNames" << endl << n_bnds << endl;
     file << "$PhysicalNames" << endl << n_bnds << endl;
     for (int i=0; i<n_bnds; i++) {
         if (bc_list(i) == -1) {
             file << n_dims << " "; // volume cell
             file << i+1  << " " << "\"FLUID\"" << endl;
+            //cout << n_dims << " "; // volume cell
+            //cout << i+1  << " " << "\"FLUID\"" << endl;
         }else{
             file << 1 << " ";  // edge
             file << i+1  << " " << "\"" << bc_flag[bc_list(i)] << "\"" << endl;
+            //cout << 1 << " ";  // edge
+            //cout << i+1  << " " << "\"" << bc_flag[bc_list(i)] << "\"" << endl;
         }
 
     }
     file << "$EndPhysicalNames" << endl;
+    //cout << "$EndPhysicalNames" << endl;
 
     // write nodes
     file << "$Nodes" << endl << n_verts_global << endl;
+    //cout << "$Nodes" << endl << n_verts_global << endl;
     for (int i=0; i<n_verts; i++) {
         file << i+1 << " " << xv(i,0) << " " << xv(i,1) << " ";
+        //cout << i+1 << " " << xv(i,0) << " " << xv(i,1) << " ";
         if (n_dims==2) {
             file << 0;
+            //cout << 0;
         }else{
             file << xv(i,2);
+            //cout << xv(i,2);
         }
         file << endl;
+        //cout << endl;
     }
     file << "$EndNodes" << endl;
+    //cout << "$EndNodes" << endl;
 
     // write elements
     file << "$Elements" << endl << n_cells_global << endl;
+    //cout << "$Elements" << endl << n_cells_global << endl;
     int gmsh_type, bcid;
     int ele_start = 0; // more setup needed for writing from parallel
     for (int i=ele_start; i<ele_start+n_eles; i++) {
-        for (bcid=0; bcid<n_bnds; bcid++) {
-            if (bc_list(bcid)==bctype_c(i)) break;
+        for (bcid=1; bcid<n_bnds+1; bcid++) {
+            if (bc_list(bcid-1)==bctype_c(i)) break; // bc_list wrong size?
         }
         if (ctype(i)==0) {
             // triangle
             if (c2n_v(i)==3) {
                 gmsh_type = 2;
-                file << i+1  << " " << gmsh_type << " 2 " << bcid+1 << " " << bcid+1;
-                file << " " << iv2ivg(c2v(i,0)) << " " << iv2ivg(c2v(i,1)) << " " << iv2ivg(c2v(i,2)) << endl;
+                file << i+1  << " " << gmsh_type << " 2 " << bcid << " " << bcid;
+                file << " " << iv2ivg(c2v(i,0))+1 << " " << iv2ivg(c2v(i,1))+1 << " " << iv2ivg(c2v(i,2))+1 << endl;
+                //cout << i+1  << " " << gmsh_type << " 2 " << bcid << " " << bcid;
+                //cout << " " << iv2ivg(c2v(i,0))+1 << " " << iv2ivg(c2v(i,1))+1 << " " << iv2ivg(c2v(i,2))+1 << endl;
             }else if (c2n_v(i)==6) {
                 gmsh_type = 9;
-                file << i+1  << " " << gmsh_type << " 2 " << bcid+1 << " " << bcid+1;
-                file << " " << iv2ivg(c2v(i,0)) << " " << iv2ivg(c2v(i,1)) << " " << iv2ivg(c2v(i,2));
-                file << " " << iv2ivg(c2v(i,3)) << " " << iv2ivg(c2v(i,4)) << " " << iv2ivg(c2v(i,5)) << endl;
+                file << i+1  << " " << gmsh_type << " 2 " << bcid << " " << bcid;
+                file << " " << iv2ivg(c2v(i,0))+1 << " " << iv2ivg(c2v(i,1))+1 << " " << iv2ivg(c2v(i,2))+1;
+                file << " " << iv2ivg(c2v(i,3))+1 << " " << iv2ivg(c2v(i,4))+1 << " " << iv2ivg(c2v(i,5))+1 << endl;
             }else if (c2n_v(i)==9) {
                 gmsh_type = 21;
                 FatalError("Cubic triangle not implemented");
@@ -544,35 +559,36 @@ void mesh::write_mesh_gmsh(double sim_time)
             // quad
             if (c2n_v(i)==4) {
                 gmsh_type = 3;
-                file << i+1 << " " << gmsh_type << " 2 " << bcid+1 << " " << bcid+1;
-                file << " " << iv2ivg(c2v(i,0)) << " " << iv2ivg(c2v(i,1)) << " " << iv2ivg(c2v(i,3)) << " " << iv2ivg(c2v(i,2)) << endl;
+                file << i+1 << " " << gmsh_type << " 2 " << bcid << " " << bcid;
+                file << " " << iv2ivg(c2v(i,0))+1 << " " << iv2ivg(c2v(i,1))+1 << " " << iv2ivg(c2v(i,3))+1 << " " << iv2ivg(c2v(i,2))+1 << endl;
             }else if (c2n_v(i)==8) {
                 gmsh_type = 16;
-                file << i+1 << " " << gmsh_type << " 2 " << bcid+1 << " " << bcid+1;
-                file << " " << iv2ivg(c2v(i,0)) << " " << iv2ivg(c2v(i,1)) << " " << iv2ivg(c2v(i,2)) << " " << iv2ivg(c2v(i,3));
-                file << " " << iv2ivg(c2v(i,4)) << " " << iv2ivg(c2v(i,5)) << " " << iv2ivg(c2v(i,6)) << " " << iv2ivg(c2v(i,7)) << endl;
+                file << i+1 << " " << gmsh_type << " 2 " << bcid << " " << bcid;
+                file << " " << iv2ivg(c2v(i,0))+1 << " " << iv2ivg(c2v(i,1))+1 << " " << iv2ivg(c2v(i,2))+1 << " " << iv2ivg(c2v(i,3))+1;
+                file << " " << iv2ivg(c2v(i,4))+1 << " " << iv2ivg(c2v(i,5))+1 << " " << iv2ivg(c2v(i,6))+1 << " " << iv2ivg(c2v(i,7))+1 << endl;
             }else if (c2n_v(i)==9) {
                 gmsh_type = 10;
-                file << i+1 << " " << gmsh_type << " 2 " << bcid+1 << " " << bcid+1;
-                file << " " << iv2ivg(c2v(i,0)) << " " << iv2ivg(c2v(i,2)) << " " << iv2ivg(c2v(i,8)) << " " << iv2ivg(c2v(i,6)) << " " << iv2ivg(c2v(i,1));
-                file << " " << iv2ivg(c2v(i,5)) << " " << iv2ivg(c2v(i,7)) << " " << iv2ivg(c2v(i,3)) << " " << iv2ivg(c2v(i,4)) << endl;
+                file << i+1 << " " << gmsh_type << " 2 " << bcid << " " << bcid;
+                file << " " << iv2ivg(c2v(i,0))+1 << " " << iv2ivg(c2v(i,2))+1 << " " << iv2ivg(c2v(i,8))+1 << " " << iv2ivg(c2v(i,6))+1 << " " << iv2ivg(c2v(i,1))+1;
+                file << " " << iv2ivg(c2v(i,5))+1 << " " << iv2ivg(c2v(i,7))+1 << " " << iv2ivg(c2v(i,3))+1 << " " << iv2ivg(c2v(i,4))+1 << endl;
             }
         }else if (ctype(i)==4) {
             //hex
             if (c2n_v(i)==8) {
                 gmsh_type = 5;
-                file << i+1  << " " << gmsh_type << " 2 " << bcid+1 << " " << bcid+1;
-                file << " " << iv2ivg(c2v(i,1)) << " " << iv2ivg(c2v(i,1)) << " " << iv2ivg(c2v(i,3)) << " " << iv2ivg(c2v(i,2));
-                file << " " << iv2ivg(c2v(i,4)) << " " << iv2ivg(c2v(i,5)) << " " << iv2ivg(c2v(i,7)) << " " << iv2ivg(c2v(i,6)) << endl;
+                file << i+1  << " " << gmsh_type << " 2 " << bcid << " " << bcid;
+                file << " " << iv2ivg(c2v(i,1))+1 << " " << iv2ivg(c2v(i,1))+1 << " " << iv2ivg(c2v(i,3))+1 << " " << iv2ivg(c2v(i,2))+1;
+                file << " " << iv2ivg(c2v(i,4))+1 << " " << iv2ivg(c2v(i,5))+1 << " " << iv2ivg(c2v(i,7))+1 << " " << iv2ivg(c2v(i,6))+1 << endl;
             }
         }
     }
-
+    //cout << "SIZE(e2v): " << e2v.get_dim(0) << "," << e2v.get_dim(1) << endl;
+    //cout << "N_FACES: " << n_faces << endl;
     /* write non-interior 'elements' (boundary faces) */
     /** ONLY FOR 2D CURRENTLY -- To fix, add array<array<int>> boundFaces to mesh class
       * (same as boundPts, but for faces) - since since faces, not edges, needed for 3D */
     // also, only for linear edges currently [Gmsh: 1==linear edge, 8==quadtratic edge]
-    int faceid = n_cells_global + 1;
+    /*int faceid = n_cells_global + 1;
     int nv = 0;
     for (int i=0; i<n_bnds; i++) {
         nv = boundPts(i).get_dim(0);
@@ -582,15 +598,22 @@ void mesh::write_mesh_gmsh(double sim_time)
             iv = boundPts(i)(j);
             for (int k=0; k<v2n_e(iv); k++) {
                 edges.insert(v2e(j)(k));
+                cout << "Edge #: " << v2e(j)(k) << endl;
+                if (v2e(j)(k) > n_faces) {
+                    cout << "** n_faces=" << n_faces << " but v2e(" << j << ")(" << k << ")=" << v2e(j)(k) << "!!" << endl;
+                    cin.get();
+                }
             }
         }
         set<int>::iterator it;
         for (it=edges.begin(); it!=edges.end(); it++) {
-            file << faceid << " 1 2 " << i << " " << i << " " << e2v(*it,0) << " " << e2v(*it,1) << endl;
+            file << faceid << " 1 2 " << i+1 << " " << i+1 << " " << e2v(*it,0)+1 << " " << e2v(*it,1)+1 << endl;
+            cout << faceid << " 1 2 " << i+1 << " " << i+1 << " " << e2v(*it,0)+1 << " " << e2v(*it,1)+1 << endl;
             faceid++;
         }
-    }
+    }*/
     file << "$EndElements" << endl;
+    //cout << "$EndElements" << endl;
     file.close();
 }
 
@@ -748,19 +771,19 @@ void mesh::set_boundary_displacements(solution *FlowSol)
     }*/
 
     array<double> VarCoord(n_dims);
-    VarCoord(0) = 0.01;
-    VarCoord(1) = 0.01;
-    cout << "Applying Boundary Conditions..." << endl;
+    VarCoord(0) = 0.1;
+    VarCoord(1) = 0.1;
+    //cout << "Applying Boundary Conditions..." << endl;
     /// cout << "number of boundaries: " << n_bnds << endl;
     /*--- Set the known displacements, note that some points of the moving surfaces
     could be on on the symmetry plane, we should specify DeleteValsRowi again (just in case) ---*/
     for (iBound = 0; iBound < n_bnds; iBound++) {
         /*if (((config->GetMarker_All_Moving(iBound) == YES) && (Kind_SU2 == SU2_CFD)) ||
                 ((config->GetMarker_All_DV(iBound) == YES) && (Kind_SU2 == SU2_MDC))) */
-        cout << "  checking boundary #" << iBound << ", type " << bc_list(iBound) << ", flag " << bound_flags(iBound) << endl;
+        //cout << "  checking boundary #" << iBound << ", type " << bc_list(iBound) << ", flag " << bound_flags(iBound) << endl;
         if (bound_flags(iBound) == MOTION_ENABLED) {
-            cout << "  --Setting boundary displacement for boundary type " << bc_list(iBound) << endl;
-            cout << "  --Applying to " << nBndPts(iBound) << " points" << endl;
+            //cout << "  --Setting boundary displacement for boundary type " << bc_list(iBound) << endl;
+            //cout << "  --Applying to " << nBndPts(iBound) << " points" << endl;
             for (iVertex = 0; iVertex < nBndPts(iBound); iVertex++) {
                 iPoint = boundPts(iBound)(iVertex);
                 // get amount which each point is supposed to move at this time step
@@ -775,5 +798,5 @@ void mesh::set_boundary_displacements(solution *FlowSol)
             }
         }
     }
-    cout << "Finished Applying Boundary Conditions!" << endl;
+    //cout << "Finished Applying Boundary Conditions!" << endl;
 }
