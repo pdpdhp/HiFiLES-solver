@@ -63,6 +63,9 @@ double* get_delta_disu_fpts_ptr(int in_ele_type, int in_ele, int in_field, int n
 /*! get pointer to gradient of the discontinuous solution at a flux point */
 double* get_grad_disu_fpts_ptr(int in_ele_type, int in_ele, int in_local_inter, int in_field, int in_dim, int in_fpt, struct solution* FlowSol);
 
+/*! get pointer to grid velocity at a flux point */
+double* get_vel_fpts_ptr(int in_ele_type, int in_ele, int in_local_inter, int in_fpt, int in_dim, struct solution* FlowSol);
+
 // Initialize the solution in the mesh
 void InitSolution(struct solution* FlowSol);
 

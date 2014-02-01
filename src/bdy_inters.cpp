@@ -10,7 +10,9 @@
  * HiFiLES (High Fidelity Large Eddy Simulation).
  * Copyright (C) 2013 Aerospace Computing Laboratory.
  */
-
+// for code highlighting purposes:
+#define _CPU
+//-------------------------------
 #include <iostream>
 #include <cmath>
 
@@ -187,22 +189,32 @@ void bdy_inters::calc_norm_tconinvf_fpts_boundary(double time_bound)
         norm(m) = *norm_fpts(j,i,m);
 
       // calculate discontinuous solution at flux points
-      for(int k=0;k<n_fields;k++) 
+      for(int k=0;k<n_fields;k++) {
         temp_u_l(k)=(*disu_fpts_l(j,i,k));
+        temp_v_l(k)=(*vel_fpts_l(j,i,k));
+      }
   
       for (int m=0;m<n_dims;m++)
         temp_loc(m) = *loc_fpts(j,i,m);
 
-      set_inv_boundary_conditions(boundary_type(i),temp_u_l.get_ptr_cpu(),temp_u_r.get_ptr_cpu(),norm.get_ptr_cpu(),temp_loc.get_ptr_cpu(),bdy_params.get_ptr_cpu(),n_dims,n_fields,run_input.gamma,run_input.R_ref,time_bound,run_input.equation);
+      set_inv_boundary_conditions(boundary_type(i),temp_u_l.get_ptr_cpu(),temp_u_r.get_ptr_cpu(),temp_v_l.get_ptr_cpu(),norm.get_ptr_cpu(),temp_loc.get_ptr_cpu(),bdy_params.get_ptr_cpu(),n_dims,n_fields,run_input.gamma,run_input.R_ref,time_bound,run_input.equation);
 
       // calculate flux from discontinuous solution at flux points
       if(n_dims==2) {
         calc_invf_2d(temp_u_l,temp_f_l);
         calc_invf_2d(temp_u_r,temp_f_r);
+        if(motion) {
+            calc_alef_2d(temp_u_l,temp_v_l,temp_f_l);
+            calc_alef_2d(temp_u_r,temp_v_r,temp_f_r);
+        }
       }
       else if(n_dims==3) {
         calc_invf_3d(temp_u_l,temp_f_l);
         calc_invf_3d(temp_u_r,temp_f_r);
+        if(motion) {
+            calc_alef_3d(temp_u_l,temp_v_l,temp_f_l);
+            calc_alef_3d(temp_u_r,temp_v_r,temp_f_r);
+        }
       }
       else
         FatalError("ERROR: Invalid number of dimensions ... ");
@@ -264,7 +276,7 @@ void bdy_inters::calc_norm_tconinvf_fpts_boundary(double time_bound)
   #endif
 }
 
-void bdy_inters::set_inv_boundary_conditions(int bdy_type, double* u_l, double* u_r, double *norm, double *loc, double *bdy_params, int n_dims, int n_fields, double gamma, double R_ref, double time_bound, int equation)
+void bdy_inters::set_inv_boundary_conditions(int bdy_type, double* u_l, double* u_r, double* gv, double *norm, double *loc, double *bdy_params, int n_dims, int n_fields, double gamma, double R_ref, double time_bound, int equation)
 {
   double rho_l, rho_r;
   double v_l[n_dims], v_r[n_dims];
@@ -285,13 +297,15 @@ void bdy_inters::set_inv_boundary_conditions(int bdy_type, double* u_l, double* 
     // Store primitive variables for clarity
     rho_l = u_l[0];
     for (int i=0; i<n_dims; i++)
-      v_l[i] = u_l[i+1]/u_l[0];
+        v_l[i] = u_l[i+1]/u_l[0];
+    /*for (int i=0; i<n_dims; i++)
+        v_l[i] = u_l[i+1]/u_l[0] - gv[i];*/
     e_l = u_l[n_dims+1];
 
     // Compute pressure on left side
     v_sq = 0.;
     for (int i=0; i<n_dims; i++)
-      v_sq += (v_l[i]*v_l[i]);
+        v_sq += (v_l[i]*v_l[i]);
     p_l = (gamma-1.0)*(e_l - 0.5*rho_l*v_sq);
 
     // Subsonic inflow simple (free pressure)
@@ -300,7 +314,7 @@ void bdy_inters::set_inv_boundary_conditions(int bdy_type, double* u_l, double* 
       // fix density and velocity
       rho_r = rho_bound;
       for (int i=0; i<n_dims; i++)
-        v_r[i] = v_bound[i];
+          v_r[i] = v_bound[i] - gv[i];
       
       // extrapolate pressure
       p_r = p_l;
@@ -318,7 +332,7 @@ void bdy_inters::set_inv_boundary_conditions(int bdy_type, double* u_l, double* 
       // extrapolate density and velocity
       rho_r = rho_l;
       for (int i=0; i<n_dims; i++)
-        v_r[i] = v_l[i];
+          v_r[i] = v_l[i];
       
       // fix pressure
       p_r = p_bound;
@@ -468,7 +482,7 @@ void bdy_inters::set_inv_boundary_conditions(int bdy_type, double* u_l, double* 
       // fix density and velocity
       rho_r = rho_bound;
       for (int i=0; i<n_dims; i++)
-        v_r[i] = v_bound[i];
+          v_r[i] = v_bound[i]-gv[i];
 
       // fix pressure
       p_r = p_bound;
@@ -523,7 +537,7 @@ void bdy_inters::set_inv_boundary_conditions(int bdy_type, double* u_l, double* 
       
       // no-slip
       for (int i=0; i<n_dims; i++)
-        v_r[i] = 0.;
+          v_r[i] = gv[i];
       
       // energy
       v_sq = 0.;
@@ -543,7 +557,7 @@ void bdy_inters::set_inv_boundary_conditions(int bdy_type, double* u_l, double* 
       
       // no-slip
       for (int i=0; i<n_dims; i++)
-        v_r[i] = 0.;
+          v_r[i] = gv[i];
       
       // energy
       v_sq = 0.;
@@ -566,7 +580,7 @@ void bdy_inters::set_inv_boundary_conditions(int bdy_type, double* u_l, double* 
       
       // no-slip
       for (int i=0; i<n_dims; i++)
-        v_r[i] = v_wall[i];
+          v_r[i] = v_wall[i] + gv[i];
       
       // energy
       v_sq = 0.;
@@ -586,7 +600,7 @@ void bdy_inters::set_inv_boundary_conditions(int bdy_type, double* u_l, double* 
       
       // no-slip
       for (int i=0; i<n_dims; i++)
-        v_r[i] = v_wall[i];
+          v_r[i] = v_wall[i] + gv[i];
       
       // energy
       v_sq = 0.;
@@ -750,13 +764,15 @@ void bdy_inters::calc_norm_tconvisf_fpts_boundary(double time_bound)
         norm(m) = *norm_fpts(j,i,m);
       
       // obtain discontinuous solution at flux points
-      for(int k=0;k<n_fields;k++)
+      for(int k=0;k<n_fields;k++) {
         temp_u_l(k)=(*disu_fpts_l(j,i,k));
+        temp_v_l(k)=(*vel_fpts_l(j,i,k));
+      }
       
       for (int m=0;m<n_dims;m++)
         temp_loc(m) = *loc_fpts(j,i,m);
 
-      set_inv_boundary_conditions(bdy_spec,temp_u_l.get_ptr_cpu(),temp_u_r.get_ptr_cpu(),norm.get_ptr_cpu(),temp_loc.get_ptr_cpu(),bdy_params.get_ptr_cpu(),n_dims,n_fields,run_input.gamma,run_input.R_ref,time_bound,run_input.equation);
+      set_inv_boundary_conditions(bdy_spec,temp_u_l.get_ptr_cpu(),temp_u_r.get_ptr_cpu(),temp_v_l.get_ptr_cpu(),norm.get_ptr_cpu(),temp_loc.get_ptr_cpu(),bdy_params.get_ptr_cpu(),n_dims,n_fields,run_input.gamma,run_input.R_ref,time_bound,run_input.equation);
       
       // obtain gradient of discontinuous solution at flux points
       for(int k=0;k<n_dims;k++)

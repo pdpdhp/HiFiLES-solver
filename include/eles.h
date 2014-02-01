@@ -226,6 +226,9 @@ public:
     /*! get a pointer to gradient of discontinuous solution at a flux point */
     double* get_grad_disu_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_dim, int in_field, int in_ele);
 
+    /*! get a pointer to the grid velocity at a flux point */
+    double* get_vel_fpts_ptr(int in_ele, int in_ele_local_inter, int in_inter_local_fpt, int in_dim);
+
     /*! get a pointer to the normal transformed continuous viscous flux at a flux point */
     //double* get_norm_tconvisf_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_field, int in_ele);
 
@@ -261,9 +264,6 @@ public:
 
     /*! set opp_r */
     void set_opp_r(void);
-
-    /*! set opp_vf */
-    //void set_opp_vf(int in_ele);
 
     /*! calculate position of the plot points */
     void calc_pos_ppts(int in_ele, array<double>& out_pos_ppts);
@@ -329,7 +329,10 @@ public:
     void set_grid_vel_spt(int in_ele, int in_spt, array<double> in_vel);
 
     /*! interpolate grid velocity from shape points to flux points */
-    void set_grid_vel_fpts();
+    void set_grid_vel_fpts(void);
+
+    /*! interpolate grid velocity from shape points to solution points */
+    void set_grid_vel_upts(void);
 
     // #### virtual methods ####
 
@@ -390,7 +393,6 @@ public:
     array<double> compute_error(int in_norm_type, double& time);
 
     array<double> get_pointwise_error(array<double>& sol, array<double>& grad_sol, array<double>& loc, double& time, int in_norm_type);
-
 
 protected:
 
@@ -486,13 +488,13 @@ protected:
     /*! transformed normal at flux points */
     array< array<double> > tnorm_inters_cubpts;
 
-    /*! location of solution points in standard element */
+    /*! location of solution points in standard element (r,s) */
     array<double> loc_upts;
 
     /*! location of solution points in standard element */
     array<double> loc_upts_rest;
 
-    /*! location of flux points in standard element */
+    /*! location of flux points in standard element (r,s) */
     array<double> tloc_fpts;
 
     /*! location of interface cubature points in standard element */
@@ -547,7 +549,7 @@ protected:
     Description: Mesh velocity at flux points \n
     indexing: (in_ele, in_fpt, in_dim) \n
     */
-    array<double> vel_fpts;
+    array<double> vel_fpts, vel_upts;
 
 	/*! index of local (individual element) shape point to index of shape point within ele class (eles_tris, etc.) */
 	array<int> loc_spt2spt_ctype;
@@ -562,7 +564,7 @@ protected:
     array<double> temp_grad_u;
 
     /*! temporary grid velocity storage at a single solution point */
-    array<double> temp_w;
+    array<double> temp_v;
 
     /*! Matrix of filter weights at solution points */
     array<double> filter_upts;

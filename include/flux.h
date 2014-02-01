@@ -33,7 +33,7 @@ void calc_visf_3d(array<double>& in_u, array<double>& in_grad_u, array<double>& 
  * \param[in] in_w - Grid velocity
  * \param[in,out] out_f - Modified flux vector
  */
-void calc_alef_2d(array<double>& in_u, array<double>& in_w, array<double>& out_f);
+void calc_alef_2d(array<double>& in_u, array<double>& in_v, array<double>& out_f);
 
 /*! 
  * \brief calculate & add addtional ALE flux term in 3D 
@@ -41,4 +41,4 @@ void calc_alef_2d(array<double>& in_u, array<double>& in_w, array<double>& out_f
  * \param[in] in_w - Grid velocity
  * \param[in,out] out_f - Modified flux vector
  */
-void calc_alef_3d(array<double>& in_u, array<double>& in_w, array<double>& out_f);
+void calc_alef_3d(array<double>& in_u, array<double>& in_v, array<double>& out_f);

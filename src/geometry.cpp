@@ -408,7 +408,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     if (FlowSol->rank==0) cout << "setting element transforms ... " << endl;
     for(int i=0;i<FlowSol->n_ele_types;i++) {
         if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
-            //FlowSol->mesh_eles(i)->set_transforms(in_run_type);
+            FlowSol->mesh_eles(i)->set_transforms(in_run_type);
         }
     }
 
@@ -418,11 +418,6 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
         for(int i=0;i<FlowSol->n_ele_types;i++) {
             if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
                 FlowSol->mesh_eles(i)->initialize_grid_vel();
-                //FlowSol->mesh_eles(i)->set_opp_vf();
-                /*opp_vf.setup(n_eles);
-                    for (int ic=0; ic<n_eles; ic++)
-                        set_opp_vf(run_input.sparse_tri,ic);
-                }*/
             }
         }
     }
@@ -431,7 +426,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     if (FlowSol->rank==0) cout << "setting element transforms at interface cubpts ... " << endl;
     for(int i=0;i<FlowSol->n_ele_types;i++) {
         if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
-            //FlowSol->mesh_eles(i)->set_transforms_inters_cubpts();
+            FlowSol->mesh_eles(i)->set_transforms_inters_cubpts();
         }
     }
 
@@ -439,7 +434,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     if (FlowSol->rank==0) cout << "setting element transforms at volume cubpts ... " << endl;
     for(int i=0;i<FlowSol->n_ele_types;i++) {
         if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
-            //FlowSol->mesh_eles(i)->set_transforms_vol_cubpts();
+            FlowSol->mesh_eles(i)->set_transforms_vol_cubpts();
         }
     }
 

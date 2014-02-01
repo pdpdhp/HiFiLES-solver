@@ -12,7 +12,7 @@
  */
 // Just for the purpose of code highlighting
 //#define _MPI
-//#define _CPU
+#define _CPU
 // -----------------------------------------
 #include <iostream>
 #include <cmath>
@@ -43,8 +43,9 @@ using namespace std;
 
 int_inters::int_inters()
 {	
-	order=run_input.order;
-	viscous=run_input.viscous;
+    order   = run_input.order;
+    viscous = run_input.viscous;
+    motion  = run_input.motion;
 }
 
 int_inters::~int_inters() { }
@@ -122,6 +123,9 @@ void int_inters::set_interior(int in_inter, int in_ele_type_l, int in_ele_type_r
 	  	for(j=0;j<n_dims;j++)
 	  	{
 	  		norm_fpts(i,in_inter,j)=get_norm_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
+
+            vel_fpts_l(i,in_inter,j)=get_vel_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
+            vel_fpts_r(i,in_inter,j)=get_vel_fpts_ptr(in_ele_type_r,in_ele_r,in_local_inter_r,i,j_rhs,FlowSol);
 	  	}
 	  }	
   }
@@ -176,10 +180,14 @@ void int_inters::calc_norm_tconinvf_fpts(void)
 		{
 
 			// calculate discontinuous solution at flux points
-			for(int k=0;k<n_fields;k++) {
+            for (int k=0;k<n_fields;k++) {
 				temp_u_l(k)=(*disu_fpts_l(j,i,k));
 				temp_u_r(k)=(*disu_fpts_r(j,i,k));
 			}
+            for (int k=0; k<n_dims; k++) {
+                temp_v_l(k)=(*vel_fpts_l(j,i,k));
+                temp_v_r(k)=(*vel_fpts_r(j,i,k));
+            }
 
       // storing normal components
       for (int m=0;m<n_dims;m++)
@@ -195,17 +203,17 @@ void int_inters::calc_norm_tconinvf_fpts(void)
 			  if(n_dims==2) {
 			  	calc_invf_2d(temp_u_l,temp_f_l);
 			  	calc_invf_2d(temp_u_r,temp_f_r);
-                if (run_input.motion) {
-                    //calc_alef_2d(temp_u_l,temp_w_l,temp_f_l);
-                    //calc_alef_2d(temp_u_r,temp_w_r,temp_f_r);
+                if (motion) {
+                    calc_alef_2d(temp_u_l,temp_v_l,temp_f_l);
+                    calc_alef_2d(temp_u_r,temp_v_r,temp_f_r);
                 }
 			  }
 			  else if(n_dims==3) {
 			  	calc_invf_3d(temp_u_l,temp_f_l);
 			  	calc_invf_3d(temp_u_r,temp_f_r);
-                if (run_input.motion) {
-                    //calc_alef_3d(temp_u_l,temp_w_l,temp_f_l);
-                    //calc_alef_3d(temp_u_r,temp_w_r,temp_f_r);
+                if (motion) {
+                    calc_alef_3d(temp_u_l,temp_v_l,temp_f_l);
+                    calc_alef_3d(temp_u_r,temp_v_r,temp_f_r);
                 }
 			  }
 			  else

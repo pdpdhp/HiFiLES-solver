@@ -68,6 +68,7 @@ protected:
 
     int order;
     int viscous;
+    int motion;
     int n_inters;
     int n_fpts_per_inter;
     int n_fields;
@@ -83,6 +84,9 @@ protected:
     array<double*> loc_fpts;
     array<double*> grad_disu_fpts_l;
 
+    array<double*> vel_fpts_l;
+    array<double*> vel_fpts_r;
+
     array<double> temp_u_l;
     array<double> temp_u_r;
 
@@ -94,6 +98,10 @@ protected:
 
     array<double> temp_fn_l;
     array<double> temp_fn_r;
+
+    // Grid velocity (continuous across eles)
+    array<double> temp_v_l;
+    array<double> temp_v_r;
 
     array<double> temp_f;
 

@@ -338,13 +338,13 @@ void calc_visf_3d(array<double>& in_u, array<double>& in_grad_u, array<double>& 
 
 // Add additional ALE flux term due to mesh motion (2D)
 
-void calc_alef_2d(array<double>& in_u, array<double>& in_w, array<double>& out_f)
+void calc_alef_2d(array<double>& in_u, array<double>& in_v, array<double>& out_f)
 {
   if (run_input.equation==0) // Euler / N-S
   {
       double u_hat, v_hat;
-      u_hat = in_w(0);
-      v_hat = in_w(1);
+      u_hat = in_v(0);
+      v_hat = in_v(1);
 
       out_f(1,0) -= in_u(1)*u_hat;
       out_f(2,0) -= in_u(1)*v_hat;
@@ -356,8 +356,8 @@ void calc_alef_2d(array<double>& in_u, array<double>& in_w, array<double>& out_f
   }
   else if (run_input.equation==1) // Advection-diffusion
   {
-    out_f(0,0) -= in_w(0)*in_u(0);
-    out_f(0,1) -= in_w(1)*in_u(0);
+    out_f(0,0) -= in_v(0)*in_u(0);
+    out_f(0,1) -= in_v(1)*in_u(0);
   }
   else
   {
@@ -367,14 +367,14 @@ void calc_alef_2d(array<double>& in_u, array<double>& in_w, array<double>& out_f
 
 // Add additional ALE flux term due to mesh motion (3D)
 
-void calc_alef_3d(array<double>& in_u, array<double>& in_w, array<double>& out_f)
+void calc_alef_3d(array<double>& in_u, array<double>& in_v, array<double>& out_f)
 {
   if (run_input.equation==0) // Euler / N-S
   {
       double u_hat, v_hat, w_hat;
-      u_hat = in_w(0);
-      v_hat = in_w(1);
-      w_hat = in_w(2);
+      u_hat = in_v(0);
+      v_hat = in_v(1);
+      w_hat = in_v(2);
 
       out_f(1,0) -= in_u(1)*u_hat;
       out_f(2,0) -= in_u(1)*v_hat;
@@ -393,8 +393,8 @@ void calc_alef_3d(array<double>& in_u, array<double>& in_w, array<double>& out_f
   }
   else if (run_input.equation==1) // Advection-diffusion
   {
-    out_f(0,0) -= in_w(0)*in_u(0);
-    out_f(0,1) -= in_w(1)*in_u(0);
+    out_f(0,0) -= in_v(0)*in_u(0);
+    out_f(0,1) -= in_v(1)*in_u(0);
   }
   else
   {

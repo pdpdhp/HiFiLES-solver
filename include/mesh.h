@@ -134,17 +134,6 @@ private:
     int failedIts;
     double min_vol, min_length, solver_tolerance;
 
-    /** enumeration for cell type */
-    enum CTYPE {
-        TRI   = 0,
-        QUAD  = 1,
-        TET   = 2,
-        WEDGE = 3,
-        BRICK = 4
-    };
-
-    enum {MOTION_DISABLED, MOTION_ENABLED};
-
     /** create individual-element stiffness matrix - triangles */
     // will I actually need the FlowSol variable for setting up the Stiffnexx Matrix?
     bool set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id);

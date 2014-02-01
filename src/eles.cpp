@@ -12,7 +12,7 @@
  */
 // Just for the purpose of code highlighting
 //#define _MPI
-//#define _CPU
+#define _CPU
 // -----------------------------------------
 #include <iostream>
 #include <iomanip>
@@ -143,6 +143,9 @@ void eles::setup(int in_n_eles, int in_max_n_spts_per_ele, int in_run_type)
 		}
 	}
   
+    temp_v.setup(n_dims);
+    temp_v.initialize_to_zero();
+
   set_shape(in_max_n_spts_per_ele);
   ele2global_ele.setup(n_eles);
   bctype.setup(n_eles,n_inters_per_ele);
@@ -917,21 +920,21 @@ void eles::calc_tdisinvf_upts(int in_disu_upts_from)
 				temp_u(k)=disu_upts(in_disu_upts_from)(j,i,k);
 			}
 
-            /*if (motion) {
+            if (motion) {
                 for (k=0; k<n_dims; k++) {
-                    temp_w(k) = vel_upts(i,j,k); // FIX: CREATE VEL_UPTS()
+                    temp_v(k) = vel_upts(i,j,k);
                 }
-            }*/
+            }
 			
 			if(n_dims==2)
 			{
 				calc_invf_2d(temp_u,temp_f);
-                if (motion) calc_alef_2d(temp_u, temp_w, temp_f);
+                if (motion) calc_alef_2d(temp_u, temp_v, temp_f);
 			}
 			else if(n_dims==3)
 			{
 				calc_invf_3d(temp_u,temp_f);
-                if (motion) calc_alef_3d(temp_u, temp_w, temp_f);
+                if (motion) calc_alef_3d(temp_u, temp_v, temp_f);
 			}
 			else
 			{
@@ -3264,11 +3267,13 @@ void eles::set_transforms(int in_run_type)
 
 void eles::initialize_grid_vel(void)
 {
-	// Setup arrays
-    // n_fpts_per_ele = constant (w/o multigrid, at least)
-    // n_spts_per_ele = variable
-    vel_fpts.setup(n_dims,n_fpts_per_ele,n_eles);
+    /* Setup arrays
+     * n_fpts_per_ele = constant (w/o multigrid, at least)
+     * n_spts_per_ele = variable */
+    vel_fpts.setup(n_eles,n_fpts_per_ele,n_dims);
     vel_fpts.initialize_to_zero();
+    vel_upts.setup(n_eles,n_upts_per_ele,n_dims);
+    vel_upts.initialize_to_zero();
 
 	vel_spts.setup(n_eles);
 	for (int i=0;i<n_eles; i++) {
@@ -3932,6 +3937,26 @@ double* eles::get_grad_disu_fpts_ptr(int in_inter_local_fpt, int in_ele_local_in
 #endif
 }
 
+double* eles::get_vel_fpts_ptr(int in_ele, int in_ele_local_inter, int in_inter_local_fpt, int in_dim)
+{
+    int i;
+
+    int fpt;
+
+    fpt=in_inter_local_fpt;
+
+    for(i=0;i<in_ele_local_inter;i++)
+    {
+        fpt+=n_fpts_per_inter(i);
+    }
+
+#ifdef _GPU
+    return vel_fpts.get_ptr_gpu(in_ele,fpt,in_dim);
+#else
+    return vel_fpts.get_ptr_cpu(in_ele,fpt,in_dim);
+#endif
+}
+
 // get a pointer to the normal transformed continuous viscous flux at a flux point
 /*
 double* eles::get_norm_tconvisf_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_field, int in_ele)
@@ -4421,7 +4446,7 @@ void eles::CalcDiagnostics(int n_diagnostics, array <double>& diagnostic_array)
         {
           disu_cubpt(m) += opp_volume_cubpts(j,k)*disu_upts(0)(k,i,m);
         }
-			}
+      }
 			// Get the solution gradient at cubature point
 			for (int m=0;m<n_fields;m++)
 			{
@@ -4774,7 +4799,7 @@ void eles::set_grid_vel_spt(int in_ele, int in_spt, array<double> in_vel)
 }
 
 /*! Interpolate the grid velocity from shape points to flux points */
-void eles::set_grid_vel_fpts()
+void eles::set_grid_vel_fpts(void)
 {
     int ic,fpt,j,k;
     array<double> loc(n_dims);
@@ -4785,9 +4810,28 @@ void eles::set_grid_vel_fpts()
             }
             for(k=0;k<n_dims;k++) {
                 for(j=0;j<n_spts_per_ele(ic);j++) {
-                    vel_fpts(k,fpt,ic)+=eval_nodal_s_basis(j,loc,n_spts_per_ele(ic))*vel_spts(ic)(j,k);
+                    vel_fpts(ic,fpt,k)+=eval_nodal_s_basis(j,loc,n_spts_per_ele(ic))*vel_spts(ic)(j,k);
                 }
             }
         }
     }
+}
+
+/*! Interpolate the grid velocity from shape points to solution points */
+void eles::set_grid_vel_upts(void)
+{
+    int ic,upt,j,k;
+    array<double> loc(n_dims);
+    for (ic=0; ic<n_eles; ic++) {
+        for (upt=0; upt<n_upts_per_ele; upt++) {
+            for(k=0;k<n_dims;k++) {
+                loc(k) = loc_upts(k,upt);
+            }
+            for(k=0;k<n_dims;k++) {
+                for(j=0;j<n_spts_per_ele(ic);j++) {
+                    vel_upts(ic,upt,k)+=eval_nodal_s_basis(j,loc,n_spts_per_ele(ic))*vel_spts(ic)(j,k);
+                }
+            }
+        } // upts
+    } // eles
 }

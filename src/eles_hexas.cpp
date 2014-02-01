@@ -124,7 +124,7 @@ void eles_hexas::setup_ele_type_specific(int in_run_type)
 	  }
 	  
 	  temp_u.setup(n_fields);
-	  temp_f.setup(n_fields,n_dims);
+      temp_f.setup(n_fields,n_dims);
   //}
   //else
   //{
