@@ -227,11 +227,9 @@ int main(int argc, char *argv[]) {
     if (run_input.motion) {
         Mesh.deform(&FlowSol);
         //Mesh.update(&FlowSol);
-         if (i_steps%10==0) Mesh.write_mesh_gmsh(FlowSol.time);
-	}
-
-    //cout << "double-free not happening here! " << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;
-    
+         if (i_steps%run_input.mesh_output_freq==0)
+             Mesh.write_mesh(run_input.mesh_output_format,FlowSol.time);
+	}    
   }
   
   /////////////////////////////////////////////////

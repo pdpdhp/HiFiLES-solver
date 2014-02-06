@@ -26,3 +26,5 @@ TECIO_DIR = lib/tecio-2008
 
 CUDA_DIR = /usr/local/cuda
 
+CODE= DEBUG
+

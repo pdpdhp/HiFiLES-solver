@@ -249,6 +249,7 @@ unsigned long CSysSolve::FGMRES(const CSysVector & b, CSysVector & x, CMatrixVec
                                 CPreconditioner & precond, double tol, unsigned long m, bool monitoring, solution* FlowSol) {
 
     int rank = FlowSol->rank;
+
 #ifdef _MPI
     rank = MPI::COMM_WORLD.Get_rank();
 #endif
