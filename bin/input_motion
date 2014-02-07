@@ -4,7 +4,7 @@
 equation                          // 0: Euler/Navier-Stokes, 1:Advection/Adv-Diffusion
 0
 viscous
-1
+0
 riemann_solve_type                // 0: Rusanov, 1: Lax-Friedrich, 2: Roe
 0
 vis_riemann_solve_type
