@@ -226,6 +226,19 @@ void mesh::set_min_length(void)
     min_length = sqrt(min_length2);
 }
 
+void mesh::set_grid_transforms(solution* FlowSol)
+{
+    /** Set new shape points in Eles */
+
+    /** Update coordinate transformation */
+
+    /** Update transformation gradient */
+
+    /** Update transformation Jacobian */
+
+
+}
+
 void mesh::set_grid_velocity(solution* FlowSol, double dt)
 {
     // calculate velocity using simple backward-Euler
