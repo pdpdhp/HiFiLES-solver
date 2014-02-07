@@ -88,15 +88,15 @@ void mesh::deform(struct solution* FlowSol) {
         FatalError("3D Mesh motion not implemented yet!");
     }
     */
-    cout << endl << ">>>>>>>>> Beginning Mesh Deformation >>>>>>>>>" << endl;
+    /// cout << endl << ">>>>>>>>> Beginning Mesh Deformation >>>>>>>>>" << endl;
     int pt_0,pt_1,pt_2,pt_3;
     bool check;
 
     min_vol = check_grid(FlowSol);
     set_min_length();
-    cout << "n_verts: " << n_verts << ", ";
+    /** cout << "n_verts: " << n_verts << ", ";
     cout << "n_dims: " << n_dims << ", ";
-    cout << "min_vol = " << min_vol << endl;
+    cout << "min_vol = " << min_vol << endl; */
 
     // Setup stiffness matrices for each individual element,
     // combine all element-level matrices into global matrix
@@ -109,7 +109,7 @@ void mesh::deform(struct solution* FlowSol) {
     deformation can be divided into increments to help with stability. In
     particular, the linear elasticity equations hold only for small deformations. ---*/
     for (int iGridDef_Iter = 0; iGridDef_Iter < run_input.n_deform_iters; iGridDef_Iter++) {
-        cout << ">>Iteration " << iGridDef_Iter+1 << " of " << run_input.n_deform_iters << endl;
+        //cout << ">>Iteration " << iGridDef_Iter+1 << " of " << run_input.n_deform_iters << endl;
         /*--- Initialize vector and sparse matrix ---*/
 
         LinSysSol.SetValZero();
@@ -175,7 +175,8 @@ void mesh::deform(struct solution* FlowSol) {
         CSysSolve *system             = new CSysSolve();
 
         /*--- Solve the linear system ---*/
-        LinSolIters = system->FGMRES(LinSysRes, LinSysSol, *mat_vec, *precond, solver_tolerance, 100, true, FlowSol);
+        bool display_statistics = false;
+        LinSolIters = system->FGMRES(LinSysRes, LinSysSol, *mat_vec, *precond, solver_tolerance, 100, display_statistics, FlowSol);
         /*--- Deallocate memory needed by the Krylov linear solver ---*/
         /// how to do safely...?
         delete system;
@@ -223,6 +224,19 @@ void mesh::set_min_length(void)
     }
 
     min_length = sqrt(min_length2);
+}
+
+void mesh::set_grid_transforms(solution* FlowSol)
+{
+    /** Set new shape points in Eles */
+
+    /** Update coordinate transformation */
+
+    /** Update transformation gradient */
+
+    /** Update transformation Jacobian */
+
+
 }
 
 void mesh::set_grid_velocity(solution* FlowSol, double dt)
@@ -466,6 +480,18 @@ void mesh::update(solution* FlowSol)
     }
 }
 
+void mesh::write_mesh(int mesh_type,double sim_time)
+{
+    if (mesh_type==0) {
+        write_mesh_gambit(sim_time);
+    }else if (mesh_type==1) {
+        write_mesh_gmsh(sim_time);
+    }else{
+        cerr << "Mesh Output Type: " << mesh_type << endl;
+        FatalError("ERROR: Trying to write unrecognized mesh format ... ");
+    }
+}
+
 void mesh::write_mesh_gambit(double sim_time)
 {
     cout << "Gambit mesh writer not yet implemented!" << endl;
@@ -473,7 +499,6 @@ void mesh::write_mesh_gambit(double sim_time)
 
 void mesh::write_mesh_gmsh(double sim_time)
 {
-    cout << "sim_time " << sim_time << endl;
 
     string filename (run_input.mesh_file);
     ostringstream sstream;
@@ -481,7 +506,6 @@ void mesh::write_mesh_gmsh(double sim_time)
     string suffix = "_" + sstream.str();
     suffix.replace(suffix.find_first_of("."),1,"_");
     filename.insert(filename.size()-4,suffix);
-    cout << "filename " << filename<< endl;
 
     fstream file;
     file.open(filename.c_str(),ios::out);
@@ -626,13 +650,14 @@ void mesh::update_grid_coords(void)
     /*--- Update the grid coordinates using the solution of the linear system
    after grid deformation (LinSysSol contains the x, y, z displacements). ---*/
 
-    for (iPoint = 0; iPoint < n_verts; iPoint++)
+    for (iPoint = 0; iPoint < n_verts; iPoint++) {
         for (iDim = 0; iDim < n_dims; iDim++) {
             total_index = iPoint*n_dims + iDim;
             new_coord = xv(iPoint,iDim) + LinSysSol[total_index];
             if (fabs(new_coord) < eps*eps) new_coord = 0.0;
             xv_new(iPoint,iDim) = new_coord;
         }
+    }
 }
 
 double mesh::check_grid(solution* FlowSol) {
@@ -771,8 +796,8 @@ void mesh::set_boundary_displacements(solution *FlowSol)
     }*/
 
     array<double> VarCoord(n_dims);
-    VarCoord(0) = 0.1;
-    VarCoord(1) = 0.1;
+    VarCoord(0) = run_input.bound_vel_simple(0)*run_input.dt;
+    VarCoord(1) = run_input.bound_vel_simple(1)*run_input.dt;
     //cout << "Applying Boundary Conditions..." << endl;
     /// cout << "number of boundaries: " << n_bnds << endl;
     /*--- Set the known displacements, note that some points of the moving surfaces

@@ -413,7 +413,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     }
 
     /// ** Placeholder for misc mesh motion setup **
-    // currently, vel_upts / vel_fpts used for all cases, so need to set to 0
+    // even if motion turned off, still need to have velocity initialized to 0
     //if (run_input.motion) {
         if (FlowSol->rank==0) cout << "setting mesh motion parameters ... " << endl;
         for(int i=0;i<FlowSol->n_ele_types;i++) {

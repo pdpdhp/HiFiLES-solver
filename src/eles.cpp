@@ -3270,9 +3270,9 @@ void eles::initialize_grid_vel(void)
     /* Setup arrays
      * n_fpts_per_ele = constant (w/o multigrid, at least)
      * n_spts_per_ele = variable */
-    vel_fpts.setup(n_eles,n_fpts_per_ele,n_dims);
+    vel_fpts.setup(n_dims,n_fpts_per_ele,n_eles);
     vel_fpts.initialize_to_zero();
-    vel_upts.setup(n_eles,n_upts_per_ele,n_dims);
+    vel_upts.setup(n_dims,n_upts_per_ele,n_eles);
     vel_upts.initialize_to_zero();
 
 	vel_spts.setup(n_eles);
@@ -3951,9 +3951,9 @@ double* eles::get_vel_fpts_ptr(int in_ele, int in_ele_local_inter, int in_inter_
     }
 
 #ifdef _GPU
-    return vel_fpts.get_ptr_gpu(in_ele,fpt,in_dim);
+    return vel_fpts.get_ptr_gpu(in_dim,fpt,in_ele);
 #else
-    return vel_fpts.get_ptr_cpu(in_ele,fpt,in_dim);
+    return vel_fpts.get_ptr_cpu(in_dim,fpt,in_ele);
 #endif
 }
 

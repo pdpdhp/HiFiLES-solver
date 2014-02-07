@@ -78,6 +78,9 @@ public:
     /** setup information for boundary motion */
     //void setup_boundaries(array<int> bctype);
 
+    /** write out mesh to file */
+    void write_mesh(int mesh_type, double sim_time);
+
     /** write out mesh in Gambit .neu format */
     void write_mesh_gambit(double sim_time);
 

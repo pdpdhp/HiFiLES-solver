@@ -1161,8 +1161,3 @@ double eles_quads::calc_ele_vol(double& detjac)
 	vol = detjac*4.;
 	return vol;
 }
-
-bool eles_quads::set_2D_StiffMat_ele(array<double> &stiffMat_ele, int ele_id) {
-	cout << "Linear elasticity for quadrilaterals not yet implemented" << endl;
-	FatalError("Mesh Motion Failed");
-}

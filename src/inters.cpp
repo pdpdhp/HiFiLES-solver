@@ -104,8 +104,8 @@ void inters::setup_inters(int in_n_inters, int in_inters_type, int in_run_type)
 	  mag_tnorm_dot_inv_detjac_mul_jac_fpts_l.setup(n_fpts_per_inter,n_inters);
 	  norm_fpts.setup(n_fpts_per_inter,n_inters,n_dims);
 	  loc_fpts.setup(n_fpts_per_inter,n_inters,n_dims);
-      vel_fpts_l.setup(n_fpts_per_inter,n_inters,n_dims);
-      vel_fpts_r.setup(n_fpts_per_inter,n_inters,n_dims);
+      vel_fpts_l.setup(n_dims,n_fpts_per_inter,n_inters);
+      vel_fpts_r.setup(n_dims,n_fpts_per_inter,n_inters);
 
     delta_disu_fpts_l.setup(n_fpts_per_inter,n_inters,n_fields);
 

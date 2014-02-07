@@ -42,8 +42,9 @@ using namespace std;
 
 bdy_inters::bdy_inters()
 { 
-  order=run_input.order;
-  viscous=run_input.viscous;
+  order   = run_input.order;
+  viscous = run_input.viscous;
+  motion  = run_input.motion;
 }
 
 bdy_inters::~bdy_inters() { }
@@ -132,6 +133,7 @@ void bdy_inters::set_boundary(int in_inter, int bdy_type, int in_ele_type_l, int
       {
         norm_fpts(i,in_inter,j)=get_norm_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
         loc_fpts(i,in_inter,j)=get_loc_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
+        vel_fpts_l(j,i,in_inter)=get_vel_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
       }
 
     } 
@@ -191,7 +193,10 @@ void bdy_inters::calc_norm_tconinvf_fpts_boundary(double time_bound)
       // calculate discontinuous solution at flux points
       for(int k=0;k<n_fields;k++) {
         temp_u_l(k)=(*disu_fpts_l(j,i,k));
-        temp_v_l(k)=(*vel_fpts_l(j,i,k));
+
+      }
+      for(int k=0; k<n_dims; k++) {
+          temp_v_l(k)=(*vel_fpts_l(k,j,i));
       }
   
       for (int m=0;m<n_dims;m++)
@@ -766,11 +771,12 @@ void bdy_inters::calc_norm_tconvisf_fpts_boundary(double time_bound)
       // obtain discontinuous solution at flux points
       for(int k=0;k<n_fields;k++) {
         temp_u_l(k)=(*disu_fpts_l(j,i,k));
-        temp_v_l(k)=(*vel_fpts_l(j,i,k));
       }
       
-      for (int m=0;m<n_dims;m++)
+      for (int m=0;m<n_dims;m++) {
         temp_loc(m) = *loc_fpts(j,i,m);
+        temp_v_l(m)=(*vel_fpts_l(m,j,i));
+      }
 
       set_inv_boundary_conditions(bdy_spec,temp_u_l.get_ptr_cpu(),temp_u_r.get_ptr_cpu(),temp_v_l.get_ptr_cpu(),norm.get_ptr_cpu(),temp_loc.get_ptr_cpu(),bdy_params.get_ptr_cpu(),n_dims,n_fields,run_input.gamma,run_input.R_ref,time_bound,run_input.equation);
       

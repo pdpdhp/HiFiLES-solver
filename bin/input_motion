@@ -4,7 +4,7 @@
 equation                          // 0: Euler/Navier-Stokes, 1:Advection/Adv-Diffusion
 0
 viscous
-1
+0
 riemann_solve_type                // 0: Rusanov, 1: Lax-Friedrich, 2: Roe
 0
 vis_riemann_solve_type
@@ -20,7 +20,7 @@ order                             // Order of basis polynomials
 dt 
 0.0001
 n_steps
-20
+5000
 adv_type                          // 0: Forward Euler, 3: RK45
 0
 tau 
@@ -51,10 +51,16 @@ dz_cyclic
 Mesh Deformation Options
 ----------------------------------
 motion_flag                       // 0: Static Mesh, 1: Moving/Deforming Mesh
-1
+0
 moving_boundaries                 // n_moving_bnds, <boundary name(s)>
 1 Slip_Wall 	 
 n_deform_iters                    // number of steps to perform during each deform process
+1
+simple_bound_velocity             // Prescribe constant <x,y,z> velocity of boundary
+5.0 3.0 0
+mesh_output_freq                  // Frequency to output mesh to file (-1: use plot_freq)
+-1
+mesh_output_format                 // 0: Gambit, 1: Gmsh (but, Gambit not working yet)
 1
 -----------------------------------
 Monitoring, plotting parameters
@@ -62,7 +68,7 @@ Monitoring, plotting parameters
 p_res                             // Plotting resolution, number of nodes per direction
 3
 write_type                        // 0: Paraview, 1: Tecplot
-1
+0
 n_plot_quantities
 8 rho u v w energy pressure mach vorticity
 inters_cub_order                  // Order of cubature rule for integrating over element interfaces
@@ -72,7 +78,7 @@ volume_cub_order                  // Order of cubature rule for integrating over
 plot_freq
 1000
 restart_dump_freq
-1000
+10000000
 diagnostics_freq
 100
 monitor_res_freq

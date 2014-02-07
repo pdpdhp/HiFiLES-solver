@@ -319,6 +319,21 @@ void input::setup(ifstream& in_run_input_file, int rank)
         {
             in_run_input_file >> n_deform_iters;
         }
+        else if (!param_name.compare("simple_bound_velocity"))
+        {
+            bound_vel_simple.setup(3);
+            for (int i=0; i<3; i++) {
+                in_run_input_file >> bound_vel_simple(i);
+            }
+        }
+        else if (!param_name.compare("mesh_output_freq"))
+        {
+            in_run_input_file >> mesh_output_freq;
+        }
+        else if (!param_name.compare("mesh_output_format"))
+        {
+            in_run_input_file >> mesh_output_format;
+        }
         else if (!param_name.compare("upts_type_tri"))
         {
             in_run_input_file >> upts_type_tri;
@@ -609,6 +624,13 @@ void input::setup(ifstream& in_run_input_file, int rank)
             FatalError("Initial condition not supported with Advection-Diffusion equation");
         if (run_type==1)
             FatalError("Run type not supported with Advection-Diffusion equation");
+    }
+
+    // Mesh Deformation-Related Options
+    if (motion)
+    {
+        if (mesh_output_freq==-1)
+            mesh_output_freq = plot_freq;
     }
 
     if(viscous)
