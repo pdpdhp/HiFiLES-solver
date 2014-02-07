@@ -412,15 +412,16 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
         }
     }
 
-    // ** Placeholder for misc mesh motion setup **
-    if (run_input.motion) {
+    /// ** Placeholder for misc mesh motion setup **
+    // currently, vel_upts / vel_fpts used for all cases, so need to set to 0
+    //if (run_input.motion) {
         if (FlowSol->rank==0) cout << "setting mesh motion parameters ... " << endl;
         for(int i=0;i<FlowSol->n_ele_types;i++) {
             if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
                 FlowSol->mesh_eles(i)->initialize_grid_vel();
             }
         }
-    }
+    //}
 
     // Set metrics at interface cubpts
     if (FlowSol->rank==0) cout << "setting element transforms at interface cubpts ... " << endl;
