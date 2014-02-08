@@ -437,7 +437,7 @@ void mesh::add_StiffMat_EleQuad(array<double> StiffMatrix_Elem, int id_pt_0,
 void mesh::update(solution* FlowSol)
 {
     // Update element shape points
-    if (FlowSol->rank==0) cout << "Deform: updating element shape points" << endl;
+    if (FlowSol->rank==0) cout << "Deform: updating dynamic element shape points" << endl;
 
     int ele_type, local_id;
     array<double> pos(FlowSol->n_dims);
@@ -449,20 +449,19 @@ void mesh::update(solution* FlowSol)
             for (int k=0; k<FlowSol->n_dims; k++) {
                 pos(k) = xv_new(c2v(ic,iv),k);
             }
-            FlowSol->mesh_eles(ele_type)->set_shape_node(iv,local_id,pos);
+            FlowSol->mesh_eles(ele_type)->set_dynamic_shape_node(iv,local_id,pos);
         }
     }
-
-    if (FlowSol->rank==0) cout << "Deform: done updating elements' shape" << endl;
 
     // Update element transforms
-    if (FlowSol->rank==0) cout << "Deform: updating element transforms ... " << endl;
+    if (FlowSol->rank==0) cout << "Deform: updating dynamic element transforms ... " << endl;
     for(int i=0;i<FlowSol->n_ele_types;i++) {
         if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
-            FlowSol->mesh_eles(i)->set_transforms(run_input.run_type);
+            FlowSol->mesh_eles(i)->set_dynamic_transforms(run_input.run_type);
         }
     }
 
+    /*
     // Set metrics at interface cubpts
     if (FlowSol->rank==0) cout << "Deform: setting element transforms at interface cubature points ... " << endl;
     for(int i=0;i<FlowSol->n_ele_types;i++) {
@@ -478,6 +477,7 @@ void mesh::update(solution* FlowSol)
             FlowSol->mesh_eles(i)->set_transforms_vol_cubpts();
         }
     }
+    */
 }
 
 void mesh::write_mesh(int mesh_type,double sim_time)

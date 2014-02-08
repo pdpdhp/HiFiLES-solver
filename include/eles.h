@@ -190,6 +190,9 @@ public:
     /*! set shape node */
     void set_shape_node(int in_spt, int in_ele, array<double>& in_pos);
 
+    /*! set dynamic (moving grid) shape node */
+    void set_dynamic_shape_node(int in_spt, int in_ele, array<double>& in_pos);
+
     /*! set bc type */
     void set_bctype(int in_ele, int in_inter, int in_bctype);
 
@@ -394,6 +397,23 @@ public:
 
     array<double> get_pointwise_error(array<double>& sol, array<double>& grad_sol, array<double>& loc, double& time, int in_norm_type);
 
+    /** set transforms for static->dynamic frames */
+    void set_transforms_dynamic(int in_run_type);
+
+    /**
+     * Calculate derivative of dynamic position wrt reference (initial,static) position
+     * \param[in] in_loc - position of point in computational space
+     * \param[in] in_ele - local element ID
+     * \param[out] out_d_pos - array of size (n_dims,n_dims); (i,j) = dx_i / dX_j
+     */
+    void calc_d_pos_dyn(array<double> in_loc, int in_ele, array<double> &out_d_pos);
+
+    /** calculate position of solution point in physical (dynamic) space */
+    void calc_pos_upt_dyn(int in_upt, int in_ele, array<double> &out_pos);
+
+    /** calculate position of a point in physical (dynamic) space from (r,s,t) coordinates*/
+    void calc_pos_dyn(array<double> in_loc, int in_ele, array<double> &out_pos);
+
 protected:
 
     // #### members ####
@@ -488,13 +508,13 @@ protected:
     /*! transformed normal at flux points */
     array< array<double> > tnorm_inters_cubpts;
 
-    /*! location of solution points in standard element (r,s) */
+    /*! location of solution points in standard element (r,s,t) */
     array<double> loc_upts;
 
     /*! location of solution points in standard element */
     array<double> loc_upts_rest;
 
-    /*! location of flux points in standard element (r,s) */
+    /*! location of flux points in standard element (r,s,t) */
     array<double> tloc_fpts;
 
     /*! location of interface cubature points in standard element */
@@ -536,8 +556,11 @@ protected:
     /*! order of polynomials defining shapes */
     int s_order;
 
-    /*! shape */
+    /*! position of shape points (mesh vertices) in static mesh */
     array<double> shape;
+
+    /*! position of shape points (mesh vertices) in dynamic mesh */
+    array<double> shape_dyn;
 
     /*!
     Description: Mesh velocity at shape points \n
@@ -602,11 +625,26 @@ protected:
     /*! determinant of interface jacobian at flux points */
     array< array<double> > inter_detjac_inters_cubpts;
 
+    /*! determinant of grid jacobian at the solution points */
+    array<double> grid_detjac_upts;
+
+    /*! determinant of grid jacobian at the solution points */
+    array<double> grid_detjac_fpts;
+
+    /*! inverse of the grid jacobian multiplied by the determinant of the grid jacobian at the solution points */
+    array<double> grid_ijac_upts;
+
+    /*! inverse of the grid jacobian multiplied by the determinant of the grid jacobian at the flux points */
+    array<double> grid_ijac_fpts;
+
     /*! normal at flux points*/
     array<double> norm_fpts;
 
-    /*! physical coordinates at flux points*/
+    /*! physical coordinates at flux points (static frame) */
     array<double> loc_fpts;
+
+    /*! physical coordinates at flux points (dynamic frame) */
+    array<double> loc_fpts_dyn;
 
     /*! normal at interface cubature points*/
     array< array<double> > norm_inters_cubpts;
