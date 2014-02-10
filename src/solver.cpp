@@ -199,25 +199,46 @@ double* get_detjac_fpts_ptr(int in_ele_type, int in_ele, int in_ele_local_inter,
 	return FlowSol->mesh_eles(in_ele_type)->get_detjac_fpts_ptr(in_inter_local_fpt,in_ele_local_inter,in_ele);
 }
 
-// get pointer to magntiude of normal dot inverse of (determinant of jacobian multiplied by jacobian) at a flux point
+// get pointer to magntiude of normal dot inverse of (determinant of jacobian multiplied by jacobian) at a flux point (static mesh)
 
 double* get_mag_tnorm_dot_inv_detjac_mul_jac_fpts_ptr(int in_ele_type, int in_ele, int in_ele_local_inter, int in_inter_local_fpt, struct solution* FlowSol)
 {
 	return FlowSol->mesh_eles(in_ele_type)->get_mag_tnorm_dot_inv_detjac_mul_jac_fpts_ptr(in_inter_local_fpt,in_ele_local_inter,in_ele);
 }
 
-// get pointer to the normal at a flux point
+// get pointer to magntiude of normal dot inverse of (determinant of jacobian multiplied by jacobian) at a flux point (dynamic mesh)
+
+double* get_scaled_norm_dyn_ptr(int in_ele_type, int in_ele, int in_ele_local_inter, int in_inter_local_fpt, struct solution* FlowSol)
+{
+    return FlowSol->mesh_eles(in_ele_type)->get_scaled_norm_dyn_ptr(in_inter_local_fpt,in_ele_local_inter,in_ele);
+}
+
+// get pointer to the normal at a flux point (static frame)
 
 double* get_norm_fpts_ptr(int in_ele_type, int in_ele, int in_local_inter, int in_fpt, int in_dim, struct solution* FlowSol)
 {
 	return FlowSol->mesh_eles(in_ele_type)->get_norm_fpts_ptr(in_fpt,in_local_inter,in_dim,in_ele);
 }
 
-// get pointer to the coordinates at a flux point
+// get pointer to the normal at a flux point (dynamic frame)
+
+double* get_norm_fpts_dyn_ptr(int in_ele_type, int in_ele, int in_local_inter, int in_fpt, int in_dim, struct solution* FlowSol)
+{
+    return FlowSol->mesh_eles(in_ele_type)->get_norm_fpts_dyn_ptr(in_fpt,in_local_inter,in_dim,in_ele);
+}
+
+// get pointer to the coordinates at a flux point (static frame)
 
 double* get_loc_fpts_ptr(int in_ele_type, int in_ele, int in_local_inter, int in_fpt, int in_dim, struct solution* FlowSol)
 {
 	return FlowSol->mesh_eles(in_ele_type)->get_loc_fpts_ptr(in_fpt,in_local_inter,in_dim,in_ele);
+}
+
+// get pointer to the coordinates at a flux point (dynamic frame)
+
+double* get_loc_fpts_dyn_ptr(int in_ele_type, int in_ele, int in_local_inter, int in_fpt, int in_dim, struct solution* FlowSol)
+{
+    return FlowSol->mesh_eles(in_ele_type)->get_loc_fpts_dyn_ptr(in_fpt,in_local_inter,in_dim,in_ele);
 }
 
 // get pointer to normal continuous transformed viscous flux at a flux point

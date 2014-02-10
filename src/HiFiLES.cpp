@@ -40,6 +40,7 @@ int main(int argc, char *argv[]) {
   int i_steps = 0;                    /*!< Iteration index */
   ifstream run_input_file;            /*!< Config input file */
   clock_t init, final;                /*!< To control the time */
+  cout << "not here" << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;
   struct solution FlowSol;            /*!< Main structure with the flow solution and geometry */
   ofstream write_force, write_stats;  /*!< Output files (forces and statistics) */
   mesh Mesh;                          /*!< Store mesh details & perform mesh motion */

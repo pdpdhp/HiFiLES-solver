@@ -43,7 +43,7 @@ public:
     void right_flux(array<double> &f_r, array<double> &norm, array<double> &fn, int n_dims, int n_fields, double gamma);
 
     /*! Compute common inviscid flux using Rusanov flux */
-    void rusanov_flux(array<double> &q_l, array<double> &q_r, array<double> &f_l, array<double> &f_r, array<double> &norm, array<double> &fn, int n_dims, int n_fields, double gamma);
+    void rusanov_flux(array<double> &q_l, array<double> &q_r, array<double> &f_l, array<double> &f_r, array<double> &v_g, array<double> &norm, array<double> &fn, int n_dims, int n_fields, double gamma);
 
     /*! Compute common inviscid flux using Roe flux */
     void roe_flux(array<double> &q_l, array<double> &q_r, array<double> &norm, array<double> &fn, int n_dims, int n_fields, double gamma);
@@ -79,9 +79,13 @@ protected:
     array<double*> norm_tconf_fpts_l;
     //array<double*> norm_tconvisf_fpts_l;
     array<double*> detjac_fpts_l;
+    array<double*> grid_detjac_fpts_l;
     array<double*> mag_tnorm_dot_inv_detjac_mul_jac_fpts_l;
+    array<double*> scaled_norm_dyn_fpts_l;
     array<double*> norm_fpts;
+    array<double*> norm_fpts_dyn;
     array<double*> loc_fpts;
+    array<double*> loc_fpts_dyn;
     array<double*> grad_disu_fpts_l;
 
     array<double*> vel_fpts_l;
@@ -99,9 +103,10 @@ protected:
     array<double> temp_fn_l;
     array<double> temp_fn_r;
 
-    // Grid velocity (continuous across eles)
+    // Grid velocity (note: continuous across eles)
     array<double> temp_v_l;
     array<double> temp_v_r;
+    array<double> temp_v;
 
     array<double> temp_f;
 

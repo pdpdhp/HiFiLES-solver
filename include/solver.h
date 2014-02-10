@@ -45,17 +45,29 @@ double* get_disu_fpts_ptr(int in_ele_type, int in_ele, int in_field, int n_local
 /*! get pointer to normal continuous transformed inviscid flux at a flux point */
 double* get_norm_tconf_fpts_ptr(int in_ele_type, int in_ele, int in_field, int in_local_inter, int in_fpt, struct solution* FlowSol);
 
-/*! get pointer to determinant of jacobian at a flux point */
+/*! get pointer to determinant of jacobian at a flux point (static frame) */
 double* get_detjac_fpts_ptr(int in_ele_type, int in_ele, int in_ele_local_inter, int in_inter_local_fpt, struct solution* FlowSol);
 
-/*! get pointer to magntiude of normal dot inverse of (determinant of jacobian multiplied by jacobian) at a solution point */
+/*! get pointer to determinant of jacobian at a flux point (dynamic frame) */
+double* get_grid_detjac_fpts_ptr(int in_ele_type, int in_ele, int in_ele_local_inter, int in_inter_local_fpt, struct solution* FlowSol);
+
+/*! get pointer to magntiude of normal dot inverse of (determinant of jacobian multiplied by jacobian) at a solution point (static mesh) */
 double* get_mag_tnorm_dot_inv_detjac_mul_jac_fpts_ptr(int in_ele_type, int in_ele, int in_ele_local_inter, int in_inter_local_fpt, struct solution* FlowSol);
 
-/*! get pointer to normal at a flux point */
+/*! get pointer to magntiude of normal dot inverse of (determinant of jacobian multiplied by jacobian) at a solution point (dynamic mesh) */
+double* get_scaled_norm_dyn_ptr(int in_ele_type, int in_ele, int in_ele_local_inter, int in_inter_local_fpt, struct solution* FlowSol);
+
+/*! get pointer to normal at a flux point (static frame) */
 double* get_norm_fpts_ptr(int in_ele_type, int in_ele, int in_local_inter, int in_fpt, int in_dim, struct solution* FlowSol);
 
-/*! get pointer to coordinates at a flux point */
+/*! get pointer to normal at a flux point (dynamic frame) */
+double* get_norm_fpts_dyn_ptr(int in_ele_type, int in_ele, int in_local_inter, int in_fpt, int in_dim, struct solution* FlowSol);
+
+/*! get pointer to coordinates at a flux point (static frame) */
 double* get_loc_fpts_ptr(int in_ele_type, int in_ele, int in_local_inter, int in_fpt, int in_dim, struct solution* FlowSol);
+
+/*! get pointer to coordinates at a flux point (dynamic frame) */
+double* get_loc_fpts_dyn_ptr(int in_ele_type, int in_ele, int in_local_inter, int in_fpt, int in_dim, struct solution* FlowSol);
 
 /*! get pointer to delta of the transformed discontinuous solution at a flux point */
 double* get_delta_disu_fpts_ptr(int in_ele_type, int in_ele, int in_field, int n_local_inter, int in_fpt, struct solution* FlowSol);
@@ -71,9 +83,3 @@ void InitSolution(struct solution* FlowSol);
 
 /*! reading a restart file */
 void read_restart(int in_file_num, int in_n_files, struct solution* FlowSol);
-
-
-
-
-
-

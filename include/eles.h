@@ -211,8 +211,11 @@ public:
     /*! get a pointer to the normal transformed continuous flux at a flux point */
     double* get_norm_tconf_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_field, int in_ele);
 
-    /*! get a pointer to the determinant of the jacobian at a flux point */
+    /*! get a pointer to the determinant of the jacobian at a flux point (static->reference) */
     double* get_detjac_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_ele);
+
+    /*! get a pointer to the determinant of the jacobian at a flux point (dynamic->static) */
+    double* get_grid_detjac_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_ele);
 
     /*! get a pointer to the magntiude of normal dot inverse of (determinant of jacobian multiplied by jacobian) at flux points */
     double* get_mag_tnorm_dot_inv_detjac_mul_jac_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_ele);
@@ -220,8 +223,11 @@ public:
     /*! get a pointer to the normal at a flux point */
     double* get_norm_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_dim, int in_ele);
 
-    /*! get a pointer to the coordinates at a flux point */
+    /*! get a pointer to the coordinates at a flux point (static mesh) */
     double* get_loc_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_dim, int in_ele);
+
+    /*! get a pointer to the coordinates at a flux point (dynamic mesh) */
+    double* get_loc_fpts_dyn_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_dim, int in_ele);
 
     /*! get a pointer to delta of the transformed discontinuous solution at a flux point */
     double* get_delta_disu_fpts_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_field, int in_ele);
@@ -414,6 +420,8 @@ public:
     /** calculate position of a point in physical (dynamic) space from (r,s,t) coordinates*/
     void calc_pos_dyn(array<double> in_loc, int in_ele, array<double> &out_pos);
 
+    double *get_norm_fpts_dyn_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_dim, int in_ele);
+    double *get_scaled_norm_dyn_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_ele);
 protected:
 
     // #### members ####
@@ -602,6 +610,7 @@ protected:
     /*! number of storage levels for time-integration scheme */
     int n_adv_levels;
 
+    // ----------------------------- Static-Mesh Transforms -----------------------------
     /*! determinant of jacobian at solution points */
     array<double> detjac_upts;
 
@@ -617,37 +626,54 @@ protected:
     /*! inverse of (determinant of jacobian multiplied by jacobian) at solution points */
     array<double> inv_detjac_mul_jac_upts;
 
+    /*! inverse of (determinant of jacobian multiplied by jacobian) at flux points */
     array<double> inv_detjac_mul_jac_fpts;
 
-    /*! magntiude of normal dot inverse of (determinant of jacobian multiplied by jacobian) at flux points */
+    /*! magntiude of normal dot inverse of (determinant of jacobian multiplied by jacobian) at flux points
+     *  (static frame) */
     array<double> mag_tnorm_dot_inv_detjac_mul_jac_fpts;
 
     /*! determinant of interface jacobian at flux points */
     array< array<double> > inter_detjac_inters_cubpts;
 
-    /*! determinant of grid jacobian at the solution points */
-    array<double> grid_detjac_upts;
-
-    /*! determinant of grid jacobian at the solution points */
-    array<double> grid_detjac_fpts;
-
-    /*! inverse of the grid jacobian multiplied by the determinant of the grid jacobian at the solution points */
-    array<double> grid_ijac_upts;
-
-    /*! inverse of the grid jacobian multiplied by the determinant of the grid jacobian at the flux points */
-    array<double> grid_ijac_fpts;
-
-    /*! normal at flux points*/
+    /*! normal at flux points in X,Y coords (static frame) */
     array<double> norm_fpts;
 
     /*! physical coordinates at flux points (static frame) */
     array<double> loc_fpts;
 
-    /*! physical coordinates at flux points (dynamic frame) */
-    array<double> loc_fpts_dyn;
-
     /*! normal at interface cubature points*/
     array< array<double> > norm_inters_cubpts;
+
+    /*! transformed gradient of determinant of jacobian at solution points */
+    array<double> tgrad_detjac_upts;
+
+    /*! transformed gradient of determinant of jacobian at flux points */
+    array<double> tgrad_detjac_fpts;
+
+    // ----------------------------- Dynamic-Mesh Transforms -----------------------------
+    /*! inverse of (determinant of jacobian multiplied by jacobian) at solution points (dynamic frame) */
+    array<double> grid_ijac_upts;
+
+    /*! inverse of (determinant of jacobian multiplied by jacobian) at flux points (dynamic frame) */
+    array<double> grid_ijac_fpts;
+
+    /*! determinant of (dynamic) grid jacobian at the solution points */
+    array<double> grid_detjac_upts;
+
+    /*! determinant of (dynamic) grid jacobian at the solution points */
+    array<double> grid_detjac_fpts;
+
+    /*! magntiude of normal dot inverse of (determinant of jacobian multiplied by jacobian) at flux points
+     *  (dynamic frame) */
+    array<double> scaled_norm_dyn;
+
+    /*! normal at flux points in x,y coords (dynamic frame) */
+    array<double> norm_fpts_dyn;
+
+    /*! physical coordinates at flux points (dynamic frame) */
+    array<double> loc_fpts_dyn;
+    // ------------------------------------------------------------------------------------
 
     /*!
     description: transformed discontinuous solution at the solution points
@@ -714,12 +740,6 @@ protected:
 
     /*! normal transformed continuous viscous flux at the flux points */
     //array<double> norm_tconvisf_fpts;
-
-    /*! transformed gradient of determinant of jacobian at solution points */
-    array<double> tgrad_detjac_upts;
-
-    /*! transformed gradient of determinant of jacobian at flux points */
-    array<double> tgrad_detjac_fpts;
 
     array<double> d_nodal_s_basis;
     array<double> dd_nodal_s_basis;

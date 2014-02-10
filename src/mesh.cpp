@@ -199,10 +199,12 @@ void mesh::deform(struct solution* FlowSol) {
         }
         */
     }
-    set_grid_velocity(FlowSol,run_input.dt);
+
+    /*--- Update grid velocity & dynamic element transforms ---*/
+    update(FlowSol);
+
     /*--- Now that deformation is complete & velocity is set, update the
       'official' vertex coordinates ---*/
-
     xv = xv_new;
 
     /*--- Deallocate vectors for the linear system. ---*/
@@ -224,19 +226,6 @@ void mesh::set_min_length(void)
     }
 
     min_length = sqrt(min_length2);
-}
-
-void mesh::set_grid_transforms(solution* FlowSol)
-{
-    /** Set new shape points in Eles */
-
-    /** Update coordinate transformation */
-
-    /** Update transformation gradient */
-
-    /** Update transformation Jacobian */
-
-
 }
 
 void mesh::set_grid_velocity(solution* FlowSol, double dt)
@@ -263,10 +252,10 @@ void mesh::set_grid_velocity(solution* FlowSol, double dt)
     }
 
     // Interpolate grid vel @ spts to fpts
-    /// CREATE MATRIX INTERPOLATION OPERATION
-    /*for (int i=0; i<FlowSol->n_ele_types; i++) {
+    for (int i=0; i<FlowSol->n_ele_types; i++) {
         FlowSol->mesh_eles(i)->set_grid_vel_fpts();
-    }*/
+        FlowSol->mesh_eles(i)->set_grid_vel_upts();
+    }
 }
 
 /*! set individual-element stiffness matrix for a triangle */
@@ -436,6 +425,11 @@ void mesh::add_StiffMat_EleQuad(array<double> StiffMatrix_Elem, int id_pt_0,
 
 void mesh::update(solution* FlowSol)
 {
+    // Update grid velocity & transfer to upts, fpts
+    if (FlowSol->rank==0) cout << "Deform: updating grid velocity" << endl;
+
+    set_grid_velocity(FlowSol,run_input.dt);
+
     // Update element shape points
     if (FlowSol->rank==0) cout << "Deform: updating dynamic element shape points" << endl;
 
@@ -443,7 +437,7 @@ void mesh::update(solution* FlowSol)
     array<double> pos(FlowSol->n_dims);
 
     for (int ic=0; ic<FlowSol->num_eles; ic++) {
-        ele_type = FlowSol->c2ctype_c(ic);
+        ele_type = ctype(ic);
         local_id = ic2loc_c(ic);
         for (int iv=0; iv<c2n_v(ic); iv++) {
             for (int k=0; k<FlowSol->n_dims; k++) {
@@ -453,11 +447,11 @@ void mesh::update(solution* FlowSol)
         }
     }
 
-    // Update element transforms
+    // Update element transforms for dynamic -> static mesh
     if (FlowSol->rank==0) cout << "Deform: updating dynamic element transforms ... " << endl;
     for(int i=0;i<FlowSol->n_ele_types;i++) {
         if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
-            FlowSol->mesh_eles(i)->set_dynamic_transforms(run_input.run_type);
+            FlowSol->mesh_eles(i)->set_transforms_dynamic(run_input.run_type);
         }
     }
 

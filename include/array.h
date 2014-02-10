@@ -124,10 +124,10 @@ public:
 
     void rm_cpu(void);
 
-    // NEW FUNCTION: used to initialize int, double and float types
+    // Note: Only valid for int, double and float types
+    void initialize_to_zero(void);
 
-    void initialize_to_zero();
-
+    // Valid for all data types
     void initialize_to_value(const T val);
 
 protected:
@@ -571,7 +571,7 @@ void array<T>::rm_cpu(void)
 // Initialize values to zero
 // NEW FUNCTION: used to initialize int, double and float types
 template <typename T>
-void array<T>::initialize_to_zero()
+void array<T>::initialize_to_zero(void)
 {
 
         for(int i=0; i<dim_0*dim_1*dim_2*dim_3; i++)
