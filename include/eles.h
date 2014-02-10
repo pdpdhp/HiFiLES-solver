@@ -422,6 +422,34 @@ public:
 
     double *get_norm_fpts_dyn_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_dim, int in_ele);
     double *get_scaled_norm_dyn_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_ele);
+
+    /*! pre-computing shape basis contributions at flux points for more efficient access */
+    void store_nodal_s_basis_fpts(void);
+
+    /*! pre-computing shape basis contributions at solution points for more efficient access */
+    void store_nodal_s_basis_upts(void);
+
+    /*! pre-computing shape basis deriavative contributions at flux points for more efficient access */
+    void store_d_nodal_s_basis_fpts(void);
+
+    /*! pre-computing shape basis derivative contributions at solution points for more efficient access */
+    void store_d_nodal_s_basis_upts(void);
+
+    /**
+     * Calculate derivative of dynamic position wrt reference (initial,static) position at fpt
+     * \param[in] in_fpt - ID of flux point within element to evaluate at
+     * \param[in] in_ele - local element ID
+     * \param[out] out_d_pos - array of size (n_dims,n_dims); (i,j) = dx_i / dX_j
+     */
+    void calc_d_pos_dyn_fpt(int in_fpt, int in_ele, array<double> &out_d_pos);
+
+    /**
+     * Calculate derivative of dynamic position wrt reference (initial,static) position at upt
+     * \param[in] in_fpt - ID of solution point within element to evaluate at
+     * \param[in] in_ele - local element ID
+     * \param[out] out_d_pos - array of size (n_dims,n_dims); (i,j) = dx_i / dX_j
+     */
+    void calc_d_pos_dyn_upt(int in_upt, int in_ele, array<double> &out_d_pos);
 protected:
 
     // #### members ####
@@ -650,6 +678,18 @@ protected:
 
     /*! transformed gradient of determinant of jacobian at flux points */
     array<double> tgrad_detjac_fpts;
+
+    /*! nodal shape basis contributions at flux points */
+    array<double> nodal_s_basis_fpts;
+
+    /*! nodal shape basis contributions at solution points */
+    array<double> nodal_s_basis_upts;
+
+    /*! nodal shape basis derivative contributions at flux points */
+    array<double> d_nodal_s_basis_fpts;
+
+    /*! nodal shape basis derivative contributions at solution points */
+    array<double> d_nodal_s_basis_upts;
 
     // ----------------------------- Dynamic-Mesh Transforms -----------------------------
     /*! inverse of (determinant of jacobian multiplied by jacobian) at solution points (dynamic frame) */
