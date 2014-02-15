@@ -4617,22 +4617,19 @@ void eles::calc_d_pos_dyn(array<double> in_loc, int in_ele, array<double>& out_d
 
     eval_d_nodal_s_basis(d_nodal_s_basis,in_loc,n_spts_per_ele(in_ele));
 
-    // Calculate dX/d<c>
+    // Calculate dX/d<c>, dx/d<c>
     d_pos_ref.initialize_to_zero();
-    for(j=0;j<n_dims;j++)
-        for(k=0;k<n_dims;k++)
-            for(i=0;i<n_spts_per_ele(in_ele);i++)
-                d_pos_ref(j,k)+=d_nodal_s_basis(i,k)*shape(j,i,in_ele);
-
-    // Calculate dx/d<c>
     out_d_pos.initialize_to_zero();
-    for(j=0;j<n_dims;j++)
-        for(k=0;k<n_dims;k++)
-            for(i=0;i<n_spts_per_ele(in_ele);i++)
+    for(j=0;j<n_dims;j++) {
+        for(k=0;k<n_dims;k++) {
+            for(i=0;i<n_spts_per_ele(in_ele);i++) {
+                d_pos_ref(j,k)+=d_nodal_s_basis(i,k)*shape(j,i,in_ele);
                 out_d_pos(j,k)+=d_nodal_s_basis(i,k)*shape_dyn(j,i,in_ele);
+            }
+        }
+    }
 
-
-    // Calculate dx/dX = (dx/d<c>)/(dX/d<c>)
+    // Calculate dx/dX = (dx/d<c1>)/(dX/d<c1>) + (dx/d<c2>)/(dX/d<c2>) + ...
     for (j=0; j<n_dims; j++)
         for (k=0; k<n_dims; k++)
             out_d_pos(j,k) /= d_pos_ref(j,k);
@@ -4649,22 +4646,19 @@ void eles::calc_d_pos_dyn_fpt(int in_fpt, int in_ele, array<double>& out_d_pos)
     array<double> d_pos_ref; ///< derivative of ref. pos. wrt compuational space vars
     d_pos_ref.setup(n_dims,n_dims);
 
-    // Calculate dX/d<c>
+    // Calculate dX/d<c>, dx/d<c>
     d_pos_ref.initialize_to_zero();
-    for(j=0;j<n_dims;j++)
-        for(k=0;k<n_dims;k++)
-            for(i=0;i<n_spts_per_ele(in_ele);i++)
-                d_pos_ref(j,k)+=d_nodal_s_basis_fpts(k,i,in_fpt,in_ele)*shape(j,i,in_ele);
-
-    // Calculate dx/d<c>
     out_d_pos.initialize_to_zero();
-    for(j=0;j<n_dims;j++)
-        for(k=0;k<n_dims;k++)
-            for(i=0;i<n_spts_per_ele(in_ele);i++)
-                out_d_pos(j,k)+=d_nodal_s_basis(k,i,in_fpt,in_ele)*shape_dyn(j,i,in_ele);
+    for(j=0;j<n_dims;j++) {
+        for(k=0;k<n_dims;k++) {
+            for(i=0;i<n_spts_per_ele(in_ele);i++) {
+                d_pos_ref(j,k)+=d_nodal_s_basis_fpts(k,i,in_fpt,in_ele)*shape(j,i,in_ele);
+                out_d_pos(j,k)+=d_nodal_s_basis_fpts(k,i,in_fpt,in_ele)*shape_dyn(j,i,in_ele);
+            }
+        }
+    }
 
-
-    // Calculate dx/dX = (dx/d<c>)/(dX/d<c>)
+    // Calculate dx/dX = (dx/d<c1>)/(dX/d<c1>) + (dx/d<c2>)/(dX/d<c2>) + ...
     for (j=0; j<n_dims; j++)
         for (k=0; k<n_dims; k++)
             out_d_pos(j,k) /= d_pos_ref(j,k);
@@ -4682,22 +4676,19 @@ void eles::calc_d_pos_dyn_upt(int in_upt, int in_ele, array<double>& out_d_pos)
     array<double> d_pos_ref; ///< derivative of ref. pos. wrt compuational space vars
     d_pos_ref.setup(n_dims,n_dims);
 
-    // Calculate dX/d<c>
+    // Calculate dX/d<c>, dx/d<c>
     d_pos_ref.initialize_to_zero();
-    for(j=0;j<n_dims;j++)
-        for(k=0;k<n_dims;k++)
-            for(i=0;i<n_spts_per_ele(in_ele);i++)
-                d_pos_ref(j,k)+=d_nodal_s_basis_fpts(k,i,in_upt,in_ele)*shape(j,i,in_ele);
-
-    // Calculate dx/d<c>
     out_d_pos.initialize_to_zero();
-    for(j=0;j<n_dims;j++)
-        for(k=0;k<n_dims;k++)
-            for(i=0;i<n_spts_per_ele(in_ele);i++)
-                out_d_pos(j,k)+=d_nodal_s_basis(k,i,in_upt,in_ele)*shape_dyn(j,i,in_ele);
+    for(j=0;j<n_dims;j++) {
+        for(k=0;k<n_dims;k++) {
+            for(i=0;i<n_spts_per_ele(in_ele);i++) {
+                d_pos_ref(j,k)+=d_nodal_s_basis_upts(k,i,in_upt,in_ele)*shape(j,i,in_ele);
+                out_d_pos(j,k)+=d_nodal_s_basis_upts(k,i,in_upt,in_ele)*shape_dyn(j,i,in_ele);
+            }
+        }
+    }
 
-
-    // Calculate dx/dX = (dx/d<c>)/(dX/d<c>)
+    // Calculate dx/dX = (dx/d<c1>)/(dX/d<c1>) + (dx/d<c2>)/(dX/d<c2>) + ...
     for (j=0; j<n_dims; j++)
         for (k=0; k<n_dims; k++)
             out_d_pos(j,k) /= d_pos_ref(j,k);

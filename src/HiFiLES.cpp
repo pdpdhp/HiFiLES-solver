@@ -225,6 +225,7 @@ int main(int argc, char *argv[]) {
     /// Mesh Deformation
     /////////////////////////////////////////////////
     if (run_input.motion) {
+        cout << "Deforming Mesh" << endl;
         Mesh.deform(&FlowSol);
         //Mesh.update(&FlowSol);
          if (i_steps%run_input.mesh_output_freq==0)
