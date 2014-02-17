@@ -66,7 +66,7 @@ void int_inters::setup(int in_n_inters,int in_inter_type,int in_run_type)
 	  detjac_fpts_r.setup(n_fpts_per_inter,n_inters);
       grid_detjac_fpts_r.setup(n_fpts_per_inter,n_inters);
 	  mag_tnorm_dot_inv_detjac_mul_jac_fpts_r.setup(n_fpts_per_inter,n_inters);
-      scaled_norm_dyn_fpts_r.setup(n_fpts_per_inter,n_inters);
+      //scaled_norm_dyn_fpts_r.setup(n_fpts_per_inter,n_inters);
       delta_disu_fpts_r.setup(n_fpts_per_inter,n_inters,n_fields);
       vel_fpts_r.setup(n_dims,n_fpts_per_inter,n_inters);
 
@@ -122,13 +122,13 @@ void int_inters::set_interior(int in_inter, int in_ele_type_l, int in_ele_type_r
             mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(i,in_inter)=get_mag_tnorm_dot_inv_detjac_mul_jac_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,FlowSol);
             mag_tnorm_dot_inv_detjac_mul_jac_fpts_r(i,in_inter)=get_mag_tnorm_dot_inv_detjac_mul_jac_fpts_ptr(in_ele_type_r,in_ele_r,in_local_inter_r,i_rhs,FlowSol);
 
-            scaled_norm_dyn_fpts_l(i,in_inter)=get_scaled_norm_dyn_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,FlowSol);
-            scaled_norm_dyn_fpts_r(i,in_inter)=get_scaled_norm_dyn_ptr(in_ele_type_r,in_ele_r,in_local_inter_r,i_rhs,FlowSol);
+            /*scaled_norm_dyn_fpts_l(i,in_inter)=get_scaled_norm_dyn_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,FlowSol);
+            scaled_norm_dyn_fpts_r(i,in_inter)=get_scaled_norm_dyn_ptr(in_ele_type_r,in_ele_r,in_local_inter_r,i_rhs,FlowSol);*/
 
             for(j=0;j<n_dims;j++)
             {
                 norm_fpts(i,in_inter,j)=get_norm_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
-                norm_fpts_dyn(i,in_inter,j)=get_norm_fpts_dyn_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
+                //norm_fpts_dyn(i,in_inter,j)=get_norm_fpts_dyn_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
 
                 vel_fpts_l(j,i,in_inter)=get_vel_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
                 vel_fpts_r(j,i,in_inter)=get_vel_fpts_ptr(in_ele_type_r,in_ele_r,in_local_inter_r,i,j_rhs,FlowSol);
@@ -201,12 +201,13 @@ void int_inters::calc_norm_tconinvf_fpts(void)
             if (motion) {
                 for (int m=0;m<n_dims;m++) {
                     temp_v(m)=(*vel_fpts_l(m,j,i));
-                    norm(m) = *norm_fpts_dyn(j,i,m);
+                    //norm(m) = *norm_fpts_dyn(j,i,m);
+                    norm(m) = *norm_fpts(j,i,m);
                 }
             }else{
+                temp_v.initialize_to_zero();
                 for (int m=0;m<n_dims;m++)
                     norm(m) = *norm_fpts(j,i,m);
-                temp_v.initialize_to_zero();
             }
 
 
@@ -226,10 +227,11 @@ void int_inters::calc_norm_tconinvf_fpts(void)
 			  else if(n_dims==3) {
 			  	calc_invf_3d(temp_u_l,temp_f_l);
 			  	calc_invf_3d(temp_u_r,temp_f_r);
-                if (motion) {
+                /// taken care of in Riemann solver?
+                /*if (motion) {
                     calc_alef_3d(temp_u_l,temp_v,temp_f_l);
                     calc_alef_3d(temp_u_r,temp_v,temp_f_r);
-                }
+                }*/
 			  }
 			  else
                   FatalError("ERROR: Invalid number of dimensions ... ");
@@ -247,8 +249,8 @@ void int_inters::calc_norm_tconinvf_fpts(void)
 
             // Transform back to reference space
             for(int k=0;k<n_fields;k++) {
-                (*norm_tconf_fpts_l(j,i,k))=  fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(j,i))*(*scaled_norm_dyn_fpts_l(j,i));
-                (*norm_tconf_fpts_r(j,i,k))= -fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_r(j,i))*(*scaled_norm_dyn_fpts_r(j,i));
+                (*norm_tconf_fpts_l(j,i,k))=  fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(j,i));//*(*scaled_norm_dyn_fpts_l(j,i));
+                (*norm_tconf_fpts_r(j,i,k))= -fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_r(j,i));//*(*scaled_norm_dyn_fpts_r(j,i));
             }
       
             if(viscous)
@@ -339,8 +341,8 @@ void int_inters::calc_norm_tconvisf_fpts(void)
 
             // Transform back to reference space
             for(int k=0;k<n_fields;k++) {
-                (*norm_tconf_fpts_l(j,i,k))+=  fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(j,i))*(*scaled_norm_dyn_fpts_l(j,i));
-                (*norm_tconf_fpts_r(j,i,k))+= -fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_r(j,i))*(*scaled_norm_dyn_fpts_r(j,i));
+                (*norm_tconf_fpts_l(j,i,k))+=  fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(j,i));//*(*scaled_norm_dyn_fpts_l(j,i));
+                (*norm_tconf_fpts_r(j,i,k))+= -fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_r(j,i));//*(*scaled_norm_dyn_fpts_r(j,i));
             }
 			
 		}

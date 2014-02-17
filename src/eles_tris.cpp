@@ -78,10 +78,10 @@ void eles_tris::setup_ele_type_specific(int in_run_type)
 	upts_type=run_input.upts_type_tri;
 
 	set_loc_upts();
-  set_vandermonde();
+    set_vandermonde();
 
 	n_ppts_per_ele=(p_res+1)*p_res/2;
-  n_peles_per_ele=(p_res-1)*(p_res-1);
+    n_peles_per_ele=(p_res-1)*(p_res-1);
 	set_loc_ppts();
 	set_opp_p();
 

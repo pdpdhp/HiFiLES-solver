@@ -6,7 +6,7 @@ equation                          // 0: Euler/Navier-Stokes, 1:Advection/Adv-Dif
 viscous
 0
 riemann_solve_type                // 0: Rusanov, 1: Lax-Friedrich, 2: Roe
-0
+2
 vis_riemann_solve_type
 0
 ic_form                           // 0: Isentropic Vortex, 1: Uniform flow, 2: Sine Wave
@@ -20,7 +20,7 @@ order                             // Order of basis polynomials
 dt 
 0.0001
 n_steps
-50
+5
 adv_type                          // 0: Forward Euler, 3: RK45
 0
 tau 
@@ -40,7 +40,7 @@ n_restart_files
 Mesh options
 -----------------------
 mesh_file
-ACL_Gmsh.msh
+cylinder_linear_simple.msh
 dx_cyclic
 200000000.0
 dy_cyclic
@@ -51,7 +51,7 @@ dz_cyclic
 Mesh Deformation Options
 ----------------------------------
 motion_flag                       // 0: Static Mesh, 1: Moving/Deforming Mesh
-1
+0
 moving_boundaries                 // n_moving_bnds, <boundary name(s)>
 1 Slip_Wall 	 
 n_deform_iters                    // number of steps to perform during each deform process
@@ -59,7 +59,7 @@ n_deform_iters                    // number of steps to perform during each defo
 simple_bound_velocity             // Prescribe constant <x,y,z> velocity of boundary
 5 5 0
 mesh_output_freq                  // Frequency to output mesh to file (-1: use plot_freq)
-5
+-1
 mesh_output_format                 // 0: Gambit, 1: Gmsh (but, Gambit not working yet)
 1
 -----------------------------------

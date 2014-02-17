@@ -251,7 +251,7 @@ void mesh::set_grid_velocity(solution* FlowSol, double dt)
         }
     }
 
-    // Interpolate grid vel @ spts to fpts
+    // Interpolate grid vel @ spts to fpts & upts
     for (int i=0; i<FlowSol->n_ele_types; i++) {
         FlowSol->mesh_eles(i)->set_grid_vel_fpts();
         FlowSol->mesh_eles(i)->set_grid_vel_upts();
@@ -451,7 +451,8 @@ void mesh::update(solution* FlowSol)
     if (FlowSol->rank==0) cout << "Deform: updating dynamic element transforms ... " << endl;
     for(int i=0;i<FlowSol->n_ele_types;i++) {
         if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
-            FlowSol->mesh_eles(i)->set_transforms_dynamic(run_input.run_type);
+            //FlowSol->mesh_eles(i)->set_transforms_dynamic(run_input.run_type);
+            FlowSol->mesh_eles(i)->set_transforms(run_input.run_type);
         }
     }
 

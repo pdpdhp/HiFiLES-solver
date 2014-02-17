@@ -128,14 +128,14 @@ void bdy_inters::set_boundary(int in_inter, int bdy_type, int in_ele_type_l, int
     for(int i=0;i<n_fpts_per_inter;i++)
     {
       mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(i,in_inter)=get_mag_tnorm_dot_inv_detjac_mul_jac_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,FlowSol);
-      scaled_norm_dyn_fpts_l(i,in_inter) = get_scaled_norm_dyn_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,FlowSol);
+      //scaled_norm_dyn_fpts_l(i,in_inter) = get_scaled_norm_dyn_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,FlowSol);
 
       for(int j=0;j<n_dims;j++)
       {
         norm_fpts(i,in_inter,j)=get_norm_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
-        norm_fpts_dyn(i,in_inter,j)=get_norm_fpts_dyn_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
+        //norm_fpts_dyn(i,in_inter,j)=get_norm_fpts_dyn_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
         loc_fpts(i,in_inter,j)=get_loc_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
-        loc_fpts_dyn(i,in_inter,j)=get_loc_fpts_dyn_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
+        //loc_fpts_dyn(i,in_inter,j)=get_loc_fpts_dyn_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
         vel_fpts_l(j,i,in_inter)=get_vel_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
       }
 
@@ -153,11 +153,11 @@ void bdy_inters::mv_all_cpu_gpu(void)
   disu_fpts_l.mv_cpu_gpu();
   norm_tconf_fpts_l.mv_cpu_gpu();
   mag_tnorm_dot_inv_detjac_mul_jac_fpts_l.mv_cpu_gpu();
-  scaled_norm_dyn_fpts_l.mv_cpu_gpu();
+  //scaled_norm_dyn_fpts_l.mv_cpu_gpu();
   norm_fpts.mv_cpu_gpu();
-  norm_fpts_dyn.mv_cpu_gpu()
+  //norm_fpts_dyn.mv_cpu_gpu()
   loc_fpts.mv_cpu_gpu();
-  loc_fpts_dyn.mv_cpu_gpu();
+  //loc_fpts_dyn.mv_cpu_gpu();
   
   delta_disu_fpts_l.mv_cpu_gpu();
 
@@ -192,30 +192,27 @@ void bdy_inters::calc_norm_tconinvf_fpts_boundary(double time_bound)
     for(int j=0;j<n_fpts_per_inter;j++)
     {
 
-        // storing normal components
-        if (motion) {
-            for (int m=0;m<n_dims;m++)
-                norm(m) = *norm_fpts_dyn(j,i,m);
-        }else{
-            for (int m=0;m<n_dims;m++)
-                norm(m) = *norm_fpts(j,i,m);
-        }
-
-
         // calculate discontinuous solution at flux points
         for(int k=0;k<n_fields;k++) {
             temp_u_l(k)=(*disu_fpts_l(j,i,k));
         }
 
-        // get position & grid velocity at flux points
-        for (int m=0;m<n_dims;m++) {
-            if (motion) {
-                temp_loc(m) = *loc_fpts_dyn(j,i,m);
-                temp_v(m)=(*vel_fpts_l(m,j,i));
-            }else{
+        // storing normal components, position, and
+        // grid velocity at flux points
+        if (motion) {
+            for (int m=0;m<n_dims;m++) {
+                //norm(m) = *norm_fpts_dyn(j,i,m);
+                norm(m) = *norm_fpts(j,i,m);
+                //temp_loc(m) = *loc_fpts_dyn(j,i,m);
                 temp_loc(m) = *loc_fpts(j,i,m);
-                temp_v.initialize_to_zero();
+                temp_v(m)=(*vel_fpts_l(m,j,i));
             }
+        }else{
+            for (int m=0;m<n_dims;m++) {
+                norm(m) = *norm_fpts(j,i,m);
+                temp_loc(m) = *loc_fpts(j,i,m);
+            }
+            temp_v.initialize_to_zero();
         }
 
         set_inv_boundary_conditions(boundary_type(i),temp_u_l.get_ptr_cpu(),temp_u_r.get_ptr_cpu(),temp_v.get_ptr_cpu(),norm.get_ptr_cpu(),temp_loc.get_ptr_cpu(),bdy_params.get_ptr_cpu(),n_dims,n_fields,run_input.gamma,run_input.R_ref,time_bound,run_input.equation);
@@ -265,12 +262,12 @@ void bdy_inters::calc_norm_tconinvf_fpts_boundary(double time_bound)
 
       // Transform back to reference space
       // First, transform from dynamic to static frame (if needed)
-      if (motion) {
+      /** if (motion) {
           for(int k=0;k<n_fields;k++) {
               // TODO: FIX ME!! SUBTRACT ALE FLUX?
               (*norm_tconf_fpts_l(j,i,k))=fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(j,i))*(*scaled_norm_dyn_fpts_l(j,i));
           }
-      }
+      }*/
       // Transfrom from static to computational frame
       for(int k=0;k<n_fields;k++)
           (*norm_tconf_fpts_l(j,i,k))=fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(j,i));
@@ -790,23 +787,23 @@ void bdy_inters::calc_norm_tconvisf_fpts_boundary(double time_bound)
       // storing normal components & flux point locations
         if (motion) {
             for (int m=0;m<n_dims;m++) {
+                //norm(m) = *norm_fpts_dyn(j,i,m);
+                //temp_loc(m) = *loc_fpts_dyn(j,i,m);
                 norm(m) = *norm_fpts(j,i,m);
                 temp_loc(m) = *loc_fpts(j,i,m);
+                temp_v_l(m)=(*vel_fpts_l(m,j,i));
             }
         }else{
             for (int m=0;m<n_dims;m++) {
-                norm(m) = *norm_fpts_dyn(j,i,m);
-                temp_loc(m) = *loc_fpts_dyn(j,i,m);
+                norm(m) = *norm_fpts(j,i,m);
+                temp_loc(m) = *loc_fpts(j,i,m);
             }
+            temp_v_l.initialize_to_zero();
         }
       
       // obtain discontinuous solution at flux points
       for(int k=0;k<n_fields;k++) {
         temp_u_l(k)=(*disu_fpts_l(j,i,k));
-      }
-      
-      for (int m=0;m<n_dims;m++) {
-        temp_v_l(m)=(*vel_fpts_l(m,j,i));
       }
 
       set_inv_boundary_conditions(bdy_spec,temp_u_l.get_ptr_cpu(),temp_u_r.get_ptr_cpu(),temp_v_l.get_ptr_cpu(),norm.get_ptr_cpu(),temp_loc.get_ptr_cpu(),bdy_params.get_ptr_cpu(),n_dims,n_fields,run_input.gamma,run_input.R_ref,time_bound,run_input.equation);
@@ -874,7 +871,7 @@ void bdy_inters::calc_norm_tconvisf_fpts_boundary(double time_bound)
 
       // Transform back to reference space  
       for(int k=0;k<n_fields;k++) 
-          (*norm_tconf_fpts_l(j,i,k))+=fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(j,i))*(*scaled_norm_dyn_fpts_l(j,i));
+          (*norm_tconf_fpts_l(j,i,k))+=fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(j,i));//*(*scaled_norm_dyn_fpts_l(j,i));
     }
   }
 
