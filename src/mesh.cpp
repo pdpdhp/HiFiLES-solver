@@ -182,7 +182,6 @@ void mesh::deform(struct solution* FlowSol) {
         delete system;
         delete mat_vec;
         delete precond;
-        //cout << "double-free not happening on delete [system, mat_vec, precond] " << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;
         /*--- Update the grid coordinates and cell volumes using the solution
         of the linear system (usol contains the x, y, z displacements). ---*/
         update_grid_coords();
@@ -199,17 +198,18 @@ void mesh::deform(struct solution* FlowSol) {
         }
         */
     }
-    set_grid_velocity(FlowSol,run_input.dt);
+
+    /*--- Update grid velocity & dynamic element transforms ---*/
+    update(FlowSol);
+
     /*--- Now that deformation is complete & velocity is set, update the
       'official' vertex coordinates ---*/
-
     xv = xv_new;
 
     /*--- Deallocate vectors for the linear system. ---*/
     LinSysSol.~CSysVector();
     LinSysRes.~CSysVector();
     StiffnessMatrix.~CSysMatrix();
-    //cout << "double-free not happening here! " << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;
 }
 
 void mesh::set_min_length(void)
@@ -249,11 +249,11 @@ void mesh::set_grid_velocity(solution* FlowSol, double dt)
         }
     }
 
-    // Interpolate grid vel @ spts to fpts
-    /// CREATE MATRIX INTERPOLATION OPERATION
-    /*for (int i=0; i<FlowSol->n_ele_types; i++) {
+    // Interpolate grid vel @ spts to fpts & upts
+    for (int i=0; i<FlowSol->n_ele_types; i++) {
         FlowSol->mesh_eles(i)->set_grid_vel_fpts();
-    }*/
+        FlowSol->mesh_eles(i)->set_grid_vel_upts();
+    }
 }
 
 /*! set individual-element stiffness matrix for a triangle */
@@ -423,6 +423,11 @@ void mesh::add_StiffMat_EleQuad(array<double> StiffMatrix_Elem, int id_pt_0,
 
 void mesh::update(solution* FlowSol)
 {
+    // Update grid velocity & transfer to upts, fpts
+    if (FlowSol->rank==0) cout << "Deform: updating grid velocity" << endl;
+
+    set_grid_velocity(FlowSol,run_input.dt);
+
     // Update element shape points
     if (FlowSol->rank==0) cout << "Deform: updating element shape points" << endl;
 
@@ -436,7 +441,7 @@ void mesh::update(solution* FlowSol)
             for (int k=0; k<FlowSol->n_dims; k++) {
                 pos(k) = xv_new(c2v(ic,iv),k);
             }
-            FlowSol->mesh_eles(ele_type)->set_shape_node(iv,local_id,pos);
+            FlowSol->mesh_eles(ele_type)->set_dynamic_shape_node(iv,local_id,pos);
         }
     }
 
@@ -450,7 +455,7 @@ void mesh::update(solution* FlowSol)
         }
     }
 
-    // Set metrics at interface cubpts
+    /*// Set metrics at interface cubpts
     if (FlowSol->rank==0) cout << "Deform: setting element transforms at interface cubature points ... " << endl;
     for(int i=0;i<FlowSol->n_ele_types;i++) {
         if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
@@ -464,7 +469,7 @@ void mesh::update(solution* FlowSol)
         if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
             FlowSol->mesh_eles(i)->set_transforms_vol_cubpts();
         }
-    }
+    }*/
 }
 
 void mesh::write_mesh(int mesh_type,double sim_time)

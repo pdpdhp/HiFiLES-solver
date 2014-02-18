@@ -184,9 +184,11 @@ void int_inters::calc_norm_tconinvf_fpts(void)
 				temp_u_l(k)=(*disu_fpts_l(j,i,k));
 				temp_u_r(k)=(*disu_fpts_r(j,i,k));
 			}
-            for (int k=0; k<n_dims; k++) {
-                temp_v_l(k)=(*vel_fpts_l(k,j,i));
-                temp_v_r(k)=(*vel_fpts_r(k,j,i));
+            if (motion) {
+                for (int k=0; k<n_dims; k++)
+                    temp_v(k)=(*vel_fpts_l(k,j,i));
+            }else{
+                temp_v.initialize_to_zero();
             }
 
       // storing normal components
@@ -203,23 +205,25 @@ void int_inters::calc_norm_tconinvf_fpts(void)
 			  if(n_dims==2) {
 			  	calc_invf_2d(temp_u_l,temp_f_l);
 			  	calc_invf_2d(temp_u_r,temp_f_r);
+                /// Figure out appropriate place for this
                 if (motion) {
-                    calc_alef_2d(temp_u_l,temp_v_l,temp_f_l);
-                    calc_alef_2d(temp_u_r,temp_v_r,temp_f_r);
+                    calc_alef_2d(temp_u_l,temp_v,temp_f_l);
+                    calc_alef_2d(temp_u_r,temp_v,temp_f_r);
                 }
 			  }
 			  else if(n_dims==3) {
 			  	calc_invf_3d(temp_u_l,temp_f_l);
 			  	calc_invf_3d(temp_u_r,temp_f_r);
+                /// Figure out appropriate place for this
                 if (motion) {
-                    calc_alef_3d(temp_u_l,temp_v_l,temp_f_l);
-                    calc_alef_3d(temp_u_r,temp_v_r,temp_f_r);
+                    calc_alef_3d(temp_u_l,temp_v,temp_f_l);
+                    calc_alef_3d(temp_u_r,temp_v,temp_f_r);
                 }
 			  }
 			  else
   		  	FatalError("ERROR: Invalid number of dimensions ... ");
 
-        rusanov_flux(temp_u_l,temp_u_r,temp_f_l,temp_f_r,norm,fn,n_dims,n_fields,run_input.gamma);
+        rusanov_flux(temp_u_l,temp_u_r,temp_f_l,temp_f_r,temp_v,norm,fn,n_dims,n_fields,run_input.gamma);
       }
       else if (run_input.riemann_solve_type==1) { // Lax-Friedrich
         lax_friedrich(temp_u_l,temp_u_r,norm,fn,n_dims,n_fields,run_input.lambda,run_input.wave_speed);
@@ -299,6 +303,15 @@ void int_inters::calc_norm_tconvisf_fpts(void)
 					temp_grad_u_r(l,k) = *grad_disu_fpts_r(j,i,l,k);
 				}
 			}
+
+            // obtain grid velocity at flux point (or set to 0)
+
+            if (motion) {
+                for (int k=0; k<n_dims; k++)
+                    temp_v(k)=(*vel_fpts_l(k,j,i));
+            }else{
+                temp_v.initialize_to_zero();
+            }
 
 			// calculate flux from discontinuous solution at flux points
 			

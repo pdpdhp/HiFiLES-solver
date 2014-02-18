@@ -190,6 +190,9 @@ public:
     /*! set shape node */
     void set_shape_node(int in_spt, int in_ele, array<double>& in_pos);
 
+    /*! set dynamic (moving grid) shape node */
+    void set_dynamic_shape_node(int in_spt, int in_ele, array<double>& in_pos);
+
     /*! set bc type */
     void set_bctype(int in_ele, int in_inter, int in_bctype);
 
@@ -393,10 +396,97 @@ public:
     array<double> compute_error(int in_norm_type, double& time);
 
     array<double> get_pointwise_error(array<double>& sol, array<double>& grad_sol, array<double>& loc, double& time, int in_norm_type);
+    /**
+     * Calculate derivative of dynamic position wrt reference (initial,static) position
+     * \param[in] in_loc - position of point in computational space
+     * \param[in] in_ele - local element ID
+     * \param[out] out_d_pos - array of size (n_dims,n_dims); (i,j) = dx_i / dX_j
+     */
+    void calc_d_pos_dyn(array<double> in_loc, int in_ele, array<double> &out_d_pos);
+
+    /** calculate position of solution point in physical (dynamic) space */
+    void calc_pos_upt_dyn(int in_upt, int in_ele, array<double> &out_pos);
+
+    /** calculate position of a point in physical (dynamic) space from (r,s,t) coordinates*/
+    void calc_pos_dyn(array<double> in_loc, int in_ele, array<double> &out_pos);
+
+    double *get_norm_fpts_dyn_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_dim, int in_ele);
+    double *get_scaled_norm_dyn_ptr(int in_inter_local_fpt, int in_ele_local_inter, int in_ele);
+
+    /*! pre-computing shape basis contributions at flux points for more efficient access */
+    void store_nodal_s_basis_fpts(void);
+
+    /*! pre-computing shape basis contributions at solution points for more efficient access */
+    void store_nodal_s_basis_upts(void);
+
+    /*! pre-computing shape basis deriavative contributions at flux points for more efficient access */
+    void store_d_nodal_s_basis_fpts(void);
+
+    /*! pre-computing shape basis derivative contributions at solution points for more efficient access */
+    void store_d_nodal_s_basis_upts(void);
+
+    /*! pre-computing shape basis 2nd derivative contributions at flux points for more efficient access */
+    void store_dd_nodal_s_basis_fpts(void);
+
+    /*! pre-computing shape basis 2nd derivative contributions at solution points for more efficient access */
+    void store_dd_nodal_s_basis_upts(void);
+
+    /**
+     * Calculate dynamic position of solution point
+     * \param[in] in_upt - ID of solution point within element to evaluate at
+     * \param[in] in_ele - local element ID
+     * \param[out] out_d_pos - array of size (n_dims,n_dims); (i,j) = dx_i / dX_j
+     */
+    void calc_pos_dyn_fpt(int in_upt, int in_ele, array<double> &out_pos);
+
+    /**
+     * Calculate dynamic position of flux point
+     * \param[in] in_upt - ID of solution point within element to evaluate at
+     * \param[in] in_ele - local element ID
+     * \param[out] out_d_pos - array of size (n_dims,n_dims); (i,j) = dx_i / dX_j
+     */
+    void calc_pos_dyn_upt(int in_fpt, int in_ele, array<double> &out_pos);
+
+    /**
+     * Calculate derivative of dynamic position wrt reference (initial,static) position at fpt
+     * \param[in] in_fpt - ID of flux point within element to evaluate at
+     * \param[in] in_ele - local element ID
+     * \param[out] out_d_pos - array of size (n_dims,n_dims); (i,j) = dx_i / dX_j
+     */
+    void calc_d_pos_dyn_fpt(int in_fpt, int in_ele, array<double> &out_d_pos);
+
+    /**
+     * Calculate derivative of dynamic position wrt reference (initial,static) position at upt
+     * \param[in] in_upt - ID of solution point within element to evaluate at
+     * \param[in] in_ele - local element ID
+     * \param[out] out_d_pos - array of size (n_dims,n_dims); (i,j) = dx_i / dX_j
+     */
+    void calc_d_pos_dyn_upt(int in_upt, int in_ele, array<double> &out_d_pos);
+
+    /**
+     * Calculate 2nd derivative of dynamic position wrt reference (initial,static) position at fpt
+     * \param[in] in_fpt - ID of flux point within element to evaluate at
+     * \param[in] in_ele - local element ID
+     * \param[out] out_d_pos - array of size (n_dims,n_dims); (i,j) = dx_i / dX_j
+     */
+    void calc_dd_pos_dyn_fpt(int in_fpt, int in_ele, array<double> &out_dd_pos);
+
+    /**
+     * Calculate 2nd derivative of dynamic position wrt reference (initial,static) position at upt
+     * \param[in] in_upt - ID of solution point within element to evaluate at
+     * \param[in] in_ele - local element ID
+     * \param[out] out_d_pos - array of size (n_dims,n_dims); (i,j) = dx_i / dX_j
+     */
+    void calc_dd_pos_dyn_upt(int in_upt, int in_ele, array<double> &out_dd_pos);
+
+    void calc_dd_pos_dyn(array<double> in_loc, int in_ele, array<double> &out_dd_pos);
 
 protected:
 
     // #### members ####
+
+    /// **NEW** flag to avoid re-setting-up transform arrays
+    bool first_time;
 
     /*! viscous flag */
     int viscous;
@@ -536,8 +626,11 @@ protected:
     /*! order of polynomials defining shapes */
     int s_order;
 
-    /*! shape */
+    /*! position of shape points (mesh vertices) in initial (static) mesh */
     array<double> shape;
+
+    /*! position of shape points (mesh vertices) in dynamic mesh */
+    array<double> shape_dyn;
 
     /*!
     Description: Mesh velocity at shape points \n
@@ -550,6 +643,24 @@ protected:
     indexing: (in_ele, in_fpt, in_dim) \n
     */
     array<double> vel_fpts, vel_upts;
+
+    /*! nodal shape basis contributions at flux points */
+    array<double> nodal_s_basis_fpts;
+
+    /*! nodal shape basis contributions at solution points */
+    array<double> nodal_s_basis_upts;
+
+    /*! nodal shape basis derivative contributions at flux points */
+    array<double> d_nodal_s_basis_fpts;
+
+    /*! nodal shape basis derivative contributions at solution points */
+    array<double> d_nodal_s_basis_upts;
+
+    /*! nodal shape basis 2nd derivative contributions at flux points */
+    array<double> dd_nodal_s_basis_fpts;
+
+    /*! nodal shape basis 2nd derivative contributions at solution points */
+    array<double> dd_nodal_s_basis_upts;
 
 	/*! index of local (individual element) shape point to index of shape point within ele class (eles_tris, etc.) */
 	array<int> loc_spt2spt_ctype;

@@ -43,7 +43,7 @@ public:
     void right_flux(array<double> &f_r, array<double> &norm, array<double> &fn, int n_dims, int n_fields, double gamma);
 
     /*! Compute common inviscid flux using Rusanov flux */
-    void rusanov_flux(array<double> &q_l, array<double> &q_r, array<double> &f_l, array<double> &f_r, array<double> &norm, array<double> &fn, int n_dims, int n_fields, double gamma);
+    void rusanov_flux(array<double> &q_l, array<double> &q_r, array<double> &f_l, array<double> &f_r, array<double> &v_g, array<double> &norm, array<double> &fn, int n_dims, int n_fields, double gamma);
 
     /*! Compute common inviscid flux using Roe flux */
     void roe_flux(array<double> &q_l, array<double> &q_r, array<double> &norm, array<double> &fn, int n_dims, int n_fields, double gamma);
@@ -102,6 +102,7 @@ protected:
     // Grid velocity (continuous across eles)
     array<double> temp_v_l;
     array<double> temp_v_r;
+    array<double> temp_v;
 
     array<double> temp_f;
 

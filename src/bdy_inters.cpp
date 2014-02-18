@@ -186,39 +186,46 @@ void bdy_inters::calc_norm_tconinvf_fpts_boundary(double time_bound)
     for(int j=0;j<n_fpts_per_inter;j++)
     {
 
-      // storing normal components
+      // get interface normal components
       for (int m=0;m<n_dims;m++)
         norm(m) = *norm_fpts(j,i,m);
 
-      // calculate discontinuous solution at flux points
+      // get discontinuous solution at flux point
       for(int k=0;k<n_fields;k++) {
         temp_u_l(k)=(*disu_fpts_l(j,i,k));
+      }
 
+      // get grid velocity at flux point (or set to 0)
+      if (motion) {
+          for(int k=0; k<n_dims; k++)
+              temp_v(k)=(*vel_fpts_l(k,j,i));
+      }else{
+          temp_v.initialize_to_zero();
       }
-      for(int k=0; k<n_dims; k++) {
-          temp_v_l(k)=(*vel_fpts_l(k,j,i));
-      }
-  
+
+      // get physical location of flux point
       for (int m=0;m<n_dims;m++)
         temp_loc(m) = *loc_fpts(j,i,m);
 
-      set_inv_boundary_conditions(boundary_type(i),temp_u_l.get_ptr_cpu(),temp_u_r.get_ptr_cpu(),temp_v_l.get_ptr_cpu(),norm.get_ptr_cpu(),temp_loc.get_ptr_cpu(),bdy_params.get_ptr_cpu(),n_dims,n_fields,run_input.gamma,run_input.R_ref,time_bound,run_input.equation);
+      set_inv_boundary_conditions(boundary_type(i),temp_u_l.get_ptr_cpu(),temp_u_r.get_ptr_cpu(),temp_v.get_ptr_cpu(),norm.get_ptr_cpu(),temp_loc.get_ptr_cpu(),bdy_params.get_ptr_cpu(),n_dims,n_fields,run_input.gamma,run_input.R_ref,time_bound,run_input.equation);
 
       // calculate flux from discontinuous solution at flux points
       if(n_dims==2) {
         calc_invf_2d(temp_u_l,temp_f_l);
         calc_invf_2d(temp_u_r,temp_f_r);
+        /// Figure out where this should really go
         if(motion) {
-            calc_alef_2d(temp_u_l,temp_v_l,temp_f_l);
-            calc_alef_2d(temp_u_r,temp_v_r,temp_f_r);
+            calc_alef_2d(temp_u_l,temp_v,temp_f_l);
+            calc_alef_2d(temp_u_r,temp_v,temp_f_r);
         }
       }
       else if(n_dims==3) {
         calc_invf_3d(temp_u_l,temp_f_l);
         calc_invf_3d(temp_u_r,temp_f_r);
+        /// Figure out where this should really go
         if(motion) {
-            calc_alef_3d(temp_u_l,temp_v_l,temp_f_l);
-            calc_alef_3d(temp_u_r,temp_v_r,temp_f_r);
+            calc_alef_3d(temp_u_l,temp_v,temp_f_l);
+            calc_alef_3d(temp_u_r,temp_v,temp_f_r);
         }
       }
       else
@@ -234,7 +241,7 @@ void bdy_inters::calc_norm_tconinvf_fpts_boundary(double time_bound)
       {
         // Calling Riemann solver
         if (run_input.riemann_solve_type==0) { //Rusanov
-          rusanov_flux(temp_u_l,temp_u_r,temp_f_l,temp_f_r,norm,fn,n_dims,n_fields,run_input.gamma);
+          rusanov_flux(temp_u_l,temp_u_r,temp_f_l,temp_f_r,temp_v,norm,fn,n_dims,n_fields,run_input.gamma);
         }
         else if (run_input.riemann_solve_type==1) { // Lax-Friedrich
           lax_friedrich(temp_u_l,temp_u_r,norm,fn,n_dims,n_fields,run_input.lambda,run_input.wave_speed);
@@ -319,7 +326,7 @@ void bdy_inters::set_inv_boundary_conditions(int bdy_type, double* u_l, double* 
       // fix density and velocity
       rho_r = rho_bound;
       for (int i=0; i<n_dims; i++)
-          v_r[i] = v_bound[i] - gv[i];
+          v_r[i] = v_bound[i];
       
       // extrapolate pressure
       p_r = p_l;
@@ -487,7 +494,7 @@ void bdy_inters::set_inv_boundary_conditions(int bdy_type, double* u_l, double* 
       // fix density and velocity
       rho_r = rho_bound;
       for (int i=0; i<n_dims; i++)
-          v_r[i] = v_bound[i]-gv[i];
+          v_r[i] = v_bound[i];
 
       // fix pressure
       p_r = p_bound;
@@ -518,7 +525,7 @@ void bdy_inters::set_inv_boundary_conditions(int bdy_type, double* u_l, double* 
       // Compute normal velocity on left side
       vn_l = 0.;
       for (int i=0; i<n_dims; i++)
-        vn_l += v_l[i]*norm[i];
+        vn_l += (v_l[i]-gv[i])*norm[i];
 
       // reflect normal velocity
       for (int i=0; i<n_dims; i++)
@@ -773,12 +780,20 @@ void bdy_inters::calc_norm_tconvisf_fpts_boundary(double time_bound)
         temp_u_l(k)=(*disu_fpts_l(j,i,k));
       }
       
+      // get physical location of flux point
       for (int m=0;m<n_dims;m++) {
         temp_loc(m) = *loc_fpts(j,i,m);
-        temp_v_l(m)=(*vel_fpts_l(m,j,i));
       }
 
-      set_inv_boundary_conditions(bdy_spec,temp_u_l.get_ptr_cpu(),temp_u_r.get_ptr_cpu(),temp_v_l.get_ptr_cpu(),norm.get_ptr_cpu(),temp_loc.get_ptr_cpu(),bdy_params.get_ptr_cpu(),n_dims,n_fields,run_input.gamma,run_input.R_ref,time_bound,run_input.equation);
+      // get grid velocity at flux point (or set to 0)
+      if (motion) {
+          for(int k=0; k<n_dims; k++)
+              temp_v(k)=(*vel_fpts_l(k,j,i));
+      }else{
+          temp_v.initialize_to_zero();
+      }
+
+      set_inv_boundary_conditions(bdy_spec,temp_u_l.get_ptr_cpu(),temp_u_r.get_ptr_cpu(),temp_v.get_ptr_cpu(),norm.get_ptr_cpu(),temp_loc.get_ptr_cpu(),bdy_params.get_ptr_cpu(),n_dims,n_fields,run_input.gamma,run_input.R_ref,time_bound,run_input.equation);
       
       // obtain gradient of discontinuous solution at flux points
       for(int k=0;k<n_dims;k++)

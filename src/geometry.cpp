@@ -408,11 +408,18 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     if (FlowSol->rank==0) cout << "setting element transforms ... " << endl;
     for(int i=0;i<FlowSol->n_ele_types;i++) {
         if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
+            // Pre-compute shape basis - CRITICAL for deforming mesh performance
+            FlowSol->mesh_eles(i)->store_nodal_s_basis_fpts();
+            FlowSol->mesh_eles(i)->store_nodal_s_basis_upts();
+            FlowSol->mesh_eles(i)->store_d_nodal_s_basis_fpts();
+            FlowSol->mesh_eles(i)->store_d_nodal_s_basis_upts();
+            FlowSol->mesh_eles(i)->store_dd_nodal_s_basis_fpts();
+            FlowSol->mesh_eles(i)->store_dd_nodal_s_basis_upts();
+            // Set physical -> reference transforms
             FlowSol->mesh_eles(i)->set_transforms(in_run_type);
         }
     }
 
-    /// ** Placeholder for misc mesh motion setup **
     // even if motion turned off, still need to have velocity initialized to 0
     //if (run_input.motion) {
         if (FlowSol->rank==0) cout << "setting mesh motion parameters ... " << endl;
