@@ -213,7 +213,6 @@ void bdy_inters::calc_norm_tconinvf_fpts_boundary(double time_bound)
       if(n_dims==2) {
         calc_invf_2d(temp_u_l,temp_f_l);
         calc_invf_2d(temp_u_r,temp_f_r);
-        /// Figure out where this should really go
         if(motion) {
             calc_alef_2d(temp_u_l,temp_v,temp_f_l);
             calc_alef_2d(temp_u_r,temp_v,temp_f_r);
@@ -222,7 +221,6 @@ void bdy_inters::calc_norm_tconinvf_fpts_boundary(double time_bound)
       else if(n_dims==3) {
         calc_invf_3d(temp_u_l,temp_f_l);
         calc_invf_3d(temp_u_r,temp_f_r);
-        /// Figure out where this should really go
         if(motion) {
             calc_alef_3d(temp_u_l,temp_v,temp_f_l);
             calc_alef_3d(temp_u_r,temp_v,temp_f_r);

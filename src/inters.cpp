@@ -273,17 +273,18 @@ void inters::right_flux(array<double> &f_r, array<double> &norm, array<double> &
 // Rusanov inviscid numerical flux
 void inters::rusanov_flux(array<double> &u_l, array<double> &u_r, array<double> &f_l, array<double> &f_r, array<double> &v_g, array<double> &norm, array<double> &fn, int n_dims, int n_fields, double gamma)
 {
-    double vx_l,vy_l,vx_r,vy_r,vz_l,vz_r,vn_l,vn_r,vn_g,p_l,p_r,vn_av_mag,c_av;
-  array<double> fn_l(n_fields),fn_r(n_fields);
+    double vx_l,vy_l,vx_r,vy_r,vz_l,vz_r,vn_l,vn_r,vn_g,p_l,p_r;
+    double vn_av_mag,c_av,lambda;
+    array<double> fn_l(n_fields),fn_r(n_fields);
 
-  // calculate normal flux from discontinuous solution at flux points
+    // calculate normal flux from discontinuous solution at flux points
 	for(int k=0;k<n_fields;k++) {
 
 		fn_l(k)=0.;
 		fn_r(k)=0.;
 
 		for(int l=0;l<n_dims;l++) {
-  		fn_l(k)+=f_l(k,l)*norm(l);
+            fn_l(k)+=f_l(k,l)*norm(l);
 			fn_r(k)+=f_r(k,l)*norm(l);
 		}		
 	}
@@ -295,35 +296,37 @@ void inters::rusanov_flux(array<double> &u_l, array<double> &u_r, array<double> 
     vy_l=u_l(2)/u_l(0);
 	vy_r=u_r(2)/u_r(0);
 		
-  if(n_dims==2) {
-            vn_l = vx_l*norm(0)+vy_l*norm(1);
-            vn_r = vx_r*norm(0)+vy_r*norm(1);
-            vn_g = v_g(0)*norm(0) + v_g(1)*norm(1);
+    if(n_dims==2) {
+        vn_l = vx_l*norm(0)+vy_l*norm(1);
+        vn_r = vx_r*norm(0)+vy_r*norm(1);
+        vn_g = v_g(0)*norm(0) + v_g(1)*norm(1);
 
-            p_l = (gamma-1.0)*(u_l(3)-(0.5*u_l(0)*((vx_l*vx_l)+(vy_l*vy_l))));
-            p_r = (gamma-1.0)*(u_r(3)-(0.5*u_r(0)*((vx_r*vx_r)+(vy_r*vy_r))));
-		}
-		else if(n_dims==3) {
-            vz_l = u_l(3)/u_l(0);
-            vz_r = u_r(3)/u_r(0);
+        p_l = (gamma-1.0)*(u_l(3)-(0.5*u_l(0)*((vx_l*vx_l)+(vy_l*vy_l))));
+        p_r = (gamma-1.0)*(u_r(3)-(0.5*u_r(0)*((vx_r*vx_r)+(vy_r*vy_r))));
+    }
+    else if(n_dims==3) {
+        vz_l = u_l(3)/u_l(0);
+        vz_r = u_r(3)/u_r(0);
 			
-            vn_l = vx_l*norm(0)+vy_l*norm(1)+vz_l*norm(2);
-            vn_r = vx_r*norm(0)+vy_r*norm(1)+vz_r*norm(2);
-            vn_g = v_g(0)*norm(0) + v_g(1)*norm(1) + v_g(2)*norm(2);
+        vn_l = vx_l*norm(0)+vy_l*norm(1)+vz_l*norm(2);
+        vn_r = vx_r*norm(0)+vy_r*norm(1)+vz_r*norm(2);
+        vn_g = v_g(0)*norm(0) + v_g(1)*norm(1) + v_g(2)*norm(2);
 
-            p_l = (gamma-1.0)*(u_l(4)-(0.5*u_l(0)*((vx_l*vx_l)+(vy_l*vy_l)+(vz_l*vz_l))));
-            p_r = (gamma-1.0)*(u_r(4)-(0.5*u_r(0)*((vx_r*vx_r)+(vy_r*vy_r)+(vz_r*vz_r))));
-		}
-		else
-			FatalError("ERROR: Invalid number of dimensions ... ");
+        p_l = (gamma-1.0)*(u_l(4)-(0.5*u_l(0)*((vx_l*vx_l)+(vy_l*vy_l)+(vz_l*vz_l))));
+        p_r = (gamma-1.0)*(u_r(4)-(0.5*u_r(0)*((vx_r*vx_r)+(vy_r*vy_r)+(vz_r*vz_r))));
+    }
+    else
+        FatalError("ERROR: Invalid number of dimensions ... ");
 		
-        vn_av_mag = sqrt(0.25*(vn_l+vn_r)*(vn_l+vn_r));
-        c_av = sqrt((gamma*(p_l+p_r))/(u_l(0)+u_r(0)));
+    vn_av_mag = 0.5*(vn_l+vn_r);
+    c_av = sqrt((gamma*(p_l+p_r))/(u_l(0)+u_r(0)));
+    lambda = fabs(vn_av_mag-vn_g+c_av);
       
-		// calculate the normal transformed continuous flux at the flux points
+    // calculate the normal transformed continuous flux at the flux points
 		
-		for(int k=0;k<n_fields;k++) 
-            fn(k)=0.5*((fn_l(k)+fn_r(k))-(vn_av_mag-vn_g+c_av)*(u_r(k)-u_l(k)));
+    for(int k=0;k<n_fields;k++)
+        fn(k)=0.5*((fn_l(k)+fn_r(k))-lambda*(u_r(k)-u_l(k)));
+      //fn(k)=0.5*((fn_l(k)+fn_r(k))-(vn_av_mag-vn_g+c_av)*(u_r(k)-u_l(k)));
 }
 
 // Rusanov inviscid numerical flux

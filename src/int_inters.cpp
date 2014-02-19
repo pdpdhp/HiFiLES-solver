@@ -201,29 +201,27 @@ void int_inters::calc_norm_tconinvf_fpts(void)
       // Calling Riemann solver
       if (run_input.riemann_solve_type==0) // Rusanov
       {
-			  // calculate flux from discontinuous solution at flux points
-			  if(n_dims==2) {
-			  	calc_invf_2d(temp_u_l,temp_f_l);
-			  	calc_invf_2d(temp_u_r,temp_f_r);
-                /// Figure out appropriate place for this
-                if (motion) {
-                    calc_alef_2d(temp_u_l,temp_v,temp_f_l);
-                    calc_alef_2d(temp_u_r,temp_v,temp_f_r);
-                }
-			  }
-			  else if(n_dims==3) {
-			  	calc_invf_3d(temp_u_l,temp_f_l);
-			  	calc_invf_3d(temp_u_r,temp_f_r);
-                /// Figure out appropriate place for this
-                if (motion) {
-                    calc_alef_3d(temp_u_l,temp_v,temp_f_l);
-                    calc_alef_3d(temp_u_r,temp_v,temp_f_r);
-                }
-			  }
-			  else
-  		  	FatalError("ERROR: Invalid number of dimensions ... ");
+          // calculate flux from discontinuous solution at flux points
+          if(n_dims==2) {
+              calc_invf_2d(temp_u_l,temp_f_l);
+              calc_invf_2d(temp_u_r,temp_f_r);
+              if (motion) {
+                  calc_alef_2d(temp_u_l,temp_v,temp_f_l);
+                  calc_alef_2d(temp_u_r,temp_v,temp_f_r);
+              }
+          }
+          else if(n_dims==3) {
+              calc_invf_3d(temp_u_l,temp_f_l);
+              calc_invf_3d(temp_u_r,temp_f_r);
+              if (motion) {
+                  calc_alef_3d(temp_u_l,temp_v,temp_f_l);
+                  calc_alef_3d(temp_u_r,temp_v,temp_f_r);
+              }
+          }
+          else
+              FatalError("ERROR: Invalid number of dimensions ... ");
 
-        rusanov_flux(temp_u_l,temp_u_r,temp_f_l,temp_f_r,temp_v,norm,fn,n_dims,n_fields,run_input.gamma);
+          rusanov_flux(temp_u_l,temp_u_r,temp_f_l,temp_f_r,temp_v,norm,fn,n_dims,n_fields,run_input.gamma);
       }
       else if (run_input.riemann_solve_type==1) { // Lax-Friedrich
         lax_friedrich(temp_u_l,temp_u_r,norm,fn,n_dims,n_fields,run_input.lambda,run_input.wave_speed);
@@ -235,9 +233,9 @@ void int_inters::calc_norm_tconinvf_fpts(void)
         FatalError("Riemann solver not implemented");
 
       // Transform back to reference space  
-  		for(int k=0;k<n_fields;k++) {
-					(*norm_tconf_fpts_l(j,i,k))=fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(j,i));
-					(*norm_tconf_fpts_r(j,i,k))=-fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_r(j,i));
+      for(int k=0;k<n_fields;k++) {
+          (*norm_tconf_fpts_l(j,i,k))=fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(j,i));
+          (*norm_tconf_fpts_r(j,i,k))=-fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_r(j,i));
       }
       
       if(viscous)
@@ -248,9 +246,9 @@ void int_inters::calc_norm_tconinvf_fpts(void)
         else
           FatalError("Viscous Riemann solver not implemented");
 		
-			  for(int k=0;k<n_fields;k++) {
-			  	*delta_disu_fpts_l(j,i,k) = (u_c(k) - temp_u_l(k));
-			  	*delta_disu_fpts_r(j,i,k) = (u_c(k) - temp_u_r(k));
+        for(int k=0;k<n_fields;k++) {
+            *delta_disu_fpts_l(j,i,k) = (u_c(k) - temp_u_l(k));
+            *delta_disu_fpts_r(j,i,k) = (u_c(k) - temp_u_r(k));
         }
       }
 
@@ -265,11 +263,6 @@ void int_inters::calc_norm_tconinvf_fpts(void)
   }
 
   #endif
-
-
-
-
-
 }
 
 

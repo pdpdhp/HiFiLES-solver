@@ -229,12 +229,16 @@ void mesh::set_min_length(void)
 void mesh::set_grid_velocity(solution* FlowSol, double dt)
 {
     // calculate velocity using simple backward-Euler
+    double vmax=0;
     for (int i=0; i<n_verts; i++) {
         for (int j=0; j<n_dims; j++) {
             vel_new(i,j) = (xv_new(i,j) - xv(i,j))/dt;
+            if (fabs(vel_new(i,j)) > fabs(vmax)) {
+                vmax = vel_new(i,j);
+            }
         }
     }
-
+    cout << "Max Grid Velocity: " << vmax << endl;
     // Apply velocity to the eles classes at the shape points
     int local_ic;
     array<double> vel(n_dims);
@@ -432,13 +436,13 @@ void mesh::update(solution* FlowSol)
     if (FlowSol->rank==0) cout << "Deform: updating element shape points" << endl;
 
     int ele_type, local_id;
-    array<double> pos(FlowSol->n_dims);
+    array<double> pos(n_dims);
 
-    for (int ic=0; ic<FlowSol->num_eles; ic++) {
-        ele_type = FlowSol->c2ctype_c(ic);
+    for (int ic=0; ic<n_eles; ic++) {
+        ele_type = ctype(ic);
         local_id = ic2loc_c(ic);
         for (int iv=0; iv<c2n_v(ic); iv++) {
-            for (int k=0; k<FlowSol->n_dims; k++) {
+            for (int k=0; k<n_dims; k++) {
                 pos(k) = xv_new(c2v(ic,iv),k);
             }
             FlowSol->mesh_eles(ele_type)->set_dynamic_shape_node(iv,local_id,pos);

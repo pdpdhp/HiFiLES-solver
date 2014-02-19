@@ -336,23 +336,16 @@ void calc_visf_3d(array<double>& in_u, array<double>& in_grad_u, array<double>& 
   }
 }
 
-// Add additional ALE flux term due to mesh motion (2D)
-
+/// Add additional ALE flux term due to mesh motion (2D)
 void calc_alef_2d(array<double>& in_u, array<double>& in_v, array<double>& out_f)
 {
   if (run_input.equation==0) // Euler / N-S
   {
-      double u_hat, v_hat;
-      u_hat = in_v(0);
-      v_hat = in_v(1);
-
-      out_f(1,0) -= in_u(1)*u_hat;
-      out_f(2,0) -= in_u(1)*v_hat;
-      out_f(3,0) -= in_u(3)*u_hat;
-
-      out_f(1,1) -= in_u(2)*u_hat;
-      out_f(2,1) -= in_u(2)*v_hat;
-      out_f(3,1) -= in_u(3)*v_hat;
+      for (int i=0; i<4; i++) {
+          for (int j=0; j<2; j++) {
+              out_f(i,j) -= in_u(i)*in_v(j);
+          }
+      }
   }
   else if (run_input.equation==1) // Advection-diffusion
   {
@@ -365,36 +358,22 @@ void calc_alef_2d(array<double>& in_u, array<double>& in_v, array<double>& out_f
   }
 }
 
-// Add additional ALE flux term due to mesh motion (3D)
-
+/// Add additional ALE flux term due to mesh motion (3D)
 void calc_alef_3d(array<double>& in_u, array<double>& in_v, array<double>& out_f)
 {
   if (run_input.equation==0) // Euler / N-S
   {
-      double u_hat, v_hat, w_hat;
-      u_hat = in_v(0);
-      v_hat = in_v(1);
-      w_hat = in_v(2);
-
-      out_f(1,0) -= in_u(1)*u_hat;
-      out_f(2,0) -= in_u(1)*v_hat;
-      out_f(3,0) -= in_u(1)*w_hat;
-      out_f(4,0) -= in_u(4)*u_hat;
-
-      out_f(1,1) -= in_u(2)*u_hat;
-      out_f(2,1) -= in_u(2)*v_hat;
-      out_f(3,1) -= in_u(2)*w_hat;
-      out_f(4,1) -= in_u(4)*v_hat;
-
-      out_f(1,2) -= in_u(3)*u_hat;
-      out_f(2,2) -= in_u(3)*v_hat;
-      out_f(3,2) -= in_u(3)*w_hat;
-      out_f(4,2) -= in_u(4)*w_hat;
+      for (int i=0; i<5; i++) {
+          for (int j=0; j<3; j++) {
+              out_f(i,j) -= in_u(i)*in_v(j);
+          }
+      }
   }
   else if (run_input.equation==1) // Advection-diffusion
   {
-    out_f(0,0) -= in_v(0)*in_u(0);
-    out_f(0,1) -= in_v(1)*in_u(0);
+      out_f(0,0) -= in_v(0)*in_u(0);
+      out_f(0,1) -= in_v(1)*in_u(0);
+      out_f(0,2) -= in_v(2)*in_u(0);
   }
   else
   {
