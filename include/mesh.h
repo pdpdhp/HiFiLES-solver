@@ -123,6 +123,8 @@ public:
 
     // nBndPts.setup(n_bnds); boundPts.setup(nBnds,nPtsPerBnd);
 
+    void rigid_move(solution *FlowSol);
+
 private:
 
 	/** Global stiffness matrix for linear elasticity solution */

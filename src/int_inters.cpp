@@ -125,7 +125,7 @@ void int_inters::set_interior(int in_inter, int in_ele_type_l, int in_ele_type_r
                 norm_fpts(i,in_inter,j)=get_norm_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
 
                 vel_fpts_l(j,i,in_inter)=get_vel_fpts_ptr(in_ele_type_l,in_ele_l,in_local_inter_l,i,j,FlowSol);
-                vel_fpts_r(j,i,in_inter)=get_vel_fpts_ptr(in_ele_type_r,in_ele_r,in_local_inter_r,i,j_rhs,FlowSol);
+                //vel_fpts_r(j,i,in_inter)=get_vel_fpts_ptr(in_ele_type_r,in_ele_r,in_local_inter_r,i_rhs,j,FlowSol);
             }
         }
     }
@@ -192,11 +192,9 @@ void int_inters::calc_norm_tconinvf_fpts(void)
             }
 
       // storing normal components
-      for (int m=0;m<n_dims;m++)
-      {
+      for (int m=0;m<n_dims;m++){
         norm(m) = *norm_fpts(j,i,m);
       }
-
 
       // Calling Riemann solver
       if (run_input.riemann_solve_type==0) // Rusanov

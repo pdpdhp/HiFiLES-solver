@@ -229,24 +229,20 @@ void mesh::set_min_length(void)
 void mesh::set_grid_velocity(solution* FlowSol, double dt)
 {
     // calculate velocity using simple backward-Euler
-    double vmax=0;
     for (int i=0; i<n_verts; i++) {
         for (int j=0; j<n_dims; j++) {
             vel_new(i,j) = (xv_new(i,j) - xv(i,j))/dt;
-            if (fabs(vel_new(i,j)) > fabs(vmax)) {
-                vmax = vel_new(i,j);
-            }
         }
     }
-    cout << "Max Grid Velocity: " << vmax << endl;
+
     // Apply velocity to the eles classes at the shape points
     int local_ic;
     array<double> vel(n_dims);
 
     for (int ic=0; ic<n_eles; ic++) {
         for (int j=0; j<c2n_v(ic); j++) {
-            for (int dim=0; dim<n_dims; dim++) {
-                vel(dim) = vel_new(c2v(ic),dim);
+            for (int idim=0; idim<n_dims; idim++) {
+                vel(idim) = vel_new(c2v(ic),idim);
             }
             local_ic = ic2loc_c(ic);
             FlowSol->mesh_eles(ctype(ic))->set_grid_vel_spt(local_ic,j,vel);
@@ -428,12 +424,12 @@ void mesh::add_StiffMat_EleQuad(array<double> StiffMatrix_Elem, int id_pt_0,
 void mesh::update(solution* FlowSol)
 {
     // Update grid velocity & transfer to upts, fpts
-    if (FlowSol->rank==0) cout << "Deform: updating grid velocity" << endl;
+    //if (FlowSol->rank==0) cout << "Deform: updating grid velocity" << endl;
 
     set_grid_velocity(FlowSol,run_input.dt);
 
     // Update element shape points
-    if (FlowSol->rank==0) cout << "Deform: updating element shape points" << endl;
+    //if (FlowSol->rank==0) cout << "Deform: updating element shape points" << endl;
 
     int ele_type, local_id;
     array<double> pos(n_dims);
@@ -449,10 +445,8 @@ void mesh::update(solution* FlowSol)
         }
     }
 
-    if (FlowSol->rank==0) cout << "Deform: done updating elements' shape" << endl;
-
     // Update element transforms
-    if (FlowSol->rank==0) cout << "Deform: updating element transforms ... " << endl;
+    //if (FlowSol->rank==0) cout << "Deform: updating element transforms ... " << endl;
     for(int i=0;i<FlowSol->n_ele_types;i++) {
         if (FlowSol->mesh_eles(i)->get_n_eles()!=0) {
             FlowSol->mesh_eles(i)->set_transforms(run_input.run_type);
@@ -725,14 +719,6 @@ double mesh::check_grid(solution* FlowSol) {
     else return MinVolume;
 }
 
-/*
-void mesh::setup_boundaries()
-{
-    // have vertex -> bcflag
-    // setup (bcflags,vertices)
-}
-*/
-
 void mesh::set_boundary_displacements(solution *FlowSol)
 {
     unsigned short iDim, nDim = FlowSol->n_dims, iBound, axis = 0;
@@ -794,17 +780,11 @@ void mesh::set_boundary_displacements(solution *FlowSol)
     array<double> VarCoord(n_dims);
     VarCoord(0) = run_input.bound_vel_simple(0)*run_input.dt;
     VarCoord(1) = run_input.bound_vel_simple(1)*run_input.dt;
-    //cout << "Applying Boundary Conditions..." << endl;
     /// cout << "number of boundaries: " << n_bnds << endl;
     /*--- Set the known displacements, note that some points of the moving surfaces
     could be on on the symmetry plane, we should specify DeleteValsRowi again (just in case) ---*/
     for (iBound = 0; iBound < n_bnds; iBound++) {
-        /*if (((config->GetMarker_All_Moving(iBound) == YES) && (Kind_SU2 == SU2_CFD)) ||
-                ((config->GetMarker_All_DV(iBound) == YES) && (Kind_SU2 == SU2_MDC))) */
-        //cout << "  checking boundary #" << iBound << ", type " << bc_list(iBound) << ", flag " << bound_flags(iBound) << endl;
         if (bound_flags(iBound) == MOTION_ENABLED) {
-            //cout << "  --Setting boundary displacement for boundary type " << bc_list(iBound) << endl;
-            //cout << "  --Applying to " << nBndPts(iBound) << " points" << endl;
             for (iVertex = 0; iVertex < nBndPts(iBound); iVertex++) {
                 iPoint = boundPts(iBound)(iVertex);
                 // get amount which each point is supposed to move at this time step
@@ -819,5 +799,15 @@ void mesh::set_boundary_displacements(solution *FlowSol)
             }
         }
     }
-    //cout << "Finished Applying Boundary Conditions!" << endl;
+}
+
+void mesh::rigid_move(solution* FlowSol) {
+    for (int i=0; i<n_verts; i++) {
+        xv_new(i,0) = xv(i,0) + run_input.bound_vel_simple(0)*run_input.dt;
+        xv_new(i,1) = xv(i,1) + run_input.bound_vel_simple(1)*run_input.dt;
+    }
+
+    update(FlowSol);
+
+    xv = xv_new;
 }
