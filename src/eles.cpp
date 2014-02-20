@@ -159,6 +159,7 @@ void eles::setup(int in_n_eles, int in_max_n_spts_per_ele, int in_run_type)
     // TODO: reduce unused allocation space (i.e. more spts alloc'd than needed)
     nodal_s_basis_fpts.setup(in_max_n_spts_per_ele,n_fpts_per_ele,n_eles);
     nodal_s_basis_upts.setup(in_max_n_spts_per_ele,n_upts_per_ele,n_eles);
+    nodal_s_basis_ppts.setup(in_max_n_spts_per_ele,n_ppts_per_ele,n_eles);
     d_nodal_s_basis_fpts.setup(n_dims,in_max_n_spts_per_ele,n_fpts_per_ele,n_eles);
     d_nodal_s_basis_upts.setup(n_dims,in_max_n_spts_per_ele,n_upts_per_ele,n_eles);
     dd_nodal_s_basis_fpts.setup(n_comp,in_max_n_spts_per_ele,n_fpts_per_ele,n_eles);
@@ -3306,6 +3307,10 @@ void eles::initialize_grid_vel(void)
     vel_upts.setup(n_dims,n_upts_per_ele,n_eles);
     vel_upts.initialize_to_zero();
 
+    // at output plotting points
+    vel_ppts.setup(n_dims,n_ppts_per_ele,n_eles);
+    vel_ppts.initialize_to_zero();
+
 	vel_spts.setup(n_eles);
 	for (int i=0;i<n_eles; i++) {
 		vel_spts(i).setup(n_spts_per_ele(i),n_dims);
@@ -5053,6 +5058,22 @@ void eles::store_nodal_s_basis_upts(void)
     }
 }
 
+void eles::store_nodal_s_basis_ppts(void)
+{
+    int ic,ppt,j,k;
+
+    array<double> loc(n_dims);
+    for(ic=0; ic<n_eles; ic++) {
+        for(ppt=0; ppt<n_ppts_per_ele; ppt++) {
+            for(k=0; k<n_dims; k++) {
+                loc(k)=loc_ppts(k,ppt);
+            }
+            nodal_s_basis_ppts(j,ppt,ic) = eval_nodal_s_basis(j,loc,n_spts_per_ele(ic));
+        }
+    }
+}
+
+
 void eles::store_d_nodal_s_basis_fpts(void)
 {
     int ic,fpt,j,k;
@@ -5187,4 +5208,22 @@ void eles::set_grid_vel_upts(void)
             }
         } // upts
     } // eles
+}
+
+
+/*! Interpolate the grid velocity from shape points to solution points
+ *  TODO: Find a way to speed up with BLAS or something */
+void eles::set_grid_vel_ppts(void)
+{
+    int ic,ppt,j,k;
+    for (ic=0; ic<n_eles; ic++) {
+        for (ppt=0; ppt<n_ppts_per_ele; ppt++) {
+            for(k=0;k<n_dims;k++) {
+                vel_ppts(k,ppt,ic) = 0.0;
+                for(j=0;j<n_spts_per_ele(ic);j++) {
+                    vel_ppts(k,ppt,ic)+=nodal_s_basis_ppts(j,ppt,ic)*vel_spts(ic)(j,k);
+                }
+            }
+        }
+    }
 }

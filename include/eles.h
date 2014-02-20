@@ -481,6 +481,8 @@ public:
 
     void calc_dd_pos_dyn(array<double> in_loc, int in_ele, array<double> &out_dd_pos);
 
+    void store_nodal_s_basis_ppts();
+    void set_grid_vel_ppts();
 protected:
 
     // #### members ####
@@ -642,13 +644,16 @@ protected:
     Description: Mesh velocity at flux points \n
     indexing: (in_ele, in_fpt, in_dim) \n
     */
-    array<double> vel_fpts, vel_upts;
+    array<double> vel_fpts, vel_upts, vel_ppts;
 
     /*! nodal shape basis contributions at flux points */
     array<double> nodal_s_basis_fpts;
 
     /*! nodal shape basis contributions at solution points */
     array<double> nodal_s_basis_upts;
+
+    /*! nodal shape basis contributions at output plot points */
+    array<double> nodal_s_basis_ppts;
 
     /*! nodal shape basis derivative contributions at flux points */
     array<double> d_nodal_s_basis_fpts;
