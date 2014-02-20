@@ -40,6 +40,8 @@ mesh::mesh(void)
     min_length = DBL_MAX;
     solver_tolerance = 1E-4;
 
+    iter = 0;
+
     bc_name["Sub_In_Simp"] = 1;
     bc_name["Sub_Out_Simp"] = 2;
     bc_name["Sub_In_Char"] = 3;
@@ -232,6 +234,8 @@ void mesh::set_grid_velocity(solution* FlowSol, double dt)
     for (int i=0; i<n_verts; i++) {
         for (int j=0; j<n_dims; j++) {
             vel_new(i,j) = (xv_new(i,j) - xv(i,j))/dt;
+            //vel_new(i,0) = 4*pi/10*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*cos(2*pi*time/10); // from Kui
+            //vel_new(i,1) = 6*pi/10*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*cos(4*pi*time/10);
         }
     }
 
@@ -802,12 +806,17 @@ void mesh::set_boundary_displacements(solution *FlowSol)
 }
 
 void mesh::rigid_move(solution* FlowSol) {
+    time = iter*run_input.dt;
     for (int i=0; i<n_verts; i++) {
-        xv_new(i,0) = xv(i,0) + run_input.bound_vel_simple(0)*run_input.dt;
-        xv_new(i,1) = xv(i,1) + run_input.bound_vel_simple(1)*run_input.dt;
+        //xv_new(i,0) = xv(i,0) + run_input.bound_vel_simple(0)*run_input.dt;
+        //xv_new(i,1) = xv(i,1) + run_input.bound_vel_simple(1)*run_input.dt;
+        /// Taken from Kui, AIAA-2010-5031-661
+        xv_new(i,0) = xv_0(i,0) + 2*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*sin(2*pi*time/10);
+        xv_new(i,1) = xv_0(i,1) + 1.5*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*sin(4*pi*time/10);
     }
 
     update(FlowSol);
 
     xv = xv_new;
+    iter++;
 }

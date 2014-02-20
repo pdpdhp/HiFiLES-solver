@@ -92,9 +92,10 @@ public:
     /** Basic parameters of mesh */
     //unsigned long
     int n_eles, n_verts, n_dims, n_verts_global, n_cells_global;
+    int iter;
 
 	/** arrays which define the basic mesh geometry */
-    array<double> xv, xv_new, vel_old, vel_new;
+    array<double> xv_0, xv, xv_new, vel_old, vel_new;
     array<int> c2v,c2n_v,ctype,bctype_c,ic2icg,iv2ivg,ic2loc_c,
                f2c,f2loc_f,c2f,c2e,f2v,f2n_v,e2v,v2n_e;
     array<array<int> > v2e;
@@ -138,6 +139,7 @@ private:
     unsigned long LinSolIters;
     int failedIts;
     double min_vol, min_length, solver_tolerance;
+    double time;
 
     /** create individual-element stiffness matrix - triangles */
     // will I actually need the FlowSol variable for setting up the Stiffnexx Matrix?

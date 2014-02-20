@@ -141,6 +141,7 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
     Mesh.c2v = c2v;
     Mesh.c2n_v = c2n_v;
     Mesh.xv = xv;
+    Mesh.xv_0 = xv; /// initial mesh, for ref.
     Mesh.xv_new = xv;
     Mesh.iv2ivg = iv2ivg;
     Mesh.ctype = ctype;
