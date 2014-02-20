@@ -2769,7 +2769,11 @@ void eles::calc_pos_ppts(int in_ele, array<double>& out_pos_ppts)
 			loc(j)=loc_ppts(j,i);
 		}
 
-		calc_pos(loc,in_ele,pos);
+        if (motion) {
+            calc_pos_dyn(loc,in_ele,pos);
+        }else{
+            calc_pos(loc,in_ele,pos);
+        }
 		
 		for(j=0;j<n_dims;j++)  // TODO: can this be made more efficient/simpler?
 		{
@@ -2915,13 +2919,13 @@ void eles::set_transforms(int in_run_type)
         }
     }
 
-    if (rank==0) {
-        //cout << " at solution points" << endl;
+    if (rank==0 && first_time) {
+        cout << " at solution points" << endl;
     }
 
     for(i=0;i<n_eles;i++) {
-      //if ((i%1000)==0 && rank==0)
-        //cout << fixed << setprecision(2) <<  (i*1.0/n_eles)*100 << "% " << flush;
+      if ((i%1000)==0 && rank==0 && first_time)
+        cout << fixed << setprecision(2) <<  (i*1.0/n_eles)*100 << "% " << flush;
 
       for(j=0;j<n_upts_per_ele;j++) {
 			// get coordinates of the solution point
@@ -3087,12 +3091,12 @@ void eles::set_transforms(int in_run_type)
           }
       }
 
-    //if (rank==0)
-      //cout << endl << " at flux points"  << endl;
+    if (rank==0 && first_time)
+      cout << endl << " at flux points"  << endl;
 
       for(i=0;i<n_eles;i++) {
-          //if ((i%1000)==0 && rank==0)
-              //cout << fixed << setprecision(2) <<  (i*1.0/n_eles)*100 << "% " << flush;
+          if ((i%1000)==0 && rank==0 && first_time)
+              cout << fixed << setprecision(2) <<  (i*1.0/n_eles)*100 << "% " << flush;
 
         for(j=0;j<n_fpts_per_ele;j++) {
 	  		// get coordinates of the flux point
@@ -3290,10 +3294,11 @@ void eles::set_transforms(int in_run_type)
 
   }
 
+  if (rank==0 && first_time) cout << endl;
+
   // To avoid re-setting up ALL transform arrays in the future (for dynamic grids)
   first_time = false;
 
-  if (rank==0) cout << endl;
   } // if n_eles!=0
 }
 
