@@ -1180,7 +1180,8 @@ void write_vtu(int in_file_num, struct solution* FlowSol) // TODO: Tidy this up
 			disu_ppts_temp.setup(n_points,n_fields);
 
             /*! Temporary grid velocity array at plot points */
-            grid_vel_ppts_temp.setup(n_dims,n_points,n_eles);
+            FlowSol->mesh_eles(i)->set_grid_vel_ppts();
+            grid_vel_ppts_temp = FlowSol->mesh_eles(i)->get_grid_vel_ppts();
 
 			con.setup(n_verts,n_cells);
 			con = FlowSol->mesh_eles(i)->get_connectivity_plot();

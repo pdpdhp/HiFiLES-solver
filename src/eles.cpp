@@ -5073,7 +5073,9 @@ void eles::store_nodal_s_basis_ppts(void)
             for(k=0; k<n_dims; k++) {
                 loc(k)=loc_ppts(k,ppt);
             }
-            nodal_s_basis_ppts(j,ppt,ic) = eval_nodal_s_basis(j,loc,n_spts_per_ele(ic));
+            for (j=0; j<n_spts_per_ele(ic); j++) {
+                nodal_s_basis_ppts(j,ppt,ic) = eval_nodal_s_basis(j,loc,n_spts_per_ele(ic));
+            }
         }
     }
 }
@@ -5196,6 +5198,39 @@ void eles::set_grid_vel_fpts(void)
             }
         }
     }
+
+    /*if (n_eles != 0) {
+        ofstream file;
+        file.open("grid_vel_fpts.dat");
+        if (file.is_open()) {
+            //file << "---GRID VELOCITY AT FLUX POINTS---" << endl;
+            //file << "X  Y  Z  vx  vy  vz" << endl;
+            for (ic=0; ic<n_eles; ic++) {
+                for (int j=0; j<n_fpts_per_ele; j++) {
+                    file << loc_fpts(j,ic,0) << "," << loc_fpts(j,ic,1) << "," << 0.0 << ",";
+                    file << vel_fpts(0,j,ic) << "," << vel_fpts(1,j,ic) << "," << 0.0 << endl;
+                }
+            }
+            file << endl;
+        }
+        file.close();
+    }*/
+    /*if (n_eles != 0) {
+        ofstream file;
+        file.open("vel_spts_2.dat");
+        if (file.is_open()) {
+            //file << "---GRID VELOCITY AT FLUX POINTS---" << endl;
+            //file << "X  Y  Z  vx  vy  vz" << endl;
+            for (ic=0; ic<n_eles; ic++) {
+                for (int spt=0; spt<n_spts_per_ele(ic); spt++) {
+                    file << shape_dyn(0,spt,ic) << "," << shape_dyn(1,spt,ic) << "," << 0.0 << ",";
+                    file << vel_spts(ic)(spt,0) << "," << vel_spts(ic)(spt,1) << "," << 0.0 << endl;
+                }
+            }
+            file << endl;
+        }
+        file.close();
+    }*/
 }
 
 /*! Interpolate the grid velocity from shape points to solution points
@@ -5211,8 +5246,31 @@ void eles::set_grid_vel_upts(void)
                     vel_upts(k,upt,ic)+=nodal_s_basis_upts(j,upt,ic)*vel_spts(ic)(j,k);
                 }
             }
-        } // upts
-    } // eles
+        }
+    }
+
+
+    /*if (n_eles!=0) {
+        array<double> pos(n_dims);
+        array<double> loc(n_dims);
+        ofstream file;
+        file.open("grid_vel_upts.dat");
+        if (file.is_open()) {
+            //file << "---GRID VELOCITY AT SOLUTION POINTS---" << endl;
+            //file << "X  Y  Z  vx  vy  vz" << endl;
+            for (ic=0; ic<n_eles; ic++) {
+                for (upt=0; upt<n_upts_per_ele; upt++) {
+                    loc(0) = loc_upts(0,upt);
+                    loc(1) = loc_upts(1,upt);
+                    calc_pos_dyn(loc,ic,pos);
+                    file << pos(0) << "," << pos(1) << "," << 0.0 << ",";
+                    file << vel_upts(0,upt,ic) << "," << vel_upts(1,upt,ic) << "," << 0.0 << endl;
+                }
+            }
+            file << endl;
+        }
+        file.close();
+    }*/
 }
 
 
@@ -5231,4 +5289,9 @@ void eles::set_grid_vel_ppts(void)
             }
         }
     }
+}
+
+array<double> eles::get_grid_vel_ppts(void)
+{
+    return vel_ppts;
 }

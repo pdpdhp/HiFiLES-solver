@@ -481,8 +481,9 @@ public:
 
     void calc_dd_pos_dyn(array<double> in_loc, int in_ele, array<double> &out_dd_pos);
 
-    void store_nodal_s_basis_ppts();
-    void set_grid_vel_ppts();
+    void store_nodal_s_basis_ppts(void);
+    void set_grid_vel_ppts(void);
+    array<double> get_grid_vel_ppts();
 protected:
 
     // #### members ####

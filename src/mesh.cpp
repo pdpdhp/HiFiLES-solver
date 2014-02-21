@@ -230,6 +230,7 @@ void mesh::set_min_length(void)
 
 void mesh::set_grid_velocity(solution* FlowSol, double dt)
 {
+    time = iter*dt;
     // calculate velocity using simple backward-Euler
     for (int i=0; i<n_verts; i++) {
         for (int j=0; j<n_dims; j++) {
@@ -239,14 +240,27 @@ void mesh::set_grid_velocity(solution* FlowSol, double dt)
         }
     }
 
+    /*ofstream file;
+    file.open("vel_spts.dat");
+    for (int i=0; i<n_verts; i++) {
+        file << xv_new(i,0) << "," << xv_new(i,1) << "," << 0.0 << ",";
+        file << vel_new(i,0) << "," << vel_new(i,1) << "," << 0.0 << endl;
+    }
+    file.close();
+
+    file.open("basic_mesh.dat");
+    for (int i=0; i<n_eles; i++) {
+        file << c2v(i,0) << "," << c2v(i,1) << "," << c2v(i,2) << endl;
+    }
+    file.close();*/
+
     // Apply velocity to the eles classes at the shape points
     int local_ic;
     array<double> vel(n_dims);
-
     for (int ic=0; ic<n_eles; ic++) {
         for (int j=0; j<c2n_v(ic); j++) {
             for (int idim=0; idim<n_dims; idim++) {
-                vel(idim) = vel_new(c2v(ic),idim);
+                vel(idim) = vel_new(iv2ivg(c2v(ic,j)),idim);
             }
             local_ic = ic2loc_c(ic);
             FlowSol->mesh_eles(ctype(ic))->set_grid_vel_spt(local_ic,j,vel);
@@ -811,8 +825,10 @@ void mesh::rigid_move(solution* FlowSol) {
         //xv_new(i,0) = xv(i,0) + run_input.bound_vel_simple(0)*run_input.dt;
         //xv_new(i,1) = xv(i,1) + run_input.bound_vel_simple(1)*run_input.dt;
         /// Taken from Kui, AIAA-2010-5031-661
-        xv_new(i,0) = xv_0(i,0) + 2*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*sin(2*pi*time/10);
-        xv_new(i,1) = xv_0(i,1) + 1.5*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*sin(4*pi*time/10);
+        //xv_new(i,0) = xv_0(i,0) + 2*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*sin(2*pi*time/10);
+        //xv_new(i,1) = xv_0(i,1) + 1.5*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*sin(4*pi*time/10);
+        xv_new(i,0) = xv_0(i,0) + sin(2*pi*time/10);
+        xv_new(i,1) = xv_0(i,1) + sin(2*pi*time/10);
     }
 
     update(FlowSol);
