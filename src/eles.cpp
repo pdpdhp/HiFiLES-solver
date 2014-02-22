@@ -2104,6 +2104,7 @@ void eles::set_shape(int in_max_n_spts_per_ele)
 
 void eles::set_shape_node(int in_spt, int in_ele, array<double>& in_pos)
 {
+    cout << in_ele << ": " << in_spt << ": " << in_pos(0) << " " << in_pos(1) << endl;
     for(int i=0;i<n_dims;i++) {
         shape(i,in_spt,in_ele)=in_pos(i);
         shape_dyn(i,in_spt,in_ele)=in_pos(i); // initial dynamic mesh position
@@ -2927,13 +2928,17 @@ void eles::set_transforms(int in_run_type)
       if ((i%1000)==0 && rank==0 && first_time)
         cout << fixed << setprecision(2) <<  (i*1.0/n_eles)*100 << "% " << flush;
 
+      cout << i << ", n_spts: " << n_spts_per_ele(i) << endl;
+      for (int blah=0; blah<n_spts_per_ele(i); blah++) {
+          cout << shape(0,blah,i) << " " << shape(1,blah,i) << endl;
+      }
       for(j=0;j<n_upts_per_ele;j++) {
 			// get coordinates of the solution point
 			
             for(k=0;k<n_dims;k++) {
 				loc(k)=loc_upts(k,j);
-			}
-			
+            }
+
 			// calculate first derivatives of shape functions at the solution point
             if (motion) {
                 calc_d_pos_dyn_upt(j,i,d_pos);
