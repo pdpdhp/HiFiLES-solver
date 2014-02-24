@@ -306,10 +306,6 @@ void GeoPreprocess(int in_run_type, struct solution* FlowSol, mesh &Mesh) {
 
     array<double> pos(FlowSol->n_dims);
 
-    for (int b=0; b<xv.get_dim(0); b++) {
-        cout << b << ": " << xv(b,0) << " " << xv(b,1) << endl;
-    }
-
     if (FlowSol->rank==0) cout << "setting elements shape" << endl;
     for (int i=0;i<FlowSol->num_eles;i++) {
         if (ctype(i) == 0) //tri
@@ -1542,29 +1538,32 @@ void read_connectivity_gambit(string& in_file_name, int &out_n_cells, array<int>
     FatalError("Unable to open mesh file");
   
 	// Skip 6-line header
-	for (int i=0;i<6;i++) mesh_file.getline(buf,BUFSIZ);
-  
-  // Find number of vertices and number of cells
-  mesh_file 	>> n_verts_global 	// num vertices in mesh
-  >> n_cells_global	// num elements
-  >> dummy        // num material groups
-  >> dummy         // num boundary groups
-  >> FlowSol->n_dims;	// num space dimensions
-  
-	mesh_file.getline(buf,BUFSIZ);	// clear rest of line
-	mesh_file.getline(buf,BUFSIZ);	// Skip 2 lines
-	mesh_file.getline(buf,BUFSIZ);
+    for (int i=0;i<6;i++)
+        mesh_file.getline(buf,BUFSIZ);
 
-    FlowSol->num_cells_global = n_cells_global;
+    // Find number of vertices and number of cells
+    mesh_file >> n_verts_global 	// num vertices in mesh
+              >> n_cells_global     // num elements
+              >> dummy              // num material groups
+              >> dummy              // num boundary groups
+              >> FlowSol->n_dims;	// num space dimensions
 
-	// Skip the x,y,z location of vertices
-  for (int i=0;i<n_verts_global;i++)
-		mesh_file.getline(buf,BUFSIZ);
-  
-	mesh_file.getline(buf,BUFSIZ); // Skip "ENDOFSECTION"
-	mesh_file.getline(buf,BUFSIZ); // Skip "ELEMENTS/CELLS"
-  
-  int kstart;
+    if (FlowSol->n_dims != 2 && FlowSol->n_dims != 3) {
+        FatalError("Invalid mesh dimensionality. Expected 2D or 3D.");
+    }
+
+    mesh_file.getline(buf,BUFSIZ);	// clear rest of line
+    mesh_file.getline(buf,BUFSIZ);	// Skip 2 lines
+    mesh_file.getline(buf,BUFSIZ);
+
+    // Skip the x,y,z location of vertices
+    for (int i=0;i<n_verts_global;i++)
+        mesh_file.getline(buf,BUFSIZ);
+
+    mesh_file.getline(buf,BUFSIZ); // Skip "ENDOFSECTION"
+    mesh_file.getline(buf,BUFSIZ); // Skip "ELEMENTS/CELLS"
+
+    int kstart;
 #ifdef _MPI
 	// Assign a number of cells for each processor
     out_n_cells = (int) ( (double)(n_cells_global)/(double)FlowSol->nproc );
@@ -1591,25 +1590,16 @@ void read_connectivity_gambit(string& in_file_name, int &out_n_cells, array<int>
     out_c2n_v.initialize_to_value(-1);
     out_ctype.initialize_to_value(-1);
     out_ic2icg.initialize_to_value(-1);
-    /*
-	for (int i=0;i<out_n_cells;i++) {
-		out_c2n_v(i)=-1;
-    out_ctype(i) = -1;
-    out_ic2icg(i) = -1;
-	  for (int k=0;k<MAX_V_PER_C;k++)
-      out_c2v(i,k)=-1;
-	}
-    */
 
   // Skip elements being read by other processors
   
   for (int i=0;i<kstart;i++) {
-		mesh_file >> dummy >> dummy >> dummy2;
-		mesh_file.getline(buf,BUFSIZ); // skip end of line
-		if (dummy2>7) mesh_file.getline(buf,BUFSIZ); // skip another line
-		if (dummy2>14) mesh_file.getline(buf,BUFSIZ); // skip another line
-		if (dummy2>21) mesh_file.getline(buf,BUFSIZ); // skip another line
-	}
+      mesh_file >> dummy >> dummy >> dummy2;
+      mesh_file.getline(buf,BUFSIZ); // skip end of line
+      if (dummy2>7) mesh_file.getline(buf,BUFSIZ); // skip another line
+      if (dummy2>14) mesh_file.getline(buf,BUFSIZ); // skip another line
+      if (dummy2>21) mesh_file.getline(buf,BUFSIZ); // skip another line
+  }
   
   // Each processor reads a block of elements
   
@@ -1618,7 +1608,7 @@ void read_connectivity_gambit(string& in_file_name, int &out_n_cells, array<int>
 	{
         //  ctype is the element type:	1=edge, 2=quad, 3=tri, 4=brick, 5=wedge, 6=tet, 7=pyramid
         mesh_file >> out_ic2icg(i) >> ctype >> out_c2n_v(i);
-    
+
         if (ctype==3) out_ctype(i)=0;
         else if (ctype==2) out_ctype(i)=1;
         else if (ctype==6) out_ctype(i)=2;
@@ -1692,8 +1682,7 @@ void read_connectivity_gambit(string& in_file_name, int &out_n_cells, array<int>
                 out_c2v(i,k)--;
 
         // Also shift every value of ic2icg
-        out_ic2icg(i)--;
-    
+        out_ic2icg(i)--;    
     }
   
 #ifdef _MPI
@@ -1706,7 +1695,7 @@ void read_connectivity_gambit(string& in_file_name, int &out_n_cells, array<int>
 
 void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &out_c2v, array<int> &out_c2n_v, array<int> &out_ctype, array<int> &out_ic2icg, struct solution* FlowSol)
 {
-	int n_verts_global,n_cells_global;
+    int n_verts_global,n_cells_global,n_bnds;
 	int dummy,dummy2;
   
 	char buf[BUFSIZ]={""};
@@ -1729,19 +1718,23 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
     }
   
 	// Read number of boundaries and fields defined
-	mesh_file >> dummy;
-    cout << "Number of Physical Regions/Boundaries: "<< dummy << endl;
+    mesh_file >> n_bnds;
+    cout << "Number of Physical Regions/Boundaries: "<< n_bnds << endl;
 	mesh_file.getline(buf,BUFSIZ);	// clear rest of line
-	for(int i=0;i<dummy;i++)
+    for(int i=0;i<n_bnds;i++)
 	{
-        cout << i+1 << ": ";
 		mesh_file.getline(buf,BUFSIZ);
 		sscanf(buf,"%d %d %s", &bcdim, &bcid, bc_txt_temp);
 		strcpy(bcTXT[bcid],bc_txt_temp);
-        cout << bc_txt_temp << endl;
-    if (strcmp(bc_txt_temp,"FLUID"))
-      FlowSol->n_dims=bcdim;
+
+        cout << i+1 << ": " << bc_txt_temp << endl;
+        if (strcmp(bc_txt_temp,"FLUID")) {
+            FlowSol->n_dims=bcdim;
+        }
 	}
+    if (FlowSol->n_dims != 2 && FlowSol->n_dims != 3) {
+        FatalError("Invalid mesh dimensionality. Expected 2D or 3D.");
+    }
   
     // Move cursor to $Elements
     while(1) {
@@ -1753,16 +1746,16 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
 	//  Read element connectivity
 	//  ------------------------------
 	
-  // Each processor first reads number of global cells
-  int n_entities;
-	// Read number of elements and bdys
-  mesh_file 	>> n_entities; 	// num cells in mesh
-	mesh_file.getline(buf,BUFSIZ);	// clear rest of line
+    // Each processor first reads number of global cells
+    int n_entities;
+    // Read number of elements and bdys
+    mesh_file >> n_entities; 	// num cells in mesh
+    mesh_file.getline(buf,BUFSIZ);	// clear rest of line
   
-  int icount=0;
+    int icount=0;
   
-  for (int i=0;i<n_entities;i++)
-  {
+    for (int i=0;i<n_entities;i++)
+    {
 		mesh_file >> id >> elmtype >> ntags;
         if (ntags!=2) {
             cout << "GMSH: ntags=" << ntags << " at element #" << id << endl;
@@ -1773,16 +1766,16 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
 		if (strstr(bcTXT[bcid],"FLUID"))
             icount++;
     
-	  mesh_file.getline(buf,BUFSIZ);	// clear rest of line
-    
+        mesh_file.getline(buf,BUFSIZ);	// clear rest of line
   }
   n_cells_global=icount;
   FlowSol->num_cells_global = n_cells_global;
 
-  cout << "n_cell_global = " << n_cells_global << endl;
+  cout << "Number of cells in mesh: " << n_cells_global << endl;
+
   
-  // Now assign kstart to each processor
-  int kstart;
+    // Now assign kstart to each processor
+    int kstart;
 #ifdef _MPI
 	// Assign a number of cells for each processor
 	out_n_cells = (int) ( (double)(n_cells_global)/(double)FlowSol->nproc);
@@ -1796,7 +1789,7 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
   out_n_cells = n_cells_global;
 #endif
   
-  // Allocate memory
+    // Allocate memory
 	out_c2v.setup(out_n_cells,MAX_V_PER_C);
 	out_c2n_v.setup(out_n_cells);
 	out_ctype.setup(out_n_cells);
@@ -1809,7 +1802,6 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
     out_ctype.initialize_to_value(-1);
 
   // Move cursor to $Elements
-  //
   mesh_file.clear();
   mesh_file.seekg(0, ios::beg);
   while(1) {
@@ -1826,102 +1818,95 @@ void read_connectivity_gmsh(string& in_file_name, int &out_n_cells, array<int> &
   
   for (int k=0;k<n_entities;k++)
   {
-      mesh_file >> id >> elmtype >> ntags;
+		mesh_file >> id >> elmtype >> ntags;
 
-      mesh_file >> bcid >> dummy;
-      if (strstr(bcTXT[bcid],"FLUID"))
-      {
-          if (icount>=kstart && i< out_n_cells) // Read this cell
-          {
-              out_ic2icg(i) = icount;
-              if (elmtype ==2 || elmtype==9 || elmtype==21) // Triangle
-              {
-                  out_ctype(i) = 0;
-                  if (elmtype==2) // linear triangle
-                  {
-                      out_c2n_v(i) =3;
-                      mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2);
-                  }
-                  else if (elmtype==9) // quadratic triangle
-                  {
-                      out_c2n_v(i) =6;
-                      mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2) >> out_c2v(i,3) >> out_c2v(i,4) >> out_c2v(i,5) ;
-                      //cout << "here" << endl;
-                  }
-                  else if (elmtype==21) // cubic triangle
-                  {
-                      FatalError("Cubic triangle not implemented");
-                  }
-              }
-              else if (elmtype==3 || elmtype==16 || elmtype==10) // Quad
-              {
-                  out_ctype(i) = 1;
-                  if (elmtype==3) // linear quadrangle
-                  {
-                      out_c2n_v(i) = 4;
-                      mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,3) >> out_c2v(i,2);
-                  }
-                  else if (elmtype==16) // quadratic quadrangle
-                  {
-                      out_c2n_v(i) = 8;
-                      /** Not consistent with Gambit quadratic-quadrangle redaer */
-                      mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2) >> out_c2v(i,3) >> out_c2v(i,4) >> out_c2v(i,5) >> out_c2v(i,6) >> out_c2v(i,7);
-                      /** corrected to match Gambit reader */
-                      //mesh_file >> out_c2v(i,0) >> out_c2v(i,4) >> out_c2v(i,1) >> out_c2v(i,5) >> out_c2v(i,2) >> out_c2v(i,6) >> out_c2v(i,3) >> out_c2v(i,7);
-                  }
-                  else if (elmtype==10) // quadratic quadrangle
-                  {
-                      out_c2n_v(i) = 9;
-                      mesh_file >> out_c2v(i,0) >> out_c2v(i,2) >> out_c2v(i,8) >> out_c2v(i,6) >> out_c2v(i,1) >> out_c2v(i,5) >> out_c2v(i,7) >> out_c2v(i,3) >> out_c2v(i,4);
-                      //cout << "i=" << i << "id=" << id << endl;
-                      //cout << "out_c2v(i,0)=" << out_c2v(i,0) << endl;
-                      //cout << "out_c2v(i,1)=" << out_c2v(i,1) << endl;
-                      //cout << "out_c2v(i,2)=" << out_c2v(i,2) << endl;
-                      //cout << "out_c2v(i,3)=" << out_c2v(i,3) << endl;
-                      //cout << "out_c2v(i,4)=" << out_c2v(i,4) << endl;
-                  }
-              }
-              else if (elmtype==5) // Hexahedral
-              {
-                  out_ctype(i) = 4;
-                  if (elmtype==5) // linear hexahedron
-                  {
-                      out_c2n_v(i) = 8;
-                      mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,3) >> out_c2v(i,2);
-                      mesh_file >> out_c2v(i,4) >> out_c2v(i,5) >> out_c2v(i,7) >> out_c2v(i,6);
-                  }
-              }
-              else
-              {
-                  cout << "elmtype=" << elmtype << endl;
-                  FatalError("element type not recognized");
-              }
+		if (ntags!=2)
+        {
+            cout << "ntags=" << ntags << endl;
+            FatalError("ntags != 2,exiting");
+        }
 
-              // Shift every values of c2v by -1
-              for(int k=0;k<out_c2n_v(i);k++)
-              {
-                  if(out_c2v(i,k)!=0)
-                  {
-                      out_c2v(i,k)--;
-                      //cout << "elmtype=" << elmtype << endl;
-                      //cout << "out_c2v=" << out_c2v(i,k) << endl;
-                  }
-              }
+		mesh_file >> bcid >> dummy;
+		if (strstr(bcTXT[bcid],"FLUID"))
+        {
+            if (icount>=kstart && i< out_n_cells) // Read this cell
+            {
+                out_ic2icg(i) = icount;
+                if (elmtype ==2 || elmtype==9 || elmtype==21) // Triangle
+                {
+                    out_ctype(i) = 0;
+                    if (elmtype==2) // linear triangle
+                    {
+                        out_c2n_v(i) =3;
+                        mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2);
+                    }
+                    else if (elmtype==9) // quadratic triangle
+                    {
+                        out_c2n_v(i) =6;
+                        mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2) >> out_c2v(i,3) >> out_c2v(i,4) >> out_c2v(i,5) ;
+                    }
+                    else if (elmtype==21) // cubic triangle
+                    {
+                        FatalError("Cubic triangle not implemented");
+                    }
+                }
+                else if (elmtype==3 || elmtype==16 || elmtype==10) // Quad
+                {
+                    out_ctype(i) = 1;
+                    if (elmtype==3) // linear quadrangle
+                    {
+                        out_c2n_v(i) = 4;
+                        mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,3) >> out_c2v(i,2);
+                    }
+                    else if (elmtype==16) // quadratic quadrangle
+                    {
+                        out_c2n_v(i) = 8;
+                        mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,2) >> out_c2v(i,3) >> out_c2v(i,4) >> out_c2v(i,5) >> out_c2v(i,6) >> out_c2v(i,7);
+                    }
+                    else if (elmtype==10) // quadratic quadrangle
+                    {
+                        out_c2n_v(i) = 9;
+                        mesh_file >> out_c2v(i,0) >> out_c2v(i,2) >> out_c2v(i,8) >> out_c2v(i,6) >> out_c2v(i,1) >> out_c2v(i,5) >> out_c2v(i,7) >> out_c2v(i,3) >> out_c2v(i,4);
+                    }
+                }
+                else if (elmtype==5) // Hexahedral
+                {
+                    out_ctype(i) = 4;
+                    if (elmtype==5) // linear quadrangle
+                    {
+                        out_c2n_v(i) = 8;
+                        mesh_file >> out_c2v(i,0) >> out_c2v(i,1) >> out_c2v(i,3) >> out_c2v(i,2);
+                        mesh_file >> out_c2v(i,4) >> out_c2v(i,5) >> out_c2v(i,7) >> out_c2v(i,6);
+                    }
+                }
+                else
+                {
+                    cout << "elmtype=" << elmtype << endl;
+                    FatalError("element type not recognized");
+                }
 
-              i++;
-              mesh_file.getline(buf,BUFSIZ); // skip end of line
-          }
-          else // Cell not on this processor; skip line
-          {
-              mesh_file.getline(buf,BUFSIZ);
-          }
-          icount++; // FLUID cell, increase icount
-      }
-      else // Not a FLUID cell, skip line
-      {
-          mesh_file.getline(buf,BUFSIZ);
-      }
+                // Shift every values of c2v by -1
+                for(int k=0;k<out_c2n_v(i);k++)
+                {
+                    if(out_c2v(i,k)!=0)
+                    {
+                        out_c2v(i,k)--;
+                    }
+                }
 
+                i++;
+                mesh_file.getline(buf,BUFSIZ); // skip end of line
+            }
+            else //
+            {
+                mesh_file.getline(buf,BUFSIZ); // skip line, cell doesn't belong to this processor
+            }
+            icount++; // FLUID cell, increase icount
+        }
+        else // Not FLUID cell, skip line
+        {
+            mesh_file.getline(buf,BUFSIZ); // skip line, cell doesn't belong to this processor
+        }
   } // End of loop over entities
   
   //out_n_cells=icount;

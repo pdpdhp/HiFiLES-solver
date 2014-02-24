@@ -224,11 +224,16 @@ int main(int argc, char *argv[]) {
 	/////////////////////////////////////////////////
     /// Mesh Deformation
     /////////////////////////////////////////////////
-    if (run_input.motion) {
-        //Mesh.deform(&FlowSol);
-        Mesh.rigid_move(&FlowSol);
-         if (i_steps%run_input.mesh_output_freq==0)
-             Mesh.write_mesh(run_input.mesh_output_format,FlowSol.time);
+    if (run_input.motion > 0) {
+        if (run_input.motion == 1) {
+            Mesh.deform(&FlowSol);
+        }else if (run_input.motion == 2) {
+            Mesh.rigid_move(&FlowSol);
+        }else if (run_input.motion == 3) {
+            Mesh.perturb(&FlowSol);
+        }
+        if (i_steps%run_input.mesh_output_freq==0)
+            Mesh.write_mesh(run_input.mesh_output_format,FlowSol.time);
 	}    
   }
   

@@ -126,6 +126,7 @@ public:
 
     void rigid_move(solution *FlowSol);
 
+    void perturb(solution *FlowSol);
 private:
 
 	/** Global stiffness matrix for linear elasticity solution */

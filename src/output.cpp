@@ -3179,8 +3179,8 @@ int monitor_residual(int in_file_num, struct solution* FlowSol) {
       else FatalError("norm_type not recognized");
       
       if (isnan(norm[i])) {
-        cout << "NaN residual at iteration " << in_file_num << ". Exiting" << endl;
-        return 1;
+          cerr << "NaN residual at iteration " << in_file_num << endl;
+          FatalError("NaN residual");
       }
     }
     

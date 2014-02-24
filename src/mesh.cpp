@@ -824,15 +824,31 @@ void mesh::rigid_move(solution* FlowSol) {
     for (int i=0; i<n_verts; i++) {
         //xv_new(i,0) = xv(i,0) + run_input.bound_vel_simple(0)*run_input.dt;
         //xv_new(i,1) = xv(i,1) + run_input.bound_vel_simple(1)*run_input.dt;
-        /// Taken from Kui, AIAA-2010-5031-661
-        //xv_new(i,0) = xv_0(i,0) + 2*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*sin(2*pi*time/10);
-        //xv_new(i,1) = xv_0(i,1) + 1.5*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*sin(4*pi*time/10);
-        xv_new(i,0) = xv_0(i,0) + sin(2*pi*time/10);
-        xv_new(i,1) = xv_0(i,1) + sin(2*pi*time/10);
+        xv_new(i,0) = xv_0(i,0) + .5*sin(2*pi*time);
+        xv_new(i,1) = xv_0(i,1) + .5*sin(2*pi*time);
     }
 
     update(FlowSol);
 
     xv = xv_new;
+    iter++;
+}
+
+void mesh::perturb(solution* FlowSol) {
+    time = iter*run_input.dt;
+
+    //if (iter < 2000) {
+    for (int i=0; i<n_verts; i++) {
+        /// Taken from Kui, AIAA-2010-5031-661
+        xv_new(i,0) = xv_0(i,0) + 1*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/10)*sin(2*pi*time/10);
+        xv_new(i,1) = xv_0(i,1) + .75*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/10)*sin(4*pi*time/10);
+    }
+
+    update(FlowSol);
+
+    xv = xv_new;
+    /*}else if (iter == 200) {
+        set_grid_velocity(FlowSol,run_input.dt);
+    }*/
     iter++;
 }

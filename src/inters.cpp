@@ -320,12 +320,12 @@ void inters::rusanov_flux(array<double> &u_l, array<double> &u_r, array<double> 
 		
     vn_av_mag = 0.5*(vn_l+vn_r);
     c_av = sqrt((gamma*(p_l+p_r))/(u_l(0)+u_r(0)));
-    lambda = fabs(vn_av_mag-vn_g+c_av);
+    lambda = fabs(vn_av_mag-vn_g)+c_av;
     // calculate the normal transformed continuous flux at the flux points
 		
     for(int k=0;k<n_fields;k++) {
-        //fn(k)=0.5*((fn_l(k)+fn_r(k))-lambda*(u_r(k)-u_l(k)));
-        fn(k)=0.5*((fn_l(k)+fn_r(k))-(vn_av_mag-vn_g+c_av)*(u_r(k)-u_l(k)));
+        fn(k)=0.5*((fn_l(k)+fn_r(k))-lambda*(u_r(k)-u_l(k)));
+        //fn(k)=0.5*((fn_l(k)+fn_r(k))-(vn_av_mag-vn_g+c_av)*(u_r(k)-u_l(k)));
     }
 }
 
