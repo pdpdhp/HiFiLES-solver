@@ -82,7 +82,6 @@ int main(int argc, char *argv[]) {
   GeoPreprocess(run_input.run_type, &FlowSol, Mesh);
   
   InitSolution(&FlowSol);
-  //FlowSol.time = 0; // HACK FOR MESH DEBUGGING
   
   init = clock();
   
@@ -138,14 +137,14 @@ int main(int argc, char *argv[]) {
   }
   
   if (FlowSol.rank == 0) cout << endl;
-  
+
   /*! Main solver loop (outer loop). */
   while(i_steps < FlowSol.n_steps) {
     
     /////////////////////////////////////////////////
     /// Flow solver
     /////////////////////////////////////////////////
-    
+
     /*! Advance the solution one time-step using a forward Euler method. */
     if(FlowSol.adv_type == 0) {
       CalcResidual(&FlowSol);
@@ -220,8 +219,7 @@ int main(int argc, char *argv[]) {
       write_restart(FlowSol.ini_iter+i_steps, &FlowSol);
     }
 
-	
-	/////////////////////////////////////////////////
+    /////////////////////////////////////////////////
     /// Mesh Deformation
     /////////////////////////////////////////////////
     if (run_input.motion > 0) {
@@ -234,7 +232,7 @@ int main(int argc, char *argv[]) {
         }
         if (i_steps%run_input.mesh_output_freq==0)
             Mesh.write_mesh(run_input.mesh_output_format,FlowSol.time);
-	}    
+    }
   }
   
   /////////////////////////////////////////////////

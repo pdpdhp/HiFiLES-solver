@@ -370,7 +370,7 @@ void eles::set_ics(double& time)
 			
 			// calculate position of solution point
 			
-			calc_pos(loc,i,pos);
+            calc_pos(loc,i,pos);
 
 			// evaluate solution at solution point
 			if(run_input.ic_form==0)
@@ -2964,7 +2964,7 @@ void eles::set_transforms(int in_run_type)
                     FatalError("Negative Jacobian at solution points");
                 }
 
-				// store inverse of determinant of jacobian multiplied by jacobian at the solution point
+                // store determinant of jacobian multiplied by inverse of jacobian at the solution point
 				inv_detjac_mul_jac_upts(j,i,0,0)= ys;
 				inv_detjac_mul_jac_upts(j,i,0,1)= -xs;
 				inv_detjac_mul_jac_upts(j,i,1,0)= -yr;

@@ -234,7 +234,8 @@ void mesh::set_grid_velocity(solution* FlowSol, double dt)
     // calculate velocity using simple backward-Euler
     for (int i=0; i<n_verts; i++) {
         for (int j=0; j<n_dims; j++) {
-            vel_new(i,j) = (xv_new(i,j) - xv(i,j))/dt;
+            //vel_new(i,j) = (xv_new(i,j) - xv(i,j))/dt;
+            vel_new(i,j) = 0;
             //vel_new(i,0) = 4*pi/10*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*cos(2*pi*time/10); // from Kui
             //vel_new(i,1) = 6*pi/10*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*cos(4*pi*time/10);
         }
@@ -512,7 +513,8 @@ void mesh::write_mesh_gmsh(double sim_time)
     ostringstream sstream;
     sstream << sim_time;
     string suffix = "_" + sstream.str();
-    suffix.replace(suffix.find_first_of("."),1,"_");
+    int find = suffix.find_first_of(".");
+    if (find != suffix.npos) suffix.replace(find,1,"_");
     filename.insert(filename.size()-4,suffix);
 
     fstream file;
@@ -824,8 +826,13 @@ void mesh::rigid_move(solution* FlowSol) {
     for (int i=0; i<n_verts; i++) {
         //xv_new(i,0) = xv(i,0) + run_input.bound_vel_simple(0)*run_input.dt;
         //xv_new(i,1) = xv(i,1) + run_input.bound_vel_simple(1)*run_input.dt;
-        xv_new(i,0) = xv_0(i,0) + .5*sin(2*pi*time);
-        xv_new(i,1) = xv_0(i,1) + .5*sin(2*pi*time);
+        //xv_new(i,0) = xv_0(i,0) + .5*sin(2*pi*time);
+        //xv_new(i,1) = xv_0(i,1) + .5*sin(2*pi*time);
+
+        //xv_new(i,0) = xv(i,0) + run_input.bound_vel_simple(0)*run_input.dt*xv_0(i,0);
+        //xv_new(i,1) = xv(i,1) + run_input.bound_vel_simple(1)*run_input.dt*xv_0(i,1);
+        xv_new(i,0) = xv(i,0) + run_input.bound_vel_simple(0)*xv_0(i,0);
+        xv_new(i,1) = xv(i,1) + run_input.bound_vel_simple(1)*xv_0(i,1);
     }
 
     update(FlowSol);
@@ -835,13 +842,13 @@ void mesh::rigid_move(solution* FlowSol) {
 }
 
 void mesh::perturb(solution* FlowSol) {
-    time = iter*run_input.dt;
-
+    //time = iter*run_input.dt;
+    time = 5000*run_input.dt;
     //if (iter < 2000) {
     for (int i=0; i<n_verts; i++) {
         /// Taken from Kui, AIAA-2010-5031-661
-        xv_new(i,0) = xv_0(i,0) + 1*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/10)*sin(2*pi*time/10);
-        xv_new(i,1) = xv_0(i,1) + .75*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/10)*sin(4*pi*time/10);
+        xv_new(i,0) = xv_0(i,0) + 1*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/10)*sin(2*pi*time/100);
+        xv_new(i,1) = xv_0(i,1) + .75*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/10)*sin(4*pi*time/100);
     }
 
     update(FlowSol);
