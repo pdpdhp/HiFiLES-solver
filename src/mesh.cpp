@@ -234,8 +234,8 @@ void mesh::set_grid_velocity(solution* FlowSol, double dt)
     // calculate velocity using simple backward-Euler
     for (int i=0; i<n_verts; i++) {
         for (int j=0; j<n_dims; j++) {
-            //vel_new(i,j) = (xv_new(i,j) - xv(i,j))/dt;
-            vel_new(i,j) = 0;
+            vel_new(i,j) = (xv_new(i,j) - xv(i,j))/dt;
+            //vel_new(i,j) = 0;
             //vel_new(i,0) = 4*pi/10*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*cos(2*pi*time/10); // from Kui
             //vel_new(i,1) = 6*pi/10*sin(pi*xv_0(i,0)/10)*sin(pi*xv_0(i,1)/8)*cos(4*pi*time/10);
         }
@@ -826,13 +826,13 @@ void mesh::rigid_move(solution* FlowSol) {
     for (int i=0; i<n_verts; i++) {
         //xv_new(i,0) = xv(i,0) + run_input.bound_vel_simple(0)*run_input.dt;
         //xv_new(i,1) = xv(i,1) + run_input.bound_vel_simple(1)*run_input.dt;
-        //xv_new(i,0) = xv_0(i,0) + .5*sin(2*pi*time);
-        //xv_new(i,1) = xv_0(i,1) + .5*sin(2*pi*time);
+        xv_new(i,0) = xv_0(i,0) + .5*sin(2*pi*time/5);
+        xv_new(i,1) = xv_0(i,1) + .5*sin(2*pi*time/5);
 
         //xv_new(i,0) = xv(i,0) + run_input.bound_vel_simple(0)*run_input.dt*xv_0(i,0);
         //xv_new(i,1) = xv(i,1) + run_input.bound_vel_simple(1)*run_input.dt*xv_0(i,1);
-        xv_new(i,0) = xv(i,0) + run_input.bound_vel_simple(0)*xv_0(i,0);
-        xv_new(i,1) = xv(i,1) + run_input.bound_vel_simple(1)*xv_0(i,1);
+        //xv_new(i,0) = xv(i,0) + run_input.bound_vel_simple(0)*xv_0(i,0);
+        //xv_new(i,1) = xv(i,1) + run_input.bound_vel_simple(1)*xv_0(i,1);
     }
 
     update(FlowSol);

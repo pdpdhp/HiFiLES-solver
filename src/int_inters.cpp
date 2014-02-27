@@ -203,10 +203,10 @@ void int_inters::calc_norm_tconinvf_fpts(void)
           if(n_dims==2) {
               calc_invf_2d(temp_u_l,temp_f_l);
               calc_invf_2d(temp_u_r,temp_f_r);
-              if (motion) {
+              /*if (motion) {
                   calc_alef_2d(temp_u_l,temp_v,temp_f_l);
                   calc_alef_2d(temp_u_r,temp_v,temp_f_r);
-              }
+              }*/
           }
           else if(n_dims==3) {
               calc_invf_3d(temp_u_l,temp_f_l);
@@ -220,6 +220,29 @@ void int_inters::calc_norm_tconinvf_fpts(void)
               FatalError("ERROR: Invalid number of dimensions ... ");
 
           rusanov_flux(temp_u_l,temp_u_r,temp_f_l,temp_f_r,temp_v,norm,fn,n_dims,n_fields,run_input.gamma);
+
+          // Add in normal ALE flux
+          temp_fn_l.initialize_to_zero();
+          temp_fn_r.initialize_to_zero();
+          if (motion) {
+              temp_f_l.initialize_to_zero();
+              temp_f_r.initialize_to_zero();
+              if (n_dims==2) {
+                  calc_alef_2d(temp_u_l,temp_v,temp_f_l);
+                  calc_alef_2d(temp_u_r,temp_v,temp_f_r);
+              }
+              else if (n_dims==3) {
+                  calc_alef_3d(temp_u_l,temp_v,temp_f_l);
+                  calc_alef_3d(temp_u_r,temp_v,temp_f_r);
+              }
+
+              for (int k=0; k<n_fields; k++) {
+                  for (int l=0; l<n_dims; l++) {
+                      temp_fn_l(k) += temp_f_l(k,l)*norm(l);
+                      temp_fn_r(k) += temp_f_r(k,l)*norm(l);
+                  }
+              }
+          }
       }
       else if (run_input.riemann_solve_type==1) { // Lax-Friedrich
         lax_friedrich(temp_u_l,temp_u_r,norm,fn,n_dims,n_fields,run_input.lambda,run_input.wave_speed);
@@ -232,8 +255,8 @@ void int_inters::calc_norm_tconinvf_fpts(void)
 
       // Transform back to reference space  
       for(int k=0;k<n_fields;k++) {
-          (*norm_tconf_fpts_l(j,i,k))=fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(j,i));
-          (*norm_tconf_fpts_r(j,i,k))=-fn(k)*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_r(j,i));
+          (*norm_tconf_fpts_l(j,i,k))=(fn(k)+temp_fn_l(k))*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_l(j,i));
+          (*norm_tconf_fpts_r(j,i,k))=-(fn(k)+temp_fn_r(k))*(*mag_tnorm_dot_inv_detjac_mul_jac_fpts_r(j,i));
       }
       
       if(viscous)

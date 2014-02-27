@@ -21,6 +21,10 @@
 *.suo
 *.vcxproj.user
 
+# Output Files
+*.vtu
+*.plt
+
 # Other files
 *.aux
 *.synctex.gz
