@@ -147,6 +147,7 @@ int main(int argc, char *argv[]) {
 
     /*! Advance the solution one time-step using a forward Euler method. */
     if(FlowSol.adv_type == 0) {
+      Mesh.move(i_steps,0,&FlowSol);
       CalcResidual(&FlowSol);
       for(j=0; j<FlowSol.n_ele_types; j++) FlowSol.mesh_eles(j)->advance_rk11();
     }
@@ -154,13 +155,14 @@ int main(int argc, char *argv[]) {
     /*! Advance the solution one time-step using a RK45 method. */
     else if(FlowSol.adv_type==3) {
       for(i=0; i<5; i++) {
+        Mesh.move(i_steps,i,&FlowSol);
         CalcResidual(&FlowSol);
         for(j=0; j<FlowSol.n_ele_types; j++) FlowSol.mesh_eles(j)->advance_rk45(i);
       }
     }
     
     /*! Time integration not implemented. */
-    //else { cout << "ERROR: Time integration type not recognised ... " << endl; }
+    else { cout << "ERROR: Time integration type not recognised ... " << endl; }
     
     /*! Update total time. */
     FlowSol.time += run_input.dt;
@@ -219,19 +221,9 @@ int main(int argc, char *argv[]) {
       write_restart(FlowSol.ini_iter+i_steps, &FlowSol);
     }
 
-    /////////////////////////////////////////////////
-    /// Mesh Deformation
-    /////////////////////////////////////////////////
-    if (run_input.motion > 0) {
-        if (run_input.motion == 1) {
-            Mesh.deform(&FlowSol);
-        }else if (run_input.motion == 2) {
-            Mesh.rigid_move(&FlowSol);
-        }else if (run_input.motion == 3) {
-            Mesh.perturb(&FlowSol);
-        }
-        if (i_steps%run_input.mesh_output_freq==0)
-            Mesh.write_mesh(run_input.mesh_output_format,FlowSol.time);
+    /*! Dump mesh file. */
+    if (run_input.motion!=0 && i_steps%run_input.mesh_output_freq==0) {
+        Mesh.write_mesh(run_input.mesh_output_format,FlowSol.time);
     }
   }
   

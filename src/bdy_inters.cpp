@@ -213,18 +213,18 @@ void bdy_inters::calc_norm_tconinvf_fpts_boundary(double time_bound)
       if(n_dims==2) {
         calc_invf_2d(temp_u_l,temp_f_l);
         calc_invf_2d(temp_u_r,temp_f_r);
-        /*if(motion) {
+        if(motion) {
             calc_alef_2d(temp_u_l,temp_v,temp_f_l);
             calc_alef_2d(temp_u_r,temp_v,temp_f_r);
-        }*/
+        }
       }
       else if(n_dims==3) {
         calc_invf_3d(temp_u_l,temp_f_l);
         calc_invf_3d(temp_u_r,temp_f_r);
-        /*if(motion) {
+        if(motion) {
             calc_alef_3d(temp_u_l,temp_v,temp_f_l);
             calc_alef_3d(temp_u_r,temp_v,temp_f_r);
-        }*/
+        }
       }
       else
         FatalError("ERROR: Invalid number of dimensions ... ");
@@ -245,27 +245,10 @@ void bdy_inters::calc_norm_tconinvf_fpts_boundary(double time_bound)
           lax_friedrich(temp_u_l,temp_u_r,norm,fn,n_dims,n_fields,run_input.lambda,run_input.wave_speed);
         }
         else if (run_input.riemann_solve_type==2) { // ROE
-          roe_flux(temp_u_l,temp_u_r,norm,fn,n_dims,n_fields,run_input.gamma);
+          roe_flux(temp_u_l,temp_u_r,temp_v,norm,fn,n_dims,n_fields,run_input.gamma);
         }
         else
           FatalError("Riemann solver not implemented");
-      }
-
-      // Add in normal ALE flux
-      if (motion) {
-          temp_f_l.initialize_to_zero();
-          if (n_dims==2) {
-              calc_alef_2d(temp_u_l,temp_v,temp_f_l);
-          }
-          else if (n_dims==3) {
-              calc_alef_3d(temp_u_l,temp_v,temp_f_l);
-          }
-
-          for (int k=0; k<n_fields; k++) {
-              for (int l=0; l<n_dims; l++) {
-                  fn(k) += temp_f_l(k,l)*norm(l);
-              }
-          }
       }
 
       // Transform back to reference space  

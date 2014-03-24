@@ -21,13 +21,6 @@
 #include <map>
 #include <set>
 
-/** Needed to resolve mutual header dependancy
-    I'll find a better way later... */
-//struct solution;
-//class CSysVector;
-//class CSysSolve;
-//class CSysMatrixVectorProduct;
-
 #include "global.h"
 #include "input.h"
 #include "error.h"
@@ -56,125 +49,133 @@
 class mesh
 {
 public:
-	// #### constructors ####
-	
-	/** default constructor */
-    mesh(void);
-	
-	/** default destructor */
-    ~mesh(void);
+  // #### constructors ####
 
-	// #### methods ####
+  /** default constructor */
+  mesh(void);
 
-	/** peform prescibed mesh motion using linear elasticity method*/
-    void deform(solution* FlowSol);
+  /** default destructor */
+  ~mesh(void);
 
-    /** update grid velocity & apply to eles */
-    void set_grid_velocity(solution *FlowSol, double dt);
+  // #### methods ####
 
-    /** update the mesh: re-set spts, transforms, etc. */
-    void update(solution *FlowSol);
+  /** Mesh motion wrapper */
+  void move(int _iter, int time_level, solution *FlowSol);
 
-    /** setup information for boundary motion */
-    //void setup_boundaries(array<int> bctype);
+  /** peform prescribed mesh motion using linear elasticity method */
+  void deform(solution* FlowSol);
 
-    /** write out mesh to file */
-    void write_mesh(int mesh_type, double sim_time);
+  /** peform prescribed mesh motion using rigid translation/rotation */
+  void rigid_move(solution *FlowSol);
 
-    /** write out mesh in Gambit .neu format */
-    void write_mesh_gambit(double sim_time);
+  /** Perturb the mesh points (test case for freestream preservation) */
+  void perturb(solution *FlowSol);
 
-    /** write out mesh in Gmsh .msh format */
-    void write_mesh_gmsh(double sim_time);
+  /** update grid velocity & apply to eles */
+  void set_grid_velocity(solution *FlowSol, double dt);
 
-	// #### members ####
-	
-    /** Basic parameters of mesh */
-    //unsigned long
-    int n_eles, n_verts, n_dims, n_verts_global, n_cells_global;
-    int iter;
+  /** update the mesh: re-set spts, transforms, etc. */
+  void update(solution *FlowSol);
 
-	/** arrays which define the basic mesh geometry */
-    array<double> xv_0, xv, xv_new, vel_old, vel_new;
-    array<int> c2v,c2n_v,ctype,bctype_c,ic2icg,iv2ivg,ic2loc_c,
-               f2c,f2loc_f,c2f,c2e,f2v,f2n_v,e2v,v2n_e;
-    array<array<int> > v2e;
+  /** setup information for boundary motion */
+  //void setup_boundaries(array<int> bctype);
 
-    /** #### Boundary information #### */
+  /** write out mesh to file */
+  void write_mesh(int mesh_type, double sim_time);
 
-    int n_bnds, n_faces;
-    array<int> nBndPts;
-    array<int> v2bc;
+  /** write out mesh in Gambit .neu format */
+  void write_mesh_gambit(double sim_time);
 
-    /** vertex id = boundpts(bc_id)(ivert) */
-    array<array<int> > boundPts;
+  /** write out mesh in Gmsh .msh format */
+  void write_mesh_gmsh(double sim_time);
 
-    /** Store motion flag for each boundary
+  // #### members ####
+
+  /** Basic parameters of mesh */
+  //unsigned long
+  int n_eles, n_verts, n_dims, n_verts_global, n_cells_global;
+  int iter;
+
+  /** arrays which define the basic mesh geometry */
+  array<double> xv_0, xv,;
+  array<int> c2v,c2n_v,ctype,bctype_c,ic2icg,iv2ivg,ic2loc_c,
+  f2c,f2loc_f,c2f,c2e,f2v,f2n_v,e2v,v2n_e;
+  array<array<int> > v2e;
+
+  /** #### Boundary information #### */
+
+  int n_bnds, n_faces;
+  array<int> nBndPts;
+  array<int> v2bc;
+
+  /** vertex id = boundpts(bc_id)(ivert) */
+  array<array<int> > boundPts;
+
+  /** Store motion flag for each boundary
      (currently 0=fixed, 1=moving, -1=volume) */
-    array<int> bound_flags;
+  array<int> bound_flags;
 
-    /** HiFiLES 'bcflag' for each boundary */
-    array<int> bc_list;
+  /** HiFiLES 'bcflag' for each boundary */
+  array<int> bc_list;
 
-    /** replacing get_bc_name() from geometry.cpp */
-    map<string,int> bc_name;
+  /** replacing get_bc_name() from geometry.cpp */
+  map<string,int> bc_name;
 
-    /** inverse of bc_name */
-    map<int,string> bc_flag;
+  /** inverse of bc_name */
+  map<int,string> bc_flag;
 
-    // nBndPts.setup(n_bnds); boundPts.setup(nBnds,nPtsPerBnd);
+  // nBndPts.setup(n_bnds); boundPts.setup(nBnds,nPtsPerBnd);
 
-    void rigid_move(solution *FlowSol);
-
-    void perturb(solution *FlowSol);
+  array<double> vel_old, vel_new, xv_new;
 private:
 
-	/** Global stiffness matrix for linear elasticity solution */
-	CSysMatrix StiffnessMatrix;
-    CSysVector LinSysRes;
-    CSysVector LinSysSol;
+  array<double> xv_nm1, xv_nm2, xv_nm3;//, xv_new, vel_old, vel_new;
 
-    /** global stiffness psuedo-matrix for linear-elasticity mesh motion */
-    array<array<double> > stiff_mat;
+  /** Global stiffness matrix for linear elasticity solution */
+  CSysMatrix StiffnessMatrix;
+  CSysVector LinSysRes;
+  CSysVector LinSysSol;
 
-    unsigned long LinSolIters;
-    int failedIts;
-    double min_vol, min_length, solver_tolerance;
-    double time;
+  /** global stiffness psuedo-matrix for linear-elasticity mesh motion */
+  array<array<double> > stiff_mat;
 
-    /** create individual-element stiffness matrix - triangles */
-    // will I actually need the FlowSol variable for setting up the Stiffnexx Matrix?
-    bool set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id);
+  unsigned long LinSolIters;
+  int failedIts;
+  double min_vol, min_length, solver_tolerance;
+  double time;
 
-    /** create individual-element stiffness matrix - quadrilaterals */
-    bool set_2D_StiffMat_ele_quad(array<double> &stiffMat_ele,int ele_id);
+  /** create individual-element stiffness matrix - triangles */
+  bool set_2D_StiffMat_ele_tri(array<double> &stiffMat_ele,int ele_id);
 
-    /** create individual-element stiffness matrix - tetrahedrons */
-    //bool set_2D_StiffMat_ele_tet(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
+  /** create individual-element stiffness matrix - quadrilaterals */
+  bool set_2D_StiffMat_ele_quad(array<double> &stiffMat_ele,int ele_id);
 
-    /** create individual-element stiffness matrix - hexahedrons */
-    //bool set_2D_StiffMat_ele_hex(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
+  /** create individual-element stiffness matrix - tetrahedrons */
+  //bool set_2D_StiffMat_ele_tet(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
 
-    /**
+  /** create individual-element stiffness matrix - hexahedrons */
+  //bool set_2D_StiffMat_ele_hex(array<double> &stiffMat_ele,int ele_id, solution *FlowSol);
+
+  /**
      * transfrom single-element stiffness matrix to nodal contributions in order to
      * add to global stiffness matrix
      */
-    void add_StiffMat_EleTri(array<double> StiffMatrix_Elem, int id_pt_0,
-                             int id_pt_1, int id_pt_2);
+  void add_StiffMat_EleTri(array<double> StiffMatrix_Elem, int id_pt_0,
+                           int id_pt_1, int id_pt_2);
 
 
-    void add_StiffMat_EleQuad(array<double> StiffMatrix_Elem, int id_pt_0,
-                             int id_pt_1, int id_pt_2, int id_pt_3);
+  void add_StiffMat_EleQuad(array<double> StiffMatrix_Elem, int id_pt_0,
+                            int id_pt_1, int id_pt_2, int id_pt_3);
 
-    /** Set given/known displacements of vertices on moving boundaries in linear system */
-    void set_boundary_displacements(solution *FlowSol);
+  /** Set given/known displacements of vertices on moving boundaries in linear system */
+  void set_boundary_displacements(solution *FlowSol);
 
-    /** meant to check for any inverted cells (I think) and return minimum volume */
-    double check_grid(solution *FlowSol);
+  /** meant to check for any inverted cells (I think) and return minimum volume */
+  double check_grid(solution *FlowSol);
 
-    /** transfer solution from LinSysSol to xv_new */
-    void update_grid_coords(void);
+  /** transfer solution from LinSysSol to xv_new */
+  void update_grid_coords(void);
 
-    /** find minimum length in mesh */
-    void set_min_length(void);
+  /** find minimum length in mesh */
+  void set_min_length(void);
 };

@@ -330,11 +330,11 @@ void inters::rusanov_flux(array<double> &u_l, array<double> &u_r, array<double> 
 }
 
 // Rusanov inviscid numerical flux
-void inters::roe_flux(array<double> &u_l, array<double> &u_r, array<double> &norm, array<double> &fn, int n_dims, int n_fields, double gamma)
+void inters::roe_flux(array<double> &u_l, array<double> &u_r, array<double> &v_g, array<double> &norm, array<double> &fn, int n_dims, int n_fields, double gamma)
 {
 	double p_l,p_r;
   double h_l, h_r;
-  double sq_rho,rrho,hm,usq,am,am_sq,unm;
+  double sq_rho,rrho,hm,usq,am,am_sq,unm,vgn;
   double lambda0,lambdaP,lambdaM;
   double rhoun_l, rhoun_r,eps;
   double a1,a2,a3,a4,a5,a6,aL1,bL1;
@@ -372,10 +372,11 @@ void inters::roe_flux(array<double> &u_l, array<double> &u_r, array<double> &nor
   am_sq   = (gamma-1.)*(hm-usq);
   am  = sqrt(am_sq);
   unm = 0.;
-  for (int i=0;i<n_dims;i++)
+  vgn = 0;
+  for (int i=0;i<n_dims;i++) {
     unm += um(i)*norm(i);
-
-
+    vgn += v_g(i)*norm(i);
+  }
 
   // Compute Euler flux (first part)
   rhoun_l = 0.;
@@ -402,9 +403,9 @@ void inters::roe_flux(array<double> &u_l, array<double> &u_r, array<double> &nor
     du(i) = u_r(i)-u_l(i);
   }
 
-  lambda0 = abs(unm);
-  lambdaP = abs(unm+am);
-  lambdaM = abs(unm-am);
+  lambda0 = abs(unm-vgn);
+  lambdaP = abs(unm-vgn+am);
+  lambdaM = abs(unm-vgn-am);
 
   // Entropy fix
   eps = 0.5*(abs(rhoun_l/u_l(0)-rhoun_r/u_r(0))+ abs(sqrt(gamma*p_l/u_l(0))-sqrt(gamma*p_r/u_r(0))));
@@ -456,7 +457,7 @@ void inters::roe_flux(array<double> &u_l, array<double> &u_r, array<double> &nor
 
   for (int i=0;i<n_fields;i++)
   {
-    fn(i) =  0.5*fn(i);
+    fn(i) =  0.5*fn(i) - 0.5*vgn*(u_r(i)+u_l(i));
   }
 
 }
