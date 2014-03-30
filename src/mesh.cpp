@@ -813,8 +813,8 @@ void mesh::rigid_move(solution* FlowSol) {
   time = iter*run_input.dt;
   for (int i=0; i<n_verts; i++) {
     // Useful for simple cases / debugging
-    xv_new(i,0) = xv_0(i,0) + 0.0*cos(2*pi*time/5)*run_input.dt;
-    xv_new(i,1) = xv_0(i,1) + 0.5*cos(2*pi*time/5)*run_input.dt;
+    xv_new(i,0) = xv(i,0) + -1.0*cos(2*pi*time/5)*run_input.dt;
+    xv_new(i,1) = xv(i,1) + 1.5*cos(2*pi*time/5)*run_input.dt;
 
     //xv_new(i,0) = xv(i,0) + run_input.bound_vel_simple(0)*run_input.dt;
     //xv_new(i,1) = xv(i,1) + run_input.bound_vel_simple(1)*run_input.dt;
